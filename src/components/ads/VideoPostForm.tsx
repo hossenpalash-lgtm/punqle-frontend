@@ -6,6 +6,7 @@ import {
   type ApiVideoOperation,
   type VideoAspectRatio,
 } from "@/lib/api";
+import { PublishToYouTube } from "./PublishToYouTube";
 
 const VIDEO_CREDIT_COST = 10;
 const POLL_INTERVAL_MS = 8000;
@@ -131,6 +132,7 @@ export function VideoPostForm({
         <div className="mb-3 overflow-hidden rounded-2xl bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
           <video src={videoUrl} controls className="w-full" />
         </div>
+        <PublishToYouTube videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} />
         <a
           href={videoUrl}
           download="ad-video.mp4"

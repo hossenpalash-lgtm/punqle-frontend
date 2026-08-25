@@ -21,6 +21,7 @@ import { LegalFooter } from "../components/LegalFooter";
 import { BillingPanel } from "../components/ads/BillingPanel";
 import { BrandKitPanel } from "../components/ads/BrandKitPanel";
 import { MetaConnectPanel } from "../components/ads/MetaConnectPanel";
+import { YouTubeConnectPanel } from "../components/ads/YouTubeConnectPanel";
 import { ProductCatalogPanel } from "../components/ads/ProductCatalogPanel";
 import { ReferralPanel } from "../components/ads/ReferralPanel";
 import { Sidebar, type NavTab } from "../components/Sidebar";
@@ -147,6 +148,7 @@ function RootComponent() {
   const [productCatalogOpen, setProductCatalogOpen] = useState(false);
   const [referralOpen, setReferralOpen] = useState(false);
   const [metaConnectOpen, setMetaConnectOpen] = useState(false);
+  const [youtubeConnectOpen, setYoutubeConnectOpen] = useState(false);
   // Lazy initializer (runs synchronously at first render, before any
   // effect) rather than a useEffect checking window.location.search —
   // the router normalizes the URL and strips unrecognised params like
@@ -211,6 +213,15 @@ function RootComponent() {
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has("meta")) {
       setMetaConnectOpen(true);
+    }
+  }, []);
+
+  // Same round-trip pattern again — YouTube's callback redirects back to
+  // "/" with ?youtube=connected|error. YouTubeConnectPanel itself reads
+  // and clears the param.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("youtube")) {
+      setYoutubeConnectOpen(true);
     }
   }, []);
 
@@ -279,6 +290,7 @@ function RootComponent() {
               onOpenReferral={() => setReferralOpen(true)}
               onOpenBilling={() => setBillingOpen(true)}
               onOpenMetaConnect={() => setMetaConnectOpen(true)}
+              onOpenYouTubeConnect={() => setYoutubeConnectOpen(true)}
               onSignOut={() => signOut()}
             />
             <div className="mx-auto flex w-full max-w-md flex-1 flex-col lg:max-w-3xl">
@@ -290,6 +302,7 @@ function RootComponent() {
             <ReferralPanel open={referralOpen} onClose={() => setReferralOpen(false)} />
             <BillingPanel open={billingOpen} onClose={() => setBillingOpen(false)} />
             <MetaConnectPanel open={metaConnectOpen} onClose={() => setMetaConnectOpen(false)} />
+            <YouTubeConnectPanel open={youtubeConnectOpen} onClose={() => setYoutubeConnectOpen(false)} />
           </>
         )}
       </div>

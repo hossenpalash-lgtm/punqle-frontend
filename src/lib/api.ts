@@ -554,6 +554,55 @@ export function publishToMeta(
   });
 }
 
+export function getYouTubeConnectUrl(): Promise<{ authorize_url: string }> {
+  return apiFetch<{ authorize_url: string }>("/youtube/connect-url");
+}
+
+export interface ApiYouTubeStatus {
+  connected: boolean;
+  channel_title: string | null;
+}
+
+export function fetchYouTubeStatus(): Promise<ApiYouTubeStatus> {
+  return apiFetch<ApiYouTubeStatus>("/youtube/status");
+}
+
+export function disconnectYouTube(): Promise<void> {
+  return apiFetch<void>("/youtube/disconnect", { method: "DELETE" });
+}
+
+export interface ApiYouTubePublishResponse {
+  posted: boolean;
+  video_id?: string;
+  video_url?: string;
+  error?: string;
+}
+
+// videoDataUrl is the same "data:video/mp4;base64,..." shape VideoPostForm
+// already holds in videoUrl state — parsed here for the same reason
+// publishToMeta parses compositedDataUrl inline.
+export function publishToYouTube(
+  videoDataUrl: string,
+  title: string,
+  description: string,
+  aspectRatio: VideoAspectRatio,
+): Promise<ApiYouTubePublishResponse> {
+  const match = videoDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) {
+    return Promise.reject(new Error("Couldn't read the generated video."));
+  }
+  const [, mimeType, base64] = match;
+  const formData = new FormData();
+  formData.append("file", base64ToFile(base64, mimeType, "ad-video.mp4"));
+  formData.append("title", title);
+  formData.append("description", description);
+  formData.append("aspect_ratio", aspectRatio);
+  return apiFetch<ApiYouTubePublishResponse>("/youtube/publish", {
+    method: "POST",
+    body: formData,
+  });
+}
+
 export type SubscriptionTier = "starter" | "growth" | "pro";
 
 export interface ApiSubscriptionStatus {

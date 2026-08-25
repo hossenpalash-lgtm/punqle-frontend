@@ -14,6 +14,7 @@ import {
   ShoppingBag,
   Sparkles,
   Video,
+  Youtube,
 } from "lucide-react";
 import { PunqleLogo } from "@/components/PunqleLogo";
 import { useScrolled } from "@/lib/use-scrolled";
@@ -60,6 +61,7 @@ export function Sidebar({
   onOpenReferral,
   onOpenBilling,
   onOpenMetaConnect,
+  onOpenYouTubeConnect,
   onSignOut,
 }: {
   tab: NavTab;
@@ -69,6 +71,7 @@ export function Sidebar({
   onOpenReferral: () => void;
   onOpenBilling: () => void;
   onOpenMetaConnect: () => void;
+  onOpenYouTubeConnect: () => void;
   onSignOut: () => void;
 }) {
   const scrolled = useScrolled();
@@ -184,6 +187,13 @@ export function Sidebar({
           >
             <Facebook className="h-3.5 w-3.5" />
             Social Accounts
+          </button>
+          <button
+            onClick={onOpenYouTubeConnect}
+            className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
+          >
+            <Youtube className="h-3.5 w-3.5" />
+            YouTube
           </button>
 
           <span className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -302,6 +312,13 @@ export function Sidebar({
               className="flex h-9 w-9 items-center justify-center rounded-full text-secondary-foreground hover:bg-secondary"
             >
               <Facebook className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onOpenYouTubeConnect}
+              aria-label="YouTube"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-secondary-foreground hover:bg-secondary"
+            >
+              <Youtube className="h-4 w-4" />
             </button>
             <button
               onClick={onOpenReferral}

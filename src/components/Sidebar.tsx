@@ -45,7 +45,7 @@ const FUTURE_CATEGORIES = [
 // primary creation categories above.
 const TOOLS_ITEMS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "plan", label: "Weekly Plan", icon: Calendar },
-  { tab: "competitor", label: "Competitor Analysis", icon: Binoculars },
+  { tab: "competitor", label: "Competitive Edge", icon: Binoculars },
 ];
 
 // One component, two renderings via Tailwind breakpoints rather than two
@@ -274,7 +274,7 @@ export function Sidebar({
             </button>
             <button
               onClick={() => onNavigate("competitor")}
-              aria-label="Competitor Analysis"
+              aria-label="Competitive Edge"
               className={[
                 "flex h-9 w-9 items-center justify-center rounded-full",
                 tab === "competitor" ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",

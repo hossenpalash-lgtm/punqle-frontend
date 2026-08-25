@@ -29,9 +29,9 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
 
   return (
     <div>
-      <h1 className="font-display mb-1 text-lg font-extrabold text-foreground">Competitor Analysis</h1>
+      <h1 className="font-display mb-1 text-lg font-extrabold text-foreground">Competitive Edge</h1>
       <p className="mb-4 text-sm text-muted-foreground">
-        Paste a competitor's website or page link to see what they focus on and how you could stand out.
+        Paste a competitor's website and find opportunities they've missed for your next ad.
       </p>
 
       <div className="mb-4 flex gap-2">
@@ -89,6 +89,9 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
                 <div key={i} className="rounded-xl bg-secondary px-3 py-2">
                   <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">{item.angle}</p>
                   <p className="mb-1.5 text-sm text-secondary-foreground">{item.idea}</p>
+                  {item.evidence && (
+                    <p className="mb-1.5 text-xs italic text-muted-foreground">Why: {item.evidence}</p>
+                  )}
                   <button
                     onClick={() => onCreateAd(item.idea)}
                     className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"

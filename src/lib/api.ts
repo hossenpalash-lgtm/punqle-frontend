@@ -582,6 +582,7 @@ export function createPortalSession(): Promise<{ portal_url: string }> {
 export interface ApiCompetitorDifferentiationIdea {
   angle: string;
   idea: string;
+  evidence: string;
 }
 
 export interface ApiCompetitorAnalysisResponse {

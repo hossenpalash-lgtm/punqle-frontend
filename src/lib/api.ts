@@ -579,10 +579,15 @@ export function createPortalSession(): Promise<{ portal_url: string }> {
   return apiFetch<{ portal_url: string }>("/billing/portal", { method: "POST" });
 }
 
+export interface ApiCompetitorDifferentiationIdea {
+  angle: string;
+  idea: string;
+}
+
 export interface ApiCompetitorAnalysisResponse {
   competitor_name: string;
   summary: string;
-  differentiation_ideas: string[];
+  differentiation_ideas: ApiCompetitorDifferentiationIdea[];
 }
 
 export function fetchCompetitorAnalysis(url: string): Promise<ApiCompetitorAnalysisResponse> {

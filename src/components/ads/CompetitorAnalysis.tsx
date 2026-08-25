@@ -85,11 +85,12 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
               Ways to stand out
             </p>
             <div className="flex flex-col gap-2">
-              {result.differentiation_ideas.map((idea, i) => (
+              {result.differentiation_ideas.map((item, i) => (
                 <div key={i} className="rounded-xl bg-secondary px-3 py-2">
-                  <p className="mb-1.5 text-sm text-secondary-foreground">{idea}</p>
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">{item.angle}</p>
+                  <p className="mb-1.5 text-sm text-secondary-foreground">{item.idea}</p>
                   <button
-                    onClick={() => onCreateAd(idea)}
+                    onClick={() => onCreateAd(item.idea)}
                     className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                   >
                     Create an ad from this

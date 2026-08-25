@@ -61,15 +61,31 @@ const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export function SinglePostForm({
   credits,
   setCredits,
+  initialIdea,
+  onInitialIdeaConsumed,
 }: {
   credits: number | null;
   setCredits: (n: number) => void;
+  // Set when arriving here from "Create an ad from this" on the
+  // Competitor Analysis tab — SinglePostForm fully unmounts/remounts on
+  // every tab switch (see index.tsx), so this only needs to be read once
+  // at mount, not kept in sync afterward.
+  initialIdea?: string;
+  onInitialIdeaConsumed?: () => void;
 }) {
   const [step, setStep] = useState<WizardStep>("idea");
   const [generationStage, setGenerationStage] = useState(0);
 
   // Idea + understanding
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(initialIdea ?? "");
+
+  // Runs once on mount only — tells the parent to clear initialIdea so a
+  // later, unrelated visit to this tab doesn't silently reuse stale text
+  // from a previous competitor-insight click.
+  useEffect(() => {
+    if (initialIdea) onInitialIdeaConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [understanding, setUnderstanding] = useState<ApiUnderstandIdeaResponse | null>(null);
   const [visualDirection, setVisualDirection] = useState<VisualDirection>("clean_premium");
 

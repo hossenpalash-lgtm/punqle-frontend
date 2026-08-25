@@ -47,6 +47,11 @@ function HomeScreen() {
   const navigate = useNavigate();
   const [credits, setCredits] = useState<number | null>(null);
   const [creditsError, setCreditsError] = useState<string | null>(null);
+  // Set by "Create an ad from this" on the Competitor Analysis tab, read
+  // once by SinglePostForm on mount, then cleared — see SinglePostForm's
+  // own initialIdea prop comment for why a later unrelated visit to the
+  // Image Post tab shouldn't silently reuse stale competitor-insight text.
+  const [prefilledIdea, setPrefilledIdea] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     fetchAdCredits()
@@ -106,11 +111,25 @@ function HomeScreen() {
         </>
       )}
 
-      {tab === "single" && <SinglePostForm credits={credits} setCredits={setCredits} />}
+      {tab === "single" && (
+        <SinglePostForm
+          credits={credits}
+          setCredits={setCredits}
+          initialIdea={prefilledIdea}
+          onInitialIdeaConsumed={() => setPrefilledIdea(undefined)}
+        />
+      )}
       {tab === "plan" && <WeeklyPlanForm credits={credits} setCredits={setCredits} />}
       {tab === "video" && <VideoPostForm credits={credits} setCredits={setCredits} />}
       {tab === "history" && <HistoryTab />}
-      {tab === "competitor" && <CompetitorAnalysis />}
+      {tab === "competitor" && (
+        <CompetitorAnalysis
+          onCreateAd={(idea) => {
+            setPrefilledIdea(idea);
+            goTo("single");
+          }}
+        />
+      )}
     </main>
   );
 }

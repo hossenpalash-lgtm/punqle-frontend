@@ -1,4 +1,4 @@
-import { AlertCircle, Binoculars, Link2, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowRight, Binoculars, Link2, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { fetchCompetitorAnalysis, type ApiCompetitorAnalysisResponse } from "@/lib/api";
 
@@ -7,7 +7,7 @@ import { fetchCompetitorAnalysis, type ApiCompetitorAnalysisResponse } from "@/l
 // Facebook/Instagram page URL usually only exposes its public
 // link-preview title/description to a plain fetch (their real feed is
 // JS-rendered and login-gated), so results there will be thinner.
-export function CompetitorAnalysis() {
+export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) => void }) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,8 +86,15 @@ export function CompetitorAnalysis() {
             </p>
             <div className="flex flex-col gap-2">
               {result.differentiation_ideas.map((idea, i) => (
-                <div key={i} className="rounded-xl bg-secondary px-3 py-2 text-sm text-secondary-foreground">
-                  {idea}
+                <div key={i} className="rounded-xl bg-secondary px-3 py-2">
+                  <p className="mb-1.5 text-sm text-secondary-foreground">{idea}</p>
+                  <button
+                    onClick={() => onCreateAd(idea)}
+                    className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                  >
+                    Create an ad from this
+                    <ArrowRight className="h-3 w-3" />
+                  </button>
                 </div>
               ))}
             </div>

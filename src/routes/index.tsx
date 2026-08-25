@@ -2,13 +2,14 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Megaphone, Sparkles, Video } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchAdCredits } from "@/lib/api";
+import { AdCreationForm } from "@/components/ads/AdCreationForm";
 import { CompetitorAnalysis } from "@/components/ads/CompetitorAnalysis";
 import { HistoryTab } from "@/components/ads/HistoryTab";
 import { SinglePostForm } from "@/components/ads/SinglePostForm";
 import { VideoPostForm } from "@/components/ads/VideoPostForm";
 import { WeeklyPlanForm } from "@/components/ads/WeeklyPlanForm";
 
-type Tab = "single" | "plan" | "history" | "competitor" | "video";
+type Tab = "single" | "plan" | "history" | "competitor" | "video" | "ad";
 
 export const Route = createFileRoute("/")({
   component: HomeScreen,
@@ -22,7 +23,9 @@ export const Route = createFileRoute("/")({
             ? "competitor"
             : search.tab === "video"
               ? "video"
-              : "single",
+              : search.tab === "ad"
+                ? "ad"
+                : "single",
   }),
 });
 
@@ -130,6 +133,7 @@ function HomeScreen() {
           }}
         />
       )}
+      {tab === "ad" && <AdCreationForm credits={credits} setCredits={setCredits} />}
     </main>
   );
 }

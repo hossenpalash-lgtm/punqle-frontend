@@ -23,22 +23,19 @@ import { useScrolled } from "@/lib/use-scrolled";
 // via the content-type card grid on the home screen instead — see
 // index.tsx) but still need tab values so none of the sidebar's own rows
 // incorrectly show as active while a user is actually on one of those tabs.
-export type NavTab = "single" | "plan" | "history" | "competitor" | "video";
+export type NavTab = "single" | "plan" | "history" | "competitor" | "video" | "ad";
 
 // Punqle's 3 primary creation categories (locked in 2026-08-21) — Social
-// Content is the only one actually built. Ad Creation / E-commerce are
-// shown as real rows (not hidden) so the architecture reads clearly from
-// day one, but are non-interactive "Soon" placeholders — explicitly NOT
-// built yet, per that round's instruction not to.
+// Content and Ad Creation are now both built (Ad Creation shipped
+// 2026-08-26, creative-only V1 — see AdCreationForm.tsx). E-commerce is
+// still a real row (not hidden) so the architecture reads clearly, but
+// stays a non-interactive "Soon" placeholder.
 const SOCIAL_CONTENT_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "single", label: "Image Post", icon: ImageIcon },
   { tab: "video", label: "Video", icon: Video },
 ];
 
-const FUTURE_CATEGORIES = [
-  { label: "Ad Creation", icon: Megaphone },
-  { label: "E-commerce", icon: ShoppingBag },
-];
+const FUTURE_CATEGORIES = [{ label: "E-commerce", icon: ShoppingBag }];
 
 // Weekly Plan / Competitor Analysis aren't part of the 3-category CREATE
 // system the 2026-08-21 spec describes — kept working and reachable, just
@@ -130,9 +127,30 @@ export function Sidebar({
             ))}
           </div>
 
-          {/* Ad Creation / E-commerce — architecture is visible, nothing
-              is clickable yet. Deliberately not hidden: the point is that
-              a user can already see Punqle's 3-category shape. */}
+          {/* Ad Creation — 2nd of the 3 primary categories, shipped
+              2026-08-26. Single row (not header-with-sub-items like Social
+              Content) since V1 has only one format under it. */}
+          <button
+            onClick={() => onNavigate("ad")}
+            className={[
+              "mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+              tab === "ad" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg",
+                tab === "ad" ? "bg-primary-foreground/20" : "bg-secondary",
+              ].join(" ")}
+            >
+              <Megaphone className="h-3.5 w-3.5" />
+            </span>
+            Ad Creation
+          </button>
+
+          {/* E-commerce — architecture is visible, nothing is clickable
+              yet. Deliberately not hidden: the point is that a user can
+              already see Punqle's 3-category shape. */}
           {FUTURE_CATEGORIES.map(({ label, icon: Icon }) => (
             <div
               key={label}
@@ -262,6 +280,16 @@ export function Sidebar({
             <span className="font-display text-sm font-extrabold text-foreground">Punqle</span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            <button
+              onClick={() => onNavigate("ad")}
+              aria-label="Ad Creation"
+              className={[
+                "flex h-9 w-9 items-center justify-center rounded-full",
+                tab === "ad" ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+              ].join(" ")}
+            >
+              <Megaphone className="h-4 w-4" />
+            </button>
             <button
               onClick={() => onNavigate("plan")}
               aria-label="Weekly Plan"

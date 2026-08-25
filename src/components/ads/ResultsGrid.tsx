@@ -10,10 +10,21 @@ import { Check, Sparkles, Star } from "lucide-react";
 export function ResultsGrid({
   images,
   onSelect,
+  angleLabels,
+  recommendedIndex,
+  recommendedReason,
 }: {
   images: string[];
   onSelect: (index: number) => void;
+  // Ad Creation passes both — a real per-image persuasion-angle label and
+  // GPT's own pick of the strongest variant (with reasoning shown below
+  // the grid). Image Post passes neither, keeping its existing "first
+  // image, no real signal" behavior unchanged.
+  angleLabels?: string[];
+  recommendedIndex?: number;
+  recommendedReason?: string;
 }) {
+  const recommended = recommendedIndex ?? (images.length > 1 ? 0 : -1);
   return (
     <div className="flex flex-col items-center text-center">
       <h1 className="font-display mb-2 flex items-center gap-2 text-xl font-extrabold text-foreground">
@@ -42,13 +53,18 @@ export function ResultsGrid({
               alt={`Option ${i + 1}`}
               className="aspect-square w-full object-cover"
             />
-            {i === 0 && images.length > 1 && (
+            {i === recommended && images.length > 1 && (
               <span
                 className="absolute left-2 top-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
                 style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground)" }}
               >
                 <Star className="h-2.5 w-2.5 fill-current" />
                 Recommended
+              </span>
+            )}
+            {angleLabels?.[i] && (
+              <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">
+                {angleLabels[i]}
               </span>
             )}
             <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/25 group-hover:opacity-100">
@@ -60,6 +76,16 @@ export function ResultsGrid({
           </button>
         ))}
       </div>
+
+      {recommendedReason && (
+        <p className="mt-4 flex items-start gap-1.5 text-left text-xs text-muted-foreground">
+          <Star className="mt-0.5 h-3 w-3 shrink-0" style={{ color: "var(--color-accent)" }} />
+          <span>
+            <span className="font-semibold text-foreground">Recommended: </span>
+            {recommendedReason}
+          </span>
+        </p>
+      )}
     </div>
   );
 }

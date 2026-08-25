@@ -404,6 +404,35 @@ export function generateCaptions(
   });
 }
 
+export type AdGoal = "sales" | "leads" | "traffic" | "bookings";
+
+export interface ApiAdCaptionVariantWithAngle {
+  angle: string;
+  facebook_caption: string;
+  whatsapp_message: string;
+}
+
+export interface ApiGenerateAdCaptionsResponse {
+  captions: ApiAdCaptionVariantWithAngle[];
+  recommended_index: number;
+  recommended_reason: string;
+}
+
+// angle=null means "Let Punqle choose" — no forced primary angle, every
+// variant is freely AI-picked. When set, it becomes variation #1's angle.
+export function generateAdCaptions(
+  itemDescription: string,
+  goal: AdGoal,
+  angle: string | null,
+  count: 1 | 3 | 5,
+): Promise<ApiGenerateAdCaptionsResponse> {
+  return apiFetch<ApiGenerateAdCaptionsResponse>("/ads/generate-ad-captions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ item_description: itemDescription, goal, angle, count }),
+  });
+}
+
 export interface ApiBlogToPostsResponse {
   title: string;
   ideas: string[];

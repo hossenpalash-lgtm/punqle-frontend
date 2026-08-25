@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Download, Pencil } from "lucide-react";
+import { AlertCircle, Check, Download, Lock, Pencil, Rocket } from "lucide-react";
 import { useState } from "react";
 import type { ApiAdCaptionVariant, CaptionLength, CaptionTone } from "@/lib/api";
 import { deriveOnImageHeadline, type Box, type BrandKit, type EditOptions } from "@/lib/canvas-text";
@@ -64,6 +64,13 @@ export function PostKit({
   visualDirection,
   error,
   onReset,
+  // Both default to Image Post's existing behavior — Ad Creation is the
+  // only caller that overrides them (its captions vary by persuasion
+  // angle, not tone/length, so those controls would do nothing useful
+  // there; and it wants a placeholder signaling where real campaign
+  // launch will live once that's built).
+  showCaptionStyleControls = true,
+  showLaunchCampaignPlaceholder = false,
 }: {
   compositedUrl: string | null;
   textBox: Box | undefined;
@@ -109,6 +116,8 @@ export function PostKit({
   visualDirection?: string;
   error: string | null;
   onReset: () => void;
+  showCaptionStyleControls?: boolean;
+  showLaunchCampaignPlaceholder?: boolean;
 }) {
   const hashtagsAdded = editedCaption.includes("#");
   // Carousel slides mirror what's actually baked onto the main preview
@@ -193,14 +202,16 @@ export function PostKit({
 
       <CaptionPicker captions={captions} selectedIndex={selectedCaptionIndex} onSelect={onSelectCaption} />
 
-      <CaptionStyleControls
-        tone={captionTone}
-        onToneChange={onCaptionToneChange}
-        length={captionLength}
-        onLengthChange={onCaptionLengthChange}
-        onGenerateAnother={onGenerateAnotherCaption}
-        generating={regeneratingCaptions}
-      />
+      {showCaptionStyleControls && (
+        <CaptionStyleControls
+          tone={captionTone}
+          onToneChange={onCaptionToneChange}
+          length={captionLength}
+          onLengthChange={onCaptionLengthChange}
+          onGenerateAnother={onGenerateAnotherCaption}
+          generating={regeneratingCaptions}
+        />
+      )}
 
       <TranslateCaptions onTranslate={onTranslate} translating={translating} />
 
@@ -249,6 +260,20 @@ export function PostKit({
       </a>
 
       <PublishToMeta compositedUrl={compositedUrl} caption={editedCaption} />
+
+      {showLaunchCampaignPlaceholder && (
+        <button
+          disabled
+          className="mb-3 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-muted-foreground"
+        >
+          <Rocket className="h-4 w-4" />
+          Launch Campaign
+          <span className="ml-1 flex items-center gap-1 rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold">
+            <Lock className="h-2.5 w-2.5" />
+            Coming soon
+          </span>
+        </button>
+      )}
 
       <button
         onClick={onReset}

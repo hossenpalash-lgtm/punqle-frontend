@@ -23,16 +23,21 @@ import { useScrolled } from "@/lib/use-scrolled";
 // via the content-type card grid on the home screen instead — see
 // index.tsx) but still need tab values so none of the sidebar's own rows
 // incorrectly show as active while a user is actually on one of those tabs.
-export type NavTab = "single" | "plan" | "history" | "competitor" | "video" | "ad";
+export type NavTab = "single" | "plan" | "history" | "competitor" | "video" | "ad" | "ad-video";
 
 // Punqle's 3 primary creation categories (locked in 2026-08-21) — Social
-// Content and Ad Creation are now both built (Ad Creation shipped
-// 2026-08-26, creative-only V1 — see AdCreationForm.tsx). E-commerce is
-// still a real row (not hidden) so the architecture reads clearly, but
-// stays a non-interactive "Soon" placeholder.
+// Content and Ad Creation are now both built, each with its own 2-format
+// split (Ad Creation's Video Ad format shipped 2026-08-26 — see
+// AdVideoForm.tsx). E-commerce is still a real row (not hidden) so the
+// architecture reads clearly, but stays a non-interactive "Soon" placeholder.
 const SOCIAL_CONTENT_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "single", label: "Image Post", icon: ImageIcon },
   { tab: "video", label: "Video", icon: Video },
+];
+
+const AD_CREATION_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
+  { tab: "ad", label: "Image Ad", icon: Megaphone },
+  { tab: "ad-video", label: "Video Ad", icon: Video },
 ];
 
 const FUTURE_CATEGORIES = [{ label: "E-commerce", icon: ShoppingBag }];
@@ -127,26 +132,34 @@ export function Sidebar({
             ))}
           </div>
 
-          {/* Ad Creation — 2nd of the 3 primary categories, shipped
-              2026-08-26. Single row (not header-with-sub-items like Social
-              Content) since V1 has only one format under it. */}
-          <button
-            onClick={() => onNavigate("ad")}
-            className={[
-              "mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-              tab === "ad" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
-            ].join(" ")}
-          >
+          {/* Ad Creation — 2nd of the 3 primary categories. Now has 2
+              formats (Image Ad shipped 2026-08-25, Video Ad shipped
+              2026-08-26) — same header+sub-items structure as Social
+              Content above, not a single row anymore. */}
+          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground">
             <span
-              className={[
-                "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg",
-                tab === "ad" ? "bg-primary-foreground/20" : "bg-secondary",
-              ].join(" ")}
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
+              style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground)" }}
             >
               <Megaphone className="h-3.5 w-3.5" />
             </span>
             Ad Creation
-          </button>
+          </div>
+          <div className="mb-2 flex flex-col gap-0.5 pl-6">
+            {AD_CREATION_FORMATS.map(({ tab: t, label, icon: Icon }) => (
+              <button
+                key={t}
+                onClick={() => onNavigate(t)}
+                className={[
+                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+                ].join(" ")}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
 
           {/* E-commerce — architecture is visible, nothing is clickable
               yet. Deliberately not hidden: the point is that a user can

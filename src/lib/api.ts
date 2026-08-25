@@ -91,11 +91,16 @@ export interface ApiVideoOperationResponse {
 
 export type VideoAspectRatio = "16:9" | "9:16";
 
+// goal/angle are only ever set by Ad Creation's Video Ad flow — Social
+// Content's Video tab omits both, leaving the backend's behavior for it
+// byte-identical to before (see GenerateVideoRequest in main.py).
 export function startVideoGeneration(
   itemDescription: string,
   imageBase64?: string,
   imageMimeType?: string,
   aspectRatio: VideoAspectRatio = "16:9",
+  goal?: AdGoal,
+  angle?: string | null,
 ): Promise<ApiVideoOperationResponse> {
   return apiFetch<ApiVideoOperationResponse>("/ads/generate-video", {
     method: "POST",
@@ -105,6 +110,8 @@ export function startVideoGeneration(
       image_base64: imageBase64,
       image_mime_type: imageMimeType,
       aspect_ratio: aspectRatio,
+      goal,
+      angle,
     }),
   });
 }

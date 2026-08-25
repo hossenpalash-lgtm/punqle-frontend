@@ -99,6 +99,12 @@ export function PublishToMeta({ compositedUrl, caption }: { compositedUrl: strin
     );
   }
 
+  // Once a publish attempt has landed a real, successful post on at least
+  // one platform, hide the button rather than leave it clickable — a
+  // second click would publish a genuine duplicate, not just re-run a
+  // harmless preview.
+  const alreadyPosted = !!(result?.facebook?.posted || result?.instagram?.posted);
+
   return (
     <div className="mb-3 rounded-2xl border border-border bg-background p-3.5">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -141,27 +147,36 @@ export function PublishToMeta({ compositedUrl, caption }: { compositedUrl: strin
         </div>
       )}
 
-      <div className="flex gap-2">
-        <button
-          onClick={handlePublish}
-          disabled={publishing || (!postFacebook && !postInstagram)}
-          className="flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-          style={{ background: "var(--gradient-primary)" }}
-        >
-          {publishing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <CheckCircle2 className="h-4 w-4" />
-          )}
-          Confirm &amp; Publish
-        </button>
+      {alreadyPosted ? (
         <button
           onClick={() => setExpanded(false)}
-          className="shrink-0 rounded-full bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground"
+          className="w-full rounded-full bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground"
         >
-          Cancel
+          Done
         </button>
-      </div>
+      ) : (
+        <div className="flex gap-2">
+          <button
+            onClick={handlePublish}
+            disabled={publishing || (!postFacebook && !postInstagram)}
+            className="flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            style={{ background: "var(--gradient-primary)" }}
+          >
+            {publishing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4" />
+            )}
+            Confirm &amp; Publish
+          </button>
+          <button
+            onClick={() => setExpanded(false)}
+            className="shrink-0 rounded-full bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }

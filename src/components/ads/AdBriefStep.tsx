@@ -2,7 +2,7 @@ import { ArrowRight, Check, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import type { AdGoal } from "@/lib/api";
 
-const GOALS: { value: AdGoal; label: string; description: string }[] = [
+export const GOALS: { value: AdGoal; label: string; description: string }[] = [
   { value: "sales", label: "Sales", description: "Get more purchases" },
   { value: "leads", label: "Leads", description: "Get people to contact you" },
   { value: "traffic", label: "Traffic", description: "Send people to your site" },

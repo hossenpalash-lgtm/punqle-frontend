@@ -1,16 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Megaphone, Sparkles, Video } from "lucide-react";
+import { Layers, Megaphone, Sparkles, Video } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchAdCredits } from "@/lib/api";
 import { AdCreationForm } from "@/components/ads/AdCreationForm";
 import { AdVideoForm } from "@/components/ads/AdVideoForm";
+import { BulkCreativeForm } from "@/components/ads/BulkCreativeForm";
 import { CompetitorAnalysis } from "@/components/ads/CompetitorAnalysis";
 import { HistoryTab } from "@/components/ads/HistoryTab";
 import { SinglePostForm } from "@/components/ads/SinglePostForm";
 import { VideoPostForm } from "@/components/ads/VideoPostForm";
 import { WeeklyPlanForm } from "@/components/ads/WeeklyPlanForm";
 
-type Tab = "single" | "plan" | "history" | "competitor" | "video" | "ad" | "ad-video";
+type Tab = "single" | "plan" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative";
 
 export const Route = createFileRoute("/")({
   component: HomeScreen,
@@ -28,17 +29,20 @@ export const Route = createFileRoute("/")({
                 ? "ad"
                 : search.tab === "ad-video"
                   ? "ad-video"
-                  : "single",
+                  : search.tab === "bulk-creative"
+                    ? "bulk-creative"
+                    : "single",
   }),
 });
 
 // Image Post and Video are the two formats inside the ✨ Social Content
 // creation category — Punqle's product architecture is 3 categories
-// (Social Content / Ad Creation / E-commerce, see Sidebar.tsx). Ad
-// Creation (📣) has its own two-format split below (AD_TYPES); only
-// E-commerce is still unbuilt. Weekly Plan and Competitor Analysis live
-// in the sidebar's own "Tools" group rather than here, since they aren't
-// part of that 3-category system.
+// (Social Content / Ad Creation / E-commerce, see Sidebar.tsx), all now
+// built. Ad Creation (📣) has its own two-format split below (AD_TYPES);
+// E-commerce (🛍) starts with 1 feature (Bulk Creative), so it gets a
+// plain header instead of a picker grid — see the render block below.
+// Weekly Plan and Competitor Analysis live in the sidebar's own "Tools"
+// group rather than here, since they aren't part of that 3-category system.
 const CONTENT_TYPES: {
   tab: Tab;
   label: string;
@@ -167,6 +171,13 @@ function HomeScreen() {
         </>
       )}
 
+      {tab === "bulk-creative" && (
+        <h1 className="font-display mb-4 flex items-center gap-2 text-xl font-extrabold text-foreground">
+          <Layers className="h-4 w-4 text-accent" />
+          E-commerce — Bulk Creative
+        </h1>
+      )}
+
       {tab === "single" && (
         <SinglePostForm
           credits={credits}
@@ -188,6 +199,7 @@ function HomeScreen() {
       )}
       {tab === "ad" && <AdCreationForm credits={credits} setCredits={setCredits} />}
       {tab === "ad-video" && <AdVideoForm credits={credits} setCredits={setCredits} />}
+      {tab === "bulk-creative" && <BulkCreativeForm credits={credits} setCredits={setCredits} />}
     </main>
   );
 }

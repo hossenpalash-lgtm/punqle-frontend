@@ -6,7 +6,7 @@ import {
   Facebook,
   Gift,
   Image as ImageIcon,
-  Lock,
+  Layers,
   LogOut,
   Megaphone,
   Package,
@@ -23,13 +23,12 @@ import { useScrolled } from "@/lib/use-scrolled";
 // via the content-type card grid on the home screen instead — see
 // index.tsx) but still need tab values so none of the sidebar's own rows
 // incorrectly show as active while a user is actually on one of those tabs.
-export type NavTab = "single" | "plan" | "history" | "competitor" | "video" | "ad" | "ad-video";
+export type NavTab = "single" | "plan" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative";
 
-// Punqle's 3 primary creation categories (locked in 2026-08-21) — Social
-// Content and Ad Creation are now both built, each with its own 2-format
-// split (Ad Creation's Video Ad format shipped 2026-08-26 — see
-// AdVideoForm.tsx). E-commerce is still a real row (not hidden) so the
-// architecture reads clearly, but stays a non-interactive "Soon" placeholder.
+// Punqle's 3 primary creation categories (locked in 2026-08-21) — all
+// three are now built. Social Content and Ad Creation each split into 2
+// formats; E-commerce ships with 1 (Bulk Creative shipped 2026-08-27),
+// with Product Video and Try-On to follow into the same header block.
 const SOCIAL_CONTENT_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "single", label: "Image Post", icon: ImageIcon },
   { tab: "video", label: "Video", icon: Video },
@@ -40,7 +39,9 @@ const AD_CREATION_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone 
   { tab: "ad-video", label: "Video Ad", icon: Video },
 ];
 
-const FUTURE_CATEGORIES = [{ label: "E-commerce", icon: ShoppingBag }];
+const ECOMMERCE_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
+  { tab: "bulk-creative", label: "Bulk Creative", icon: Layers },
+];
 
 // Weekly Plan / Competitor Analysis aren't part of the 3-category CREATE
 // system the 2026-08-21 spec describes — kept working and reachable, just
@@ -161,25 +162,33 @@ export function Sidebar({
             ))}
           </div>
 
-          {/* E-commerce — architecture is visible, nothing is clickable
-              yet. Deliberately not hidden: the point is that a user can
-              already see Punqle's 3-category shape. */}
-          {FUTURE_CATEGORIES.map(({ label, icon: Icon }) => (
-            <div
-              key={label}
-              className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted-foreground/70"
-              aria-disabled="true"
+          {/* E-commerce — 3rd of the 3 primary categories, now real.
+              Same header+sub-items structure as the two above; starts
+              with 1 format (Bulk Creative), more to follow. */}
+          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground">
+            <span
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
+              style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground)" }}
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-secondary">
+              <ShoppingBag className="h-3.5 w-3.5" />
+            </span>
+            E-commerce
+          </div>
+          <div className="mb-2 flex flex-col gap-0.5 pl-6">
+            {ECOMMERCE_FORMATS.map(({ tab: t, label, icon: Icon }) => (
+              <button
+                key={t}
+                onClick={() => onNavigate(t)}
+                className={[
+                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+                ].join(" ")}
+              >
                 <Icon className="h-3.5 w-3.5" />
-              </span>
-              {label}
-              <span className="ml-auto flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                <Lock className="h-2.5 w-2.5" />
-                Soon
-              </span>
-            </div>
-          ))}
+                {label}
+              </button>
+            ))}
+          </div>
 
           <span className="mb-1 mt-5 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
             Library
@@ -302,6 +311,16 @@ export function Sidebar({
               ].join(" ")}
             >
               <Megaphone className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onNavigate("bulk-creative")}
+              aria-label="Bulk Creative"
+              className={[
+                "flex h-9 w-9 items-center justify-center rounded-full",
+                tab === "bulk-creative" ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+              ].join(" ")}
+            >
+              <Layers className="h-4 w-4" />
             </button>
             <button
               onClick={() => onNavigate("plan")}

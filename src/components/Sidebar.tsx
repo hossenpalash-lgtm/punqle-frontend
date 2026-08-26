@@ -11,6 +11,7 @@ import {
   Megaphone,
   Package,
   Palette,
+  Shirt,
   ShoppingBag,
   Sparkles,
   Video,
@@ -23,12 +24,22 @@ import { useScrolled } from "@/lib/use-scrolled";
 // via the content-type card grid on the home screen instead — see
 // index.tsx) but still need tab values so none of the sidebar's own rows
 // incorrectly show as active while a user is actually on one of those tabs.
-export type NavTab = "single" | "plan" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative";
+export type NavTab =
+  | "single"
+  | "plan"
+  | "history"
+  | "competitor"
+  | "video"
+  | "ad"
+  | "ad-video"
+  | "bulk-creative"
+  | "tryon";
 
 // Punqle's 3 primary creation categories (locked in 2026-08-21) — all
 // three are now built. Social Content and Ad Creation each split into 2
-// formats; E-commerce ships with 1 (Bulk Creative shipped 2026-08-27),
-// with Product Video and Try-On to follow into the same header block.
+// formats; E-commerce now has 2 (Bulk Creative shipped 2026-08-27,
+// Try-On shipped same day) — "Product Video" was proposed and dropped
+// as redundant with Video Ad, see adcreate_ai_project memory.
 const SOCIAL_CONTENT_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "single", label: "Image Post", icon: ImageIcon },
   { tab: "video", label: "Video", icon: Video },
@@ -41,6 +52,7 @@ const AD_CREATION_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone 
 
 const ECOMMERCE_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "bulk-creative", label: "Bulk Creative", icon: Layers },
+  { tab: "tryon", label: "Try-On", icon: Shirt },
 ];
 
 // Weekly Plan / Competitor Analysis aren't part of the 3-category CREATE
@@ -321,6 +333,16 @@ export function Sidebar({
               ].join(" ")}
             >
               <Layers className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onNavigate("tryon")}
+              aria-label="Try-On"
+              className={[
+                "flex h-9 w-9 items-center justify-center rounded-full",
+                tab === "tryon" ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+              ].join(" ")}
+            >
+              <Shirt className="h-4 w-4" />
             </button>
             <button
               onClick={() => onNavigate("plan")}

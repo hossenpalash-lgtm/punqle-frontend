@@ -8,10 +8,11 @@ import { BulkCreativeForm } from "@/components/ads/BulkCreativeForm";
 import { CompetitorAnalysis } from "@/components/ads/CompetitorAnalysis";
 import { HistoryTab } from "@/components/ads/HistoryTab";
 import { SinglePostForm } from "@/components/ads/SinglePostForm";
+import { TryOnForm } from "@/components/ads/TryOnForm";
 import { VideoPostForm } from "@/components/ads/VideoPostForm";
 import { WeeklyPlanForm } from "@/components/ads/WeeklyPlanForm";
 
-type Tab = "single" | "plan" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative";
+type Tab = "single" | "plan" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative" | "tryon";
 
 export const Route = createFileRoute("/")({
   component: HomeScreen,
@@ -31,7 +32,9 @@ export const Route = createFileRoute("/")({
                   ? "ad-video"
                   : search.tab === "bulk-creative"
                     ? "bulk-creative"
-                    : "single",
+                    : search.tab === "tryon"
+                      ? "tryon"
+                      : "single",
   }),
 });
 
@@ -171,10 +174,10 @@ function HomeScreen() {
         </>
       )}
 
-      {tab === "bulk-creative" && (
+      {(tab === "bulk-creative" || tab === "tryon") && (
         <h1 className="font-display mb-4 flex items-center gap-2 text-xl font-extrabold text-foreground">
           <Layers className="h-4 w-4 text-accent" />
-          E-commerce — Bulk Creative
+          E-commerce — {tab === "bulk-creative" ? "Bulk Creative" : "Try-On"}
         </h1>
       )}
 
@@ -200,6 +203,7 @@ function HomeScreen() {
       {tab === "ad" && <AdCreationForm credits={credits} setCredits={setCredits} />}
       {tab === "ad-video" && <AdVideoForm credits={credits} setCredits={setCredits} />}
       {tab === "bulk-creative" && <BulkCreativeForm credits={credits} setCredits={setCredits} />}
+      {tab === "tryon" && <TryOnForm credits={credits} setCredits={setCredits} />}
     </main>
   );
 }

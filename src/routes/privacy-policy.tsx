@@ -10,7 +10,7 @@ export const Route = createFileRoute("/privacy-policy")({
 
 function PrivacyPolicyPage() {
   return (
-    <LegalLayout title="Privacy Policy" effectiveDate="August 26, 2026">
+    <LegalLayout title="Privacy Policy" effectiveDate="August 27, 2026">
       <p>
         This Privacy Policy explains what information Punqle ("Punqle," "we," "us") collects when you use the
         Punqle app at punqle.com, how we use it, and what choices you have. Punqle is operated by HOSSEN, MD
@@ -35,6 +35,7 @@ function PrivacyPolicyPage() {
       <p><strong>Shopify integration (optional).</strong> If you choose to connect a Shopify store, we store your store's domain and an access token that lets us read your product catalog, so we can import your products into Punqle. This only happens if you actively connect your store, and you can disconnect it at any time from within the app.</p>
       <p><strong>YouTube integration (optional).</strong> If you choose to connect your YouTube channel, we store your channel's ID and title, along with an OAuth access token and refresh token, so we can identify your connected channel and publish, only at your explicit request, videos you create inside Punqle to it. See "Google User Data (YouTube Integration)" below for full details. This only happens if you actively connect your channel, and you can disconnect it at any time from within the app.</p>
       <p><strong>Facebook and Instagram integration (optional).</strong> If you choose to connect a Facebook Page (and its linked Instagram account, if any), we store the Page's ID and name, a Page access token, and, if linked, the Instagram account's ID and username, so we can publish, only at your explicit request, ad content you create inside Punqle to those accounts. This only happens if you actively connect an account, and you can disconnect it at any time from within the app.</p>
+      <p><strong>Try-On (optional).</strong> If you use the Try-On feature, the photo you upload (of yourself or someone else with their permission) and a product photo are sent to FASHN AI to generate a preview. We do not store these photos — see "FASHN AI (Virtual Try-On)" below for full details.</p>
       <p><strong>Referral information.</strong> Punqle has an optional referral program. If you share your referral link, it contains your account ID. If someone signs up using it, we record that a referral occurred (linking the two account IDs) so we can grant referral credits. We do not share your email or other account details through this feature.</p>
       <p><strong>Credits.</strong> We keep a simple count of your remaining ad-generation credits.</p>
 
@@ -48,6 +49,7 @@ function PrivacyPolicyPage() {
         <li><strong>Stripe</strong> — handles billing and payment directly; see "Payment and subscription information" above.</li>
         <li><strong>Shopify</strong> — only if you connect your store; see "Shopify integration" above.</li>
         <li><strong>Meta (Facebook and Instagram)</strong> — only if you connect a Facebook Page or Instagram account; see "Facebook and Instagram integration" above.</li>
+        <li><strong>FASHN AI</strong> — only if you use the Try-On feature; see "FASHN AI (Virtual Try-On)" below for full details.</li>
         <li><strong>Supabase</strong> — our database and authentication provider, which securely hosts your account and the information described in this policy.</li>
       </ul>
       <p>We do not sell your information to anyone, and we do not share it with advertisers.</p>
@@ -112,16 +114,45 @@ function PrivacyPolicyPage() {
         data.
       </p>
 
-      <h2>7. Your Rights and Choices</h2>
+      <h2>7. FASHN AI (Virtual Try-On)</h2>
+      <p>
+        If you use Punqle's Try-On feature, you upload a photo of a person (yourself, or someone else only
+        with their permission) along with a product photo. This section explains exactly what happens to
+        those photos.
+      </p>
+      <p>
+        <strong>What we send.</strong> The photo you upload and the product photo are sent to FASHN AI, a
+        third-party virtual try-on provider, solely to generate your try-on preview.
+      </p>
+      <p>
+        <strong>What we store.</strong> Punqle does not save your uploaded photo or the generated result to
+        our servers beyond the time needed to generate and return it to you. It is not added to your post
+        history, and it is never visible to any other Punqle user.
+      </p>
+      <p>
+        <strong>Who else handles it.</strong> Once your photos reach FASHN AI, their own privacy policy
+        governs how they're handled — see{" "}
+        <a href="https://fashn.ai/privacy-policy" target="_blank" rel="noopener noreferrer">
+          fashn.ai/privacy-policy
+        </a>
+        . We don't control, and can't guarantee, FASHN's own retention practices beyond what their policy
+        states.
+      </p>
+      <p>
+        <strong>Your responsibility.</strong> Only upload a photo of yourself, or of someone else who has
+        given you permission to use their photo this way.
+      </p>
+
+      <h2>8. Your Rights and Choices</h2>
       <p>You can review and update your business profile, disconnect your Shopify store, disconnect your YouTube channel, disconnect your Facebook/Instagram connection, and delete individual generated posts at any time from within the app. For anything else — including deleting your account entirely — see our <a href="/data-deletion">Data Deletion</a> page.</p>
 
-      <h2>8. Children's Privacy</h2>
+      <h2>9. Children's Privacy</h2>
       <p>Punqle is intended for business owners and is not directed at children. We do not knowingly collect information from anyone under 16.</p>
 
-      <h2>9. Changes to This Policy</h2>
+      <h2>10. Changes to This Policy</h2>
       <p>We may update this policy as Punqle's features change. We'll update the effective date above when we do. Significant changes — such as adding new data collection tied to a new feature — will be reflected here before that feature goes live.</p>
 
-      <h2>10. Contact Us</h2>
+      <h2>11. Contact Us</h2>
       <p>Questions about this policy? Email <a href="mailto:hossenpalash@gmail.com">hossenpalash@gmail.com</a>.</p>
     </LegalLayout>
   );

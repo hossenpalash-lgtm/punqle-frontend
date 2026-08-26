@@ -453,6 +453,49 @@ export function fetchBlogToPosts(url: string): Promise<ApiBlogToPostsResponse> {
   });
 }
 
+export interface ApiTryOnStartResponse {
+  id: string;
+}
+
+// Either productImageUrl (a catalog product's existing image_url — FASHN
+// accepts URLs directly, no fetch/base64 round trip needed) or
+// productImageBase64+productImageMimeType (an uploaded garment photo) —
+// exactly one must be passed. modelImage is always base64 since the
+// uploaded person photo never has a public URL.
+export function startTryOn(
+  modelImageBase64: string,
+  modelImageMimeType: string,
+  productImageUrl: string | null,
+  productImageBase64: string | null,
+  productImageMimeType: string | null,
+): Promise<ApiTryOnStartResponse> {
+  return apiFetch<ApiTryOnStartResponse>("/tryon/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model_image_base64: modelImageBase64,
+      model_image_mime_type: modelImageMimeType,
+      product_image_url: productImageUrl ?? undefined,
+      product_image_base64: productImageBase64 ?? undefined,
+      product_image_mime_type: productImageMimeType ?? undefined,
+    }),
+  });
+}
+
+export interface ApiTryOnStatusResponse {
+  done: boolean;
+  image_base64: string | null;
+  credits_remaining: number | null;
+}
+
+export function checkTryOnStatus(id: string): Promise<ApiTryOnStatusResponse> {
+  return apiFetch<ApiTryOnStatusResponse>("/tryon/status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+}
+
 export interface ApiImportedProduct {
   id: string;
   name: string;

@@ -161,6 +161,10 @@ export function TryOnForm({
     setResultUrl(null);
     setError(null);
     setElapsedSeconds(0);
+    // Re-fetch on the next "garment" visit — otherwise a product added to
+    // the catalog mid-session (e.g. via Product Catalog in another tab)
+    // wouldn't show up until a full page reload.
+    setProductsLoaded(false);
   };
 
   const minutes = Math.floor(elapsedSeconds / 60);

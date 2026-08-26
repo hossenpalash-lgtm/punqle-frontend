@@ -32,11 +32,13 @@ type BulkResultItem =
   | { productId: string; productName: string; status: "success"; thumbnail: string; caption: string }
   | { productId: string; productName: string; status: "error"; error: string };
 
-// How long a single item realistically takes end-to-end (captions + one
-// image call), plus the throttle gap below — used only to show an honest
-// "about X min" estimate before the user commits, same discipline as
-// AdVideoForm's unconditional cost line.
-const SECONDS_PER_ITEM = 8;
+// How long a single item realistically takes end-to-end — measured live
+// against the deployed backend (not guessed): captions ~2-3s, the image
+// call itself ~40-50s (Gemini image generation, the real bottleneck, not
+// the 10/min throttle below), plus the 6.5s gap. ~55s/item, used only to
+// show an honest "about X min" estimate before the user commits, same
+// discipline as AdVideoForm's unconditional cost line.
+const SECONDS_PER_ITEM = 55;
 
 // /ads/generate and /ads/generate-image-variant are rate-limited to
 // 10/minute per-IP (main.py, slowapi), with no retry/backoff anywhere in

@@ -87,6 +87,7 @@ export type ApiVideoOperation = Record<string, unknown>;
 export interface ApiVideoOperationResponse {
   operation: ApiVideoOperation;
   headline: string;
+  narration: string;
 }
 
 export type VideoAspectRatio = "16:9" | "9:16";
@@ -134,6 +135,30 @@ export function checkVideoStatus(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ operation, headline, aspect_ratio: aspectRatio }),
+  });
+}
+
+export interface ApiAddVoiceoverResponse {
+  video_base64: string;
+  credits_remaining: number;
+}
+
+// Re-downloads the same Veo output fresh server-side (via the same
+// operation handle) rather than re-sending the already-composited video
+// — that version has the full-duration headline permanently baked in,
+// which every non-voiceover video keeps unchanged. headline here is
+// only used server-side to decide whether captions wait ~1.5s (a hook
+// was shown) or start immediately.
+export function addVoiceover(
+  operation: ApiVideoOperation,
+  headline: string,
+  narration: string,
+  aspectRatio: VideoAspectRatio = "16:9",
+): Promise<ApiAddVoiceoverResponse> {
+  return apiFetch<ApiAddVoiceoverResponse>("/ads/add-voiceover", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ operation, headline, narration, aspect_ratio: aspectRatio }),
   });
 }
 

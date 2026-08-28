@@ -1,6 +1,7 @@
-import { AlertCircle, Camera, ChevronDown, Clock, Download, Link2, Loader2, Video } from "lucide-react";
+import { AlertCircle, Camera, ChevronDown, Clock, Download, Link2, Loader2, Mic, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
+  addVoiceover,
   base64ToFile,
   checkVideoStatus,
   fetchBusinessProfile,
@@ -13,6 +14,7 @@ import { ProductPicker } from "./ProductPicker";
 import { PublishToYouTube } from "./PublishToYouTube";
 
 const VIDEO_CREDIT_COST = 10;
+const VOICEOVER_CREDIT_COST = 2;
 const POLL_INTERVAL_MS = 8000;
 
 function fileToBase64(file: File): Promise<string> {
@@ -45,6 +47,11 @@ export function VideoPostForm({
   const [error, setError] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [headline, setHeadline] = useState("");
+  const [videoOperation, setVideoOperation] = useState<ApiVideoOperation | null>(null);
+  const [narration, setNarration] = useState("");
+  const [addingVoiceover, setAddingVoiceover] = useState(false);
+  const [voiceoverError, setVoiceoverError] = useState<string | null>(null);
+  const [hasVoiceover, setHasVoiceover] = useState(false);
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [productUrl, setProductUrl] = useState("");
@@ -134,11 +141,29 @@ export function VideoPostForm({
       const r = await startVideoGeneration(description.trim(), imageBase64, file?.type, aspectRatio);
       setHeadline(r.headline);
       headlineRef.current = r.headline;
+      setNarration(r.narration);
+      setVideoOperation(r.operation);
       pollTimeoutRef.current = setTimeout(() => poll(r.operation), POLL_INTERVAL_MS);
     } catch (err) {
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
       setGenerating(false);
       setError(err instanceof Error ? err.message : "Couldn't start the video.");
+    }
+  };
+
+  const handleAddVoiceover = async () => {
+    if (!videoOperation || addingVoiceover || (credits !== null && credits < VOICEOVER_CREDIT_COST)) return;
+    setAddingVoiceover(true);
+    setVoiceoverError(null);
+    try {
+      const r = await addVoiceover(videoOperation, headlineRef.current, narration, aspectRatio);
+      setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
+      setHasVoiceover(true);
+      setCredits(r.credits_remaining);
+    } catch (err) {
+      setVoiceoverError(err instanceof Error ? err.message : "Couldn't add voiceover.");
+    } finally {
+      setAddingVoiceover(false);
     }
   };
 
@@ -151,6 +176,11 @@ export function VideoPostForm({
     setElapsedSeconds(0);
     setHeadline("");
     headlineRef.current = "";
+    setVideoOperation(null);
+    setNarration("");
+    setAddingVoiceover(false);
+    setVoiceoverError(null);
+    setHasVoiceover(false);
     setMoreOptionsOpen(false);
     setShowLinkInput(false);
     setProductUrl("");
@@ -171,6 +201,36 @@ export function VideoPostForm({
         <div className="mb-3 overflow-hidden rounded-2xl bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
           <video src={videoUrl} controls className="w-full" />
         </div>
+
+        {!hasVoiceover && (
+          <div className="mb-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+            <p className="mb-1 text-sm font-semibold text-foreground">Add AI voiceover + captions</p>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Real spoken narration with animated captions synced to the voice.
+            </p>
+            {credits !== null && credits < VOICEOVER_CREDIT_COST && (
+              <p className="mb-3 text-xs text-muted-foreground">
+                Needs {VOICEOVER_CREDIT_COST} credits — you have {credits}.
+              </p>
+            )}
+            {voiceoverError && (
+              <p className="mb-3 flex items-center gap-1.5 text-xs font-medium text-destructive">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                {voiceoverError}
+              </p>
+            )}
+            <button
+              onClick={handleAddVoiceover}
+              disabled={addingVoiceover || !videoOperation || (credits !== null && credits < VOICEOVER_CREDIT_COST)}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground disabled:opacity-60"
+            >
+              {addingVoiceover ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+              Add voiceover + captions ({VOICEOVER_CREDIT_COST} credits)
+            </button>
+          </div>
+        )}
+        {hasVoiceover && <p className="mb-3 text-xs font-medium text-primary">Voiceover + captions added.</p>}
+
         <PublishToYouTube videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} />
         <a
           href={videoUrl}

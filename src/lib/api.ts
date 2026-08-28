@@ -122,11 +122,18 @@ export interface ApiVideoStatusResponse {
   credits_remaining: number | null;
 }
 
-export function checkVideoStatus(operation: ApiVideoOperation, headline: string): Promise<ApiVideoStatusResponse> {
+// aspectRatio determines the logo overlay's target size server-side
+// (Veo's two 720p frame sizes differ) — defaults to "16:9" so it's
+// optional at call sites that don't care.
+export function checkVideoStatus(
+  operation: ApiVideoOperation,
+  headline: string,
+  aspectRatio: VideoAspectRatio = "16:9",
+): Promise<ApiVideoStatusResponse> {
   return apiFetch<ApiVideoStatusResponse>("/ads/video-status", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ operation, headline }),
+    body: JSON.stringify({ operation, headline, aspect_ratio: aspectRatio }),
   });
 }
 

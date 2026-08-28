@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   base64ToFile,
   checkVideoStatus,
+  fetchBusinessProfile,
   fetchProductLink,
   startVideoGeneration,
   type ApiVideoOperation,
@@ -49,6 +50,7 @@ export function VideoPostForm({
   const [productUrl, setProductUrl] = useState("");
   const [fetchingLink, setFetchingLink] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [hasLogo, setHasLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -65,6 +67,12 @@ export function VideoPostForm({
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    fetchBusinessProfile()
+      .then((profile) => setHasLogo(!!profile.logo_base64))
+      .catch(() => {});
   }, []);
 
   const handleFileChange = (f: File | null) => {
@@ -96,7 +104,7 @@ export function VideoPostForm({
 
   const poll = async (operation: ApiVideoOperation) => {
     try {
-      const r = await checkVideoStatus(operation, headlineRef.current);
+      const r = await checkVideoStatus(operation, headlineRef.current, aspectRatio);
       if (!r.done) {
         pollTimeoutRef.current = setTimeout(() => poll(operation), POLL_INTERVAL_MS);
         return;
@@ -339,6 +347,10 @@ export function VideoPostForm({
           </button>
         </div>
       </div>
+
+      {hasLogo && (
+        <p className="mb-4 text-xs text-muted-foreground">Your Brand Kit logo will be added to this video automatically.</p>
+      )}
 
       {error && (
         <p className="mb-4 flex items-center gap-1.5 text-sm font-medium text-destructive">

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   base64ToFile,
   checkVideoStatus,
+  fetchBusinessProfile,
   fetchProductLink,
   generateAdCaptions,
   startVideoGeneration,
@@ -80,6 +81,7 @@ export function AdVideoForm({
   const [productUrl, setProductUrl] = useState("");
   const [fetchingLink, setFetchingLink] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [hasLogo, setHasLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -92,6 +94,12 @@ export function AdVideoForm({
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    fetchBusinessProfile()
+      .then((profile) => setHasLogo(!!profile.logo_base64))
+      .catch(() => {});
   }, []);
 
   const handleFileChange = (f: File | null) => {
@@ -127,7 +135,7 @@ export function AdVideoForm({
 
   const poll = async (operation: ApiVideoOperation) => {
     try {
-      const r = await checkVideoStatus(operation, headlineRef.current);
+      const r = await checkVideoStatus(operation, headlineRef.current, aspectRatio);
       if (!r.done) {
         pollTimeoutRef.current = setTimeout(() => poll(operation), POLL_INTERVAL_MS);
         return;
@@ -419,6 +427,10 @@ export function AdVideoForm({
             <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-sm text-foreground">
               You have {credits} credits — not enough for a video. Upgrade to keep generating.
             </div>
+          )}
+
+          {hasLogo && (
+            <p className="mb-4 text-xs text-muted-foreground">Your Brand Kit logo will be added to this video automatically.</p>
           )}
 
           {error && (

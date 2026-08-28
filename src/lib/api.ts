@@ -601,6 +601,7 @@ export interface ApiMetaPlatformResult {
   post_id?: string;
   media_id?: string;
   error?: string;
+  scheduled?: boolean;
 }
 
 export interface ApiMetaPublishResponse {
@@ -611,11 +612,15 @@ export interface ApiMetaPublishResponse {
 // compositedDataUrl is a canvas toDataURL() result ("data:image/...;base64,...")
 // — parsed here (not passed pre-split) so every call site can just hand over
 // PostKit's existing compositedUrl prop as-is, same as CarouselBuilder does.
+// scheduledTime (ISO8601, optional) only affects Facebook — Instagram has no
+// native scheduling, so it always posts immediately regardless; the caller
+// is responsible for disclosing that to the user before submitting.
 export function publishToMeta(
   compositedDataUrl: string,
   caption: string,
   postToFacebook: boolean,
   postToInstagram: boolean,
+  scheduledTime?: string,
 ): Promise<ApiMetaPublishResponse> {
   const match = compositedDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
@@ -627,6 +632,7 @@ export function publishToMeta(
   formData.append("caption", caption);
   formData.append("post_to_facebook", String(postToFacebook));
   formData.append("post_to_instagram", String(postToInstagram));
+  if (scheduledTime) formData.append("scheduled_time", scheduledTime);
   return apiFetch<ApiMetaPublishResponse>("/meta/publish", {
     method: "POST",
     body: formData,
@@ -655,16 +661,20 @@ export interface ApiYouTubePublishResponse {
   video_id?: string;
   video_url?: string;
   error?: string;
+  scheduled?: boolean;
 }
 
 // videoDataUrl is the same "data:video/mp4;base64,..." shape VideoPostForm
 // already holds in videoUrl state — parsed here for the same reason
-// publishToMeta parses compositedDataUrl inline.
+// publishToMeta parses compositedDataUrl inline. scheduledTime (ISO8601,
+// optional) uses YouTube's own native scheduled-release (uploads "private"
+// with a future publishAt) — no polling or job needed on our side.
 export function publishToYouTube(
   videoDataUrl: string,
   title: string,
   description: string,
   aspectRatio: VideoAspectRatio,
+  scheduledTime?: string,
 ): Promise<ApiYouTubePublishResponse> {
   const match = videoDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
@@ -676,6 +686,7 @@ export function publishToYouTube(
   formData.append("title", title);
   formData.append("description", description);
   formData.append("aspect_ratio", aspectRatio);
+  if (scheduledTime) formData.append("scheduled_time", scheduledTime);
   return apiFetch<ApiYouTubePublishResponse>("/youtube/publish", {
     method: "POST",
     body: formData,

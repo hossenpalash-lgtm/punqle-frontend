@@ -1,11 +1,14 @@
-import { AlertCircle, Camera, Clock, Download, Loader2, Video } from "lucide-react";
+import { AlertCircle, Camera, ChevronDown, Clock, Download, Link2, Loader2, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
+  base64ToFile,
   checkVideoStatus,
+  fetchProductLink,
   startVideoGeneration,
   type ApiVideoOperation,
   type VideoAspectRatio,
 } from "@/lib/api";
+import { ProductPicker } from "./ProductPicker";
 import { PublishToYouTube } from "./PublishToYouTube";
 
 const VIDEO_CREDIT_COST = 10;
@@ -41,6 +44,11 @@ export function VideoPostForm({
   const [error, setError] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [headline, setHeadline] = useState("");
+  const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [productUrl, setProductUrl] = useState("");
+  const [fetchingLink, setFetchingLink] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -65,6 +73,25 @@ export function VideoPostForm({
       return f ? URL.createObjectURL(f) : null;
     });
     setFile(f);
+  };
+
+  const handleFetchProductLink = async () => {
+    if (!productUrl.trim() || fetchingLink) return;
+    setFetchingLink(true);
+    setLinkError(null);
+    try {
+      const r = await fetchProductLink(productUrl.trim());
+      setDescription([r.title, r.description].filter(Boolean).join(" — "));
+      if (r.image_base64) {
+        handleFileChange(base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg"));
+      }
+      setShowLinkInput(false);
+      setProductUrl("");
+    } catch (err) {
+      setLinkError(err instanceof Error ? err.message : "Couldn't fetch that link.");
+    } finally {
+      setFetchingLink(false);
+    }
   };
 
   const poll = async (operation: ApiVideoOperation) => {
@@ -116,6 +143,10 @@ export function VideoPostForm({
     setElapsedSeconds(0);
     setHeadline("");
     headlineRef.current = "";
+    setMoreOptionsOpen(false);
+    setShowLinkInput(false);
+    setProductUrl("");
+    setLinkError(null);
   };
 
   const handleHeadlineChange = (value: string) => {
@@ -218,6 +249,57 @@ export function VideoPostForm({
           )}
         </button>
       </div>
+
+      {/* Same "paste a product link / pick from catalog" pattern
+          SetupStep.tsx already proves out for Image Post — reused as-is
+          here (fetchProductLink is free, no new backend work), just not
+          previously wired into either video flow. Collapsed by default,
+          same progressive-disclosure reasoning as SetupStep's version. */}
+      <button
+        onClick={() => setMoreOptionsOpen((v) => !v)}
+        className="mb-3 flex items-center gap-1 text-xs font-semibold text-muted-foreground"
+      >
+        More options
+        <ChevronDown className={["h-3.5 w-3.5 transition-transform", moreOptionsOpen ? "rotate-180" : ""].join(" ")} />
+      </button>
+      {moreOptionsOpen && (
+        <div className="mb-6 flex w-full flex-col items-center gap-2">
+          {!showLinkInput ? (
+            <button
+              onClick={() => setShowLinkInput(true)}
+              className="flex items-center gap-1 text-xs font-semibold text-primary underline-offset-2 hover:underline"
+            >
+              <Link2 className="h-3 w-3" />
+              Product link
+            </button>
+          ) : (
+            <div className="flex w-full gap-2">
+              <input
+                type="url"
+                value={productUrl}
+                onChange={(e) => setProductUrl(e.target.value)}
+                placeholder="https://yourstore.com/products/..."
+                disabled={fetchingLink}
+                className="flex-1 rounded-full border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <button
+                onClick={handleFetchProductLink}
+                disabled={!productUrl.trim() || fetchingLink}
+                className="flex shrink-0 items-center justify-center gap-1 rounded-full bg-secondary px-3 py-2 text-xs font-semibold text-secondary-foreground disabled:opacity-60"
+              >
+                {fetchingLink ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Fetch"}
+              </button>
+            </div>
+          )}
+          <ProductPicker
+            onSelect={(desc, photoFile) => {
+              setDescription(desc);
+              if (photoFile) handleFileChange(photoFile);
+            }}
+          />
+          {linkError && <p className="text-xs font-medium text-destructive">{linkError}</p>}
+        </div>
+      )}
 
       <div className="mb-6">
         <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">

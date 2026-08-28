@@ -1,7 +1,6 @@
-import { AlertCircle, Camera, ChevronDown, Clock, Download, Link2, Loader2, Mic, Video } from "lucide-react";
+import { AlertCircle, Camera, ChevronDown, Clock, Download, Link2, Loader2, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
-  addVoiceover,
   base64ToFile,
   checkVideoStatus,
   fetchBusinessProfile,
@@ -14,13 +13,13 @@ import {
 } from "@/lib/api";
 import { findVideoStyle, type VideoStyle } from "@/lib/video-style";
 import { AdBriefStep } from "./AdBriefStep";
+import { EditVideoPanel } from "./EditVideoPanel";
 import { ProductPicker } from "./ProductPicker";
 import { PublishToYouTube } from "./PublishToYouTube";
 import { VideoStyleStep } from "./VideoStyleStep";
 import { WizardProgress } from "./WizardProgress";
 
 const VIDEO_CREDIT_COST = 10;
-const VOICEOVER_CREDIT_COST = 2;
 const POLL_INTERVAL_MS = 8000;
 
 type WizardStep = "brief" | "style" | "setup" | "generating" | "result";
@@ -80,15 +79,13 @@ export function AdVideoForm({
   const [caption, setCaption] = useState("");
   const [videoOperation, setVideoOperation] = useState<ApiVideoOperation | null>(null);
   const [narration, setNarration] = useState("");
-  const [addingVoiceover, setAddingVoiceover] = useState(false);
-  const [voiceoverError, setVoiceoverError] = useState<string | null>(null);
-  const [hasVoiceover, setHasVoiceover] = useState(false);
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [productUrl, setProductUrl] = useState("");
   const [fetchingLink, setFetchingLink] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [hasLogo, setHasLogo] = useState(false);
+  const [hasBrandColor, setHasBrandColor] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -105,7 +102,10 @@ export function AdVideoForm({
 
   useEffect(() => {
     fetchBusinessProfile()
-      .then((profile) => setHasLogo(!!profile.logo_base64))
+      .then((profile) => {
+        setHasLogo(!!profile.logo_base64);
+        setHasBrandColor(!!profile.brand_color);
+      })
       .catch(() => {});
   }, []);
 
@@ -197,22 +197,6 @@ export function AdVideoForm({
     }
   };
 
-  const handleAddVoiceover = async () => {
-    if (!videoOperation || addingVoiceover || (credits !== null && credits < VOICEOVER_CREDIT_COST)) return;
-    setAddingVoiceover(true);
-    setVoiceoverError(null);
-    try {
-      const r = await addVoiceover(videoOperation, headlineRef.current, narration, aspectRatio);
-      setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
-      setHasVoiceover(true);
-      setCredits(r.credits_remaining);
-    } catch (err) {
-      setVoiceoverError(err instanceof Error ? err.message : "Couldn't add voiceover.");
-    } finally {
-      setAddingVoiceover(false);
-    }
-  };
-
   const handleReset = () => {
     setStep("brief");
     setOfferDescription("");
@@ -229,9 +213,6 @@ export function AdVideoForm({
     headlineRef.current = "";
     setVideoOperation(null);
     setNarration("");
-    setAddingVoiceover(false);
-    setVoiceoverError(null);
-    setHasVoiceover(false);
     setMoreOptionsOpen(false);
     setShowLinkInput(false);
     setProductUrl("");
@@ -254,34 +235,17 @@ export function AdVideoForm({
           <video src={videoUrl} controls className="w-full" />
         </div>
 
-        {!hasVoiceover && (
-          <div className="mb-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-            <p className="mb-1 text-sm font-semibold text-foreground">Add AI voiceover + captions</p>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Real spoken narration with animated captions synced to the voice.
-            </p>
-            {credits !== null && credits < VOICEOVER_CREDIT_COST && (
-              <p className="mb-3 text-xs text-muted-foreground">
-                Needs {VOICEOVER_CREDIT_COST} credits — you have {credits}.
-              </p>
-            )}
-            {voiceoverError && (
-              <p className="mb-3 flex items-center gap-1.5 text-xs font-medium text-destructive">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                {voiceoverError}
-              </p>
-            )}
-            <button
-              onClick={handleAddVoiceover}
-              disabled={addingVoiceover || !videoOperation || (credits !== null && credits < VOICEOVER_CREDIT_COST)}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground disabled:opacity-60"
-            >
-              {addingVoiceover ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
-              Add voiceover + captions ({VOICEOVER_CREDIT_COST} credits)
-            </button>
-          </div>
-        )}
-        {hasVoiceover && <p className="mb-3 text-xs font-medium text-primary">Voiceover + captions added.</p>}
+        <EditVideoPanel
+          videoOperation={videoOperation}
+          headline={headline}
+          narration={narration}
+          aspectRatio={aspectRatio}
+          hasLogo={hasLogo}
+          hasBrandColor={hasBrandColor}
+          credits={credits}
+          setCredits={setCredits}
+          onSaved={(videoBase64) => setVideoUrl(`data:video/mp4;base64,${videoBase64}`)}
+        />
 
         {caption && (
           <div className="mb-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>

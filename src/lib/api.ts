@@ -138,27 +138,57 @@ export function checkVideoStatus(
   });
 }
 
-export interface ApiAddVoiceoverResponse {
+export type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+export type TextPosition = "top" | "center" | "bottom";
+export type TtsVoice = "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer";
+
+export interface EditVideoOptions {
+  headline: string;
+  narration: string;
+  aspectRatio: VideoAspectRatio;
+  showLogo: boolean;
+  logoPosition: LogoPosition;
+  useBrandColor: boolean;
+  textPosition: TextPosition;
+  voiceoverEnabled: boolean;
+  voice: TtsVoice;
+  captionsEnabled: boolean;
+  muted: boolean;
+}
+
+export interface ApiEditVideoResponse {
   video_base64: string;
   credits_remaining: number;
+  credits_charged: number;
 }
 
 // Re-downloads the same Veo output fresh server-side (via the same
 // operation handle) rather than re-sending the already-composited video
 // — that version has the full-duration headline permanently baked in,
-// which every non-voiceover video keeps unchanged. headline here is
-// only used server-side to decide whether captions wait ~1.5s (a hook
-// was shown) or start immediately.
-export function addVoiceover(
+// which every un-edited video keeps unchanged. Free unless voiceover
+// audio actually gets (re)synthesized (credits_charged tells the truth,
+// don't just assume 0 client-side).
+export function editVideo(
   operation: ApiVideoOperation,
-  headline: string,
-  narration: string,
-  aspectRatio: VideoAspectRatio = "16:9",
-): Promise<ApiAddVoiceoverResponse> {
-  return apiFetch<ApiAddVoiceoverResponse>("/ads/add-voiceover", {
+  options: EditVideoOptions,
+): Promise<ApiEditVideoResponse> {
+  return apiFetch<ApiEditVideoResponse>("/ads/edit-video", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ operation, headline, narration, aspect_ratio: aspectRatio }),
+    body: JSON.stringify({
+      operation,
+      headline: options.headline,
+      narration: options.narration,
+      aspect_ratio: options.aspectRatio,
+      show_logo: options.showLogo,
+      logo_position: options.logoPosition,
+      use_brand_color: options.useBrandColor,
+      text_position: options.textPosition,
+      voiceover_enabled: options.voiceoverEnabled,
+      voice: options.voice,
+      captions_enabled: options.captionsEnabled,
+      muted: options.muted,
+    }),
   });
 }
 

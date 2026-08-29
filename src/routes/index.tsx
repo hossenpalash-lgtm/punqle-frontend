@@ -9,7 +9,12 @@ import { CalendarView } from "@/components/ads/CalendarView";
 import { CompetitorAnalysis } from "@/components/ads/CompetitorAnalysis";
 import { HistoryTab } from "@/components/ads/HistoryTab";
 import { SinglePostForm } from "@/components/ads/SinglePostForm";
-import { TryOnForm } from "@/components/ads/TryOnForm";
+import {
+  TryOnForm,
+  type TryOnImageAdHandoff,
+  type TryOnSocialPostHandoff,
+  type TryOnVideoAdHandoff,
+} from "@/components/ads/TryOnForm";
 import { VideoPostForm } from "@/components/ads/VideoPostForm";
 import { WeeklyPlanForm } from "@/components/ads/WeeklyPlanForm";
 
@@ -84,6 +89,13 @@ function HomeScreen() {
   // own initialIdea prop comment for why a later unrelated visit to the
   // Image Post tab shouldn't silently reuse stale competitor-insight text.
   const [prefilledIdea, setPrefilledIdea] = useState<string | undefined>(undefined);
+  // Set by Try-On's "Social Post" / "Image Ad" / "Video Ad" handoffs —
+  // Try-On output is deliberately unbranded, so this is how the user
+  // sends a result into a flow where Brand Kit already applies. Same
+  // "read once on mount, then cleared" contract as prefilledIdea above.
+  const [prefilledSocialImage, setPrefilledSocialImage] = useState<TryOnSocialPostHandoff | undefined>(undefined);
+  const [prefilledAdImage, setPrefilledAdImage] = useState<TryOnImageAdHandoff | undefined>(undefined);
+  const [prefilledAdVideo, setPrefilledAdVideo] = useState<TryOnVideoAdHandoff | undefined>(undefined);
 
   useEffect(() => {
     fetchAdCredits()
@@ -190,6 +202,8 @@ function HomeScreen() {
           setCredits={setCredits}
           initialIdea={prefilledIdea}
           onInitialIdeaConsumed={() => setPrefilledIdea(undefined)}
+          initialGeneratedImage={prefilledSocialImage}
+          onInitialGeneratedImageConsumed={() => setPrefilledSocialImage(undefined)}
         />
       )}
       {tab === "plan" && <WeeklyPlanForm credits={credits} setCredits={setCredits} />}
@@ -204,10 +218,41 @@ function HomeScreen() {
           }}
         />
       )}
-      {tab === "ad" && <AdCreationForm credits={credits} setCredits={setCredits} />}
-      {tab === "ad-video" && <AdVideoForm credits={credits} setCredits={setCredits} />}
+      {tab === "ad" && (
+        <AdCreationForm
+          credits={credits}
+          setCredits={setCredits}
+          initialGeneratedImage={prefilledAdImage}
+          onInitialGeneratedImageConsumed={() => setPrefilledAdImage(undefined)}
+        />
+      )}
+      {tab === "ad-video" && (
+        <AdVideoForm
+          credits={credits}
+          setCredits={setCredits}
+          initialVideo={prefilledAdVideo}
+          onInitialVideoConsumed={() => setPrefilledAdVideo(undefined)}
+        />
+      )}
       {tab === "bulk-creative" && <BulkCreativeForm credits={credits} setCredits={setCredits} />}
-      {tab === "tryon" && <TryOnForm credits={credits} setCredits={setCredits} />}
+      {tab === "tryon" && (
+        <TryOnForm
+          credits={credits}
+          setCredits={setCredits}
+          onSendToSocialPost={(payload) => {
+            setPrefilledSocialImage(payload);
+            goTo("single");
+          }}
+          onSendToImageAd={(payload) => {
+            setPrefilledAdImage(payload);
+            goTo("ad");
+          }}
+          onSendToVideoAd={(payload) => {
+            setPrefilledAdVideo(payload);
+            goTo("ad-video");
+          }}
+        />
+      )}
     </main>
   );
 }

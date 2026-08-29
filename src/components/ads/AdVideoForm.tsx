@@ -22,7 +22,7 @@ import { WizardProgress } from "./WizardProgress";
 const VIDEO_CREDIT_COST = 10;
 const POLL_INTERVAL_MS = 8000;
 
-type WizardStep = "brief" | "style" | "setup" | "generating" | "result";
+type WizardStep = "brief" | "style" | "setup" | "generating" | "result" | "receiving";
 
 const PROGRESS_STAGE: Partial<Record<WizardStep, 1 | 2 | 3>> = {
   brief: 1,
@@ -56,19 +56,34 @@ function fileToBase64(file: File): Promise<string> {
 export function AdVideoForm({
   credits,
   setCredits,
+  initialVideo,
+  onInitialVideoConsumed,
 }: {
   credits: number | null;
   setCredits: (n: number) => void;
+  // Set when arriving here from Try-On's "Video Ad" handoff — an
+  // already-animated video, not a text brief, so it skips generation
+  // entirely and lands straight on the result screen. videoOperation is
+  // the same Veo operation shape /ads/generate-video itself produces
+  // (Veo doesn't care which endpoint created it), so EditVideoPanel's
+  // logo/brand-color/voiceover/caption controls work on it unmodified —
+  // that's how Brand Kit gets applied to a Try-On video, with no new
+  // video-compositing code. Only a free caption call runs on mount.
+  initialVideo?: { videoBase64: string; operation: ApiVideoOperation; itemDescription: string; goal: AdGoal };
+  onInitialVideoConsumed?: () => void;
 }) {
-  const [step, setStep] = useState<WizardStep>("brief");
+  const [step, setStep] = useState<WizardStep>(initialVideo ? "receiving" : "brief");
 
   // Brief
   const [offerDescription, setOfferDescription] = useState("");
-  const [goal, setGoal] = useState<AdGoal>("sales");
+  const [goal, setGoal] = useState<AdGoal>(initialVideo?.goal ?? "sales");
   const [angle, setAngle] = useState<string | null>(null);
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("product_showcase");
 
-  const [aspectRatio, setAspectRatio] = useState<VideoAspectRatio>("16:9");
+  // Try-On's animate step always renders 9:16 (a portrait photo of a
+  // standing person) — the handed-off video really is that shape,
+  // regardless of this form's own 16:9 default.
+  const [aspectRatio, setAspectRatio] = useState<VideoAspectRatio>(initialVideo ? "9:16" : "16:9");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -107,6 +122,23 @@ export function AdVideoForm({
         setHasBrandColor(!!profile.brand_color);
       })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!initialVideo) return;
+    onInitialVideoConsumed?.();
+    generateAdCaptions(initialVideo.itemDescription, initialVideo.goal, null, 1)
+      .then((r) => {
+        setCaption(r.captions[0]?.facebook_caption ?? "");
+        setVideoUrl(`data:video/mp4;base64,${initialVideo.videoBase64}`);
+        setVideoOperation(initialVideo.operation);
+        setStep("result");
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Couldn't prepare your ad.");
+        setStep("brief");
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleFileChange = (f: File | null) => {
@@ -270,6 +302,15 @@ export function AdVideoForm({
           Create another
         </button>
       </>
+    );
+  }
+
+  if (step === "receiving") {
+    return (
+      <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Preparing your ad...
+      </div>
     );
   }
 

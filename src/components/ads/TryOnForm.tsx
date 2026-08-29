@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowLeft, ArrowRight, Camera, Check, Clock, Download, Loader2, Package, Shirt, Sparkles, Upload, User, Video } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Camera, Check, Clock, Download, Image as ImageIcon, Loader2, Megaphone, Package, Shirt, Sparkles, Upload, User, Video, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   checkTryOnAnimationStatus,
@@ -6,9 +6,11 @@ import {
   fetchProducts,
   startTryOn,
   startTryOnAnimation,
+  type AdGoal,
   type ApiImportedProduct,
   type ApiVideoOperation,
 } from "@/lib/api";
+import { GOALS } from "./AdBriefStep";
 
 const TRYON_CREDIT_COST = 2;
 const VIDEO_CREDIT_COST = 10;
@@ -17,6 +19,25 @@ const VIDEO_POLL_INTERVAL_MS = 8000;
 
 type WizardStep = "photo" | "garment" | "confirm" | "generating" | "result" | "animating" | "video-result";
 type GarmentSource = "catalog" | "upload";
+type HandoffTarget = "social" | "image-ad" | "video-ad" | null;
+
+export interface TryOnSocialPostHandoff {
+  imageBase64: string;
+  itemDescription: string;
+}
+
+export interface TryOnImageAdHandoff {
+  imageBase64: string;
+  itemDescription: string;
+  goal: AdGoal;
+}
+
+export interface TryOnVideoAdHandoff {
+  videoBase64: string;
+  operation: ApiVideoOperation;
+  itemDescription: string;
+  goal: AdGoal;
+}
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -37,9 +58,19 @@ function fileToBase64(file: File): Promise<string> {
 export function TryOnForm({
   credits,
   setCredits,
+  onSendToSocialPost,
+  onSendToImageAd,
+  onSendToVideoAd,
 }: {
   credits: number | null;
   setCredits: (n: number) => void;
+  // Try-On output is deliberately unbranded (a customer's own photo, not
+  // the business's ad content) — these three let the user explicitly hand
+  // a result over to a flow where Brand Kit already applies, rather than
+  // branding it automatically. Optional so TryOnForm still works standalone.
+  onSendToSocialPost?: (payload: TryOnSocialPostHandoff) => void;
+  onSendToImageAd?: (payload: TryOnImageAdHandoff) => void;
+  onSendToVideoAd?: (payload: TryOnVideoAdHandoff) => void;
 }) {
   const [step, setStep] = useState<WizardStep>("photo");
 
@@ -63,6 +94,11 @@ export function TryOnForm({
 
   const [animating, setAnimating] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoOperation, setVideoOperation] = useState<ApiVideoOperation | null>(null);
+
+  const [handoffTarget, setHandoffTarget] = useState<HandoffTarget>(null);
+  const [handoffDescription, setHandoffDescription] = useState("");
+  const [handoffGoal, setHandoffGoal] = useState<AdGoal>("sales");
 
   const modelInputRef = useRef<HTMLInputElement>(null);
   const garmentInputRef = useRef<HTMLInputElement>(null);
@@ -203,6 +239,7 @@ export function TryOnForm({
     elapsedIntervalRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
     try {
       const r = await startTryOnAnimation(resultImageBase64);
+      setVideoOperation(r.operation);
       pollTimeoutRef.current = setTimeout(() => pollAnimation(r.operation), VIDEO_POLL_INTERVAL_MS);
     } catch (err) {
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
@@ -210,6 +247,30 @@ export function TryOnForm({
       setError(err instanceof Error ? err.message : "Couldn't start animating.");
       setStep("result");
     }
+  };
+
+  const catalogItemDescription =
+    garmentSource === "catalog" && selectedProduct
+      ? [selectedProduct.name, selectedProduct.description].filter(Boolean).join(" — ")
+      : "";
+
+  const openHandoff = (target: Exclude<HandoffTarget, null>) => {
+    setHandoffDescription(catalogItemDescription);
+    setHandoffGoal("sales");
+    setHandoffTarget(target);
+  };
+
+  const confirmHandoff = () => {
+    const itemDescription = handoffDescription.trim();
+    if (!itemDescription) return;
+    if (handoffTarget === "social" && resultImageBase64 && onSendToSocialPost) {
+      onSendToSocialPost({ imageBase64: resultImageBase64, itemDescription });
+    } else if (handoffTarget === "image-ad" && resultImageBase64 && onSendToImageAd) {
+      onSendToImageAd({ imageBase64: resultImageBase64, itemDescription, goal: handoffGoal });
+    } else if (handoffTarget === "video-ad" && videoUrl && videoOperation && onSendToVideoAd) {
+      onSendToVideoAd({ videoBase64: videoUrl.split(",")[1], operation: videoOperation, itemDescription, goal: handoffGoal });
+    }
+    setHandoffTarget(null);
   };
 
   const handleReset = () => {
@@ -221,6 +282,10 @@ export function TryOnForm({
     setResultUrl(null);
     setResultImageBase64(null);
     setVideoUrl(null);
+    setVideoOperation(null);
+    setHandoffTarget(null);
+    setHandoffDescription("");
+    setHandoffGoal("sales");
     setError(null);
     setElapsedSeconds(0);
     // Re-fetch on the next "garment" visit — otherwise a product added to
@@ -232,8 +297,74 @@ export function TryOnForm({
   const minutes = Math.floor(elapsedSeconds / 60);
   const seconds = elapsedSeconds % 60;
 
+  const handoffTitle =
+    handoffTarget === "social" ? "Create Social Post" : handoffTarget === "image-ad" ? "Create Image Ad" : "Create Video Ad";
+
+  // Rendered from within both the "result" and "video-result" early
+  // returns below (referenced, not duplicated) — those are separate
+  // `return`s, so this can't live in one shared wrapper without
+  // restructuring every step into a single return.
+  const handoffModal = handoffTarget && (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+      <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-card p-6 sm:rounded-3xl" style={{ boxShadow: "var(--shadow-card)" }}>
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="font-display text-lg font-extrabold text-foreground">{handoffTitle}</h2>
+          <button
+            onClick={() => setHandoffTarget(null)}
+            aria-label="Close"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-secondary-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          What's this item?
+        </label>
+        <p className="mb-2 text-xs text-muted-foreground">Used for your caption.</p>
+        <textarea
+          value={handoffDescription}
+          onChange={(e) => setHandoffDescription(e.target.value)}
+          rows={3}
+          placeholder="e.g. Blue floral saree with green trim"
+          className="mb-4 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+
+        {(handoffTarget === "image-ad" || handoffTarget === "video-ad") && (
+          <>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Goal</label>
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              {GOALS.map((g) => (
+                <button
+                  key={g.value}
+                  onClick={() => setHandoffGoal(g.value)}
+                  className={[
+                    "rounded-xl px-3 py-2 text-left text-xs font-semibold",
+                    handoffGoal === g.value ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                  ].join(" ")}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        <button
+          onClick={confirmHandoff}
+          disabled={!handoffDescription.trim()}
+          className="w-full rounded-full px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          style={{ background: "var(--gradient-primary)" }}
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+
   if (step === "result" && resultUrl) {
     return (
+      <>
       <div className="flex flex-col items-center text-center">
         <h1 className="font-display mb-1 flex items-center gap-2 text-xl font-extrabold text-foreground">
           Here's your look
@@ -274,6 +405,35 @@ export function TryOnForm({
         <p className="mb-3 mt-1.5 text-xs text-muted-foreground">
           Turn your try-on image into a short fashion video.
         </p>
+
+        {(onSendToSocialPost || onSendToImageAd) && (
+          <div className="mb-3 w-full rounded-2xl border border-dashed border-border p-3">
+            <p className="mb-2 text-xs font-semibold text-muted-foreground">
+              This photo stays unbranded. Send it to a flow that applies your Brand Kit:
+            </p>
+            <div className="flex gap-2">
+              {onSendToSocialPost && (
+                <button
+                  onClick={() => openHandoff("social")}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-secondary px-3 py-2.5 text-xs font-semibold text-secondary-foreground"
+                >
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  Social Post
+                </button>
+              )}
+              {onSendToImageAd && (
+                <button
+                  onClick={() => openHandoff("image-ad")}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-secondary px-3 py-2.5 text-xs font-semibold text-secondary-foreground"
+                >
+                  <Megaphone className="h-3.5 w-3.5" />
+                  Image Ad
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {error && (
           <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" />
@@ -287,11 +447,14 @@ export function TryOnForm({
           Try another
         </button>
       </div>
+      {handoffModal}
+    </>
     );
   }
 
   if (step === "video-result" && videoUrl) {
     return (
+      <>
       <div className="flex flex-col items-center text-center">
         <h1 className="font-display mb-1 flex items-center gap-2 text-xl font-extrabold text-foreground">
           Your look, animated
@@ -315,6 +478,16 @@ export function TryOnForm({
           <Download className="h-5 w-5" />
           Download
         </a>
+
+        {onSendToVideoAd && (
+          <button
+            onClick={() => openHandoff("video-ad")}
+            className="mb-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-secondary-foreground"
+          >
+            <Megaphone className="h-4 w-4" />
+            Create Video Ad — applies your Brand Kit
+          </button>
+        )}
         <button
           onClick={() => setStep("result")}
           className="mb-3 w-full rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-secondary-foreground"
@@ -328,6 +501,8 @@ export function TryOnForm({
           Try another
         </button>
       </div>
+      {handoffModal}
+    </>
     );
   }
 

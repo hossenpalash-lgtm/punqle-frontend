@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   enhanceImage,
@@ -31,7 +32,7 @@ import { SetupStep } from "./SetupStep";
 import { VisualDirectionStep } from "./VisualDirectionStep";
 import { WizardProgress } from "./WizardProgress";
 
-type WizardStep = "brief" | "direction" | "setup" | "generating" | "results" | "result";
+type WizardStep = "brief" | "direction" | "setup" | "generating" | "results" | "result" | "receiving";
 
 const PROGRESS_STAGE: Partial<Record<WizardStep, 1 | 2 | 3 | 4>> = {
   brief: 1,
@@ -65,18 +66,45 @@ const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export function AdCreationForm({
   credits,
   setCredits,
+  initialGeneratedImage,
+  onInitialGeneratedImageConsumed,
 }: {
   credits: number | null;
   setCredits: (n: number) => void;
+  // Set when arriving here from Try-On's "Image Ad" handoff — an
+  // already-finished image, not a text idea, so it skips straight to the
+  // result step instead of going through image generation again. Only a
+  // free caption call runs. Same "read once on mount" contract as
+  // SinglePostForm.tsx's sibling prop.
+  initialGeneratedImage?: { imageBase64: string; itemDescription: string; goal: AdGoal };
+  onInitialGeneratedImageConsumed?: () => void;
 }) {
-  const [step, setStep] = useState<WizardStep>("brief");
+  const [step, setStep] = useState<WizardStep>(initialGeneratedImage ? "receiving" : "brief");
   const [generationStage, setGenerationStage] = useState(0);
 
   // Brief
   const [offerDescription, setOfferDescription] = useState("");
-  const [goal, setGoal] = useState<AdGoal>("sales");
+  const [goal, setGoal] = useState<AdGoal>(initialGeneratedImage?.goal ?? "sales");
   const [angle, setAngle] = useState<string | null>(null);
   const [visualDirection, setVisualDirection] = useState<VisualDirection>("clean_premium");
+
+  useEffect(() => {
+    if (!initialGeneratedImage) return;
+    onInitialGeneratedImageConsumed?.();
+    generateAdCaptions(initialGeneratedImage.itemDescription, initialGeneratedImage.goal, null, 1)
+      .then((r) => {
+        setAdCaptions(r.captions);
+        setImages([initialGeneratedImage.imageBase64]);
+        setSelectedCaptionIndex(0);
+        setSelectedImageIndex(0);
+        setStep("result");
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Couldn't prepare your ad.");
+        setStep("brief");
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Visual source
   const [file, setFile] = useState<File | null>(null);
@@ -406,6 +434,13 @@ export function AdCreationForm({
           onBack={() => setStep("direction")}
           error={error}
         />
+      )}
+
+      {step === "receiving" && (
+        <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Preparing your ad...
+        </div>
       )}
 
       {step === "generating" && <GenerationProgress currentStage={generationStage} />}

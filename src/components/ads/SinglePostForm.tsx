@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   enhanceImage,
@@ -31,7 +32,7 @@ import { SetupStep } from "./SetupStep";
 import { VisualDirectionStep } from "./VisualDirectionStep";
 import { WizardProgress } from "./WizardProgress";
 
-type WizardStep = "idea" | "direction" | "setup" | "generating" | "results" | "result";
+type WizardStep = "idea" | "direction" | "setup" | "generating" | "results" | "result" | "receiving";
 
 // Maps the real step machine onto the 4 display stages (① What do you
 // want? → ② Choose a look → ③ Set it up → ④ Generate) — purely a UI
@@ -63,6 +64,8 @@ export function SinglePostForm({
   setCredits,
   initialIdea,
   onInitialIdeaConsumed,
+  initialGeneratedImage,
+  onInitialGeneratedImageConsumed,
 }: {
   credits: number | null;
   setCredits: (n: number) => void;
@@ -72,8 +75,15 @@ export function SinglePostForm({
   // at mount, not kept in sync afterward.
   initialIdea?: string;
   onInitialIdeaConsumed?: () => void;
+  // Set when arriving here from Try-On's "Social Post" handoff — an
+  // already-finished image, not a text idea, so it skips straight to the
+  // result step instead of going through image generation again (the
+  // photo is real and specific, not something to hand back to the AI
+  // image model as a loose reference). Only a free caption call runs.
+  initialGeneratedImage?: { imageBase64: string; itemDescription: string };
+  onInitialGeneratedImageConsumed?: () => void;
 }) {
-  const [step, setStep] = useState<WizardStep>("idea");
+  const [step, setStep] = useState<WizardStep>(initialGeneratedImage ? "receiving" : "idea");
   const [generationStage, setGenerationStage] = useState(0);
 
   // Idea + understanding
@@ -84,6 +94,28 @@ export function SinglePostForm({
   // from a previous competitor-insight click.
   useEffect(() => {
     if (initialIdea) onInitialIdeaConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Same "read once on mount" contract as initialIdea above. Only a
+  // caption call runs here — the image itself is used exactly as handed
+  // over, then picked up by the existing Brand-Kit compositing effect
+  // below once step is "result", the same as any normally-generated post.
+  useEffect(() => {
+    if (!initialGeneratedImage) return;
+    onInitialGeneratedImageConsumed?.();
+    generateCaptions(initialGeneratedImage.itemDescription, captionTone, captionLength)
+      .then((r) => {
+        setCaptions(r.captions);
+        setImages([initialGeneratedImage.imageBase64]);
+        setSelectedCaptionIndex(0);
+        setSelectedImageIndex(0);
+        setStep("result");
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Couldn't prepare your post.");
+        setStep("idea");
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [understanding, setUnderstanding] = useState<ApiUnderstandIdeaResponse | null>(null);
@@ -422,6 +454,13 @@ export function SinglePostForm({
           onBack={() => setStep("direction")}
           error={error}
         />
+      )}
+
+      {step === "receiving" && (
+        <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Preparing your post...
+        </div>
       )}
 
       {step === "generating" && <GenerationProgress currentStage={generationStage} />}

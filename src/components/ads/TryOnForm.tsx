@@ -266,11 +266,14 @@ export function TryOnForm({
         <button
           onClick={handleAnimate}
           disabled={insufficientVideoCredits}
-          className="mb-3 flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-5 py-4 text-base font-semibold text-secondary-foreground disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-5 py-4 text-base font-semibold text-secondary-foreground disabled:opacity-60"
         >
           <Video className="h-5 w-5" />
-          Animate ({VIDEO_CREDIT_COST} credits)
+          Animate this look · {VIDEO_CREDIT_COST} credits
         </button>
+        <p className="mb-3 mt-1.5 text-xs text-muted-foreground">
+          Turn your try-on image into a short fashion video.
+        </p>
         {error && (
           <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" />

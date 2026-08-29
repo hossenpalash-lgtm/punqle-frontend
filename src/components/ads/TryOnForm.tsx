@@ -1,11 +1,21 @@
-import { AlertCircle, ArrowLeft, ArrowRight, Camera, Check, Clock, Download, Loader2, Package, Shirt, Sparkles, Upload, User } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Camera, Check, Clock, Download, Loader2, Package, Shirt, Sparkles, Upload, User, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { checkTryOnStatus, fetchProducts, startTryOn, type ApiImportedProduct } from "@/lib/api";
+import {
+  checkTryOnAnimationStatus,
+  checkTryOnStatus,
+  fetchProducts,
+  startTryOn,
+  startTryOnAnimation,
+  type ApiImportedProduct,
+  type ApiVideoOperation,
+} from "@/lib/api";
 
 const TRYON_CREDIT_COST = 2;
+const VIDEO_CREDIT_COST = 10;
 const POLL_INTERVAL_MS = 4000;
+const VIDEO_POLL_INTERVAL_MS = 8000;
 
-type WizardStep = "photo" | "garment" | "confirm" | "generating" | "result";
+type WizardStep = "photo" | "garment" | "confirm" | "generating" | "result" | "animating" | "video-result";
 type GarmentSource = "catalog" | "upload";
 
 function fileToBase64(file: File): Promise<string> {
@@ -49,6 +59,10 @@ export function TryOnForm({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [resultImageBase64, setResultImageBase64] = useState<string | null>(null);
+
+  const [animating, setAnimating] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
   const modelInputRef = useRef<HTMLInputElement>(null);
   const garmentInputRef = useRef<HTMLInputElement>(null);
@@ -97,6 +111,7 @@ export function TryOnForm({
 
   const hasGarment = garmentSource === "catalog" ? !!selectedProduct : !!garmentFile;
   const insufficientCredits = credits !== null && credits < TRYON_CREDIT_COST;
+  const insufficientVideoCredits = credits !== null && credits < VIDEO_CREDIT_COST;
 
   const poll = async (id: string) => {
     try {
@@ -110,6 +125,7 @@ export function TryOnForm({
       if (r.credits_remaining !== null) setCredits(r.credits_remaining);
       if (r.image_base64) {
         setResultUrl(`data:image/png;base64,${r.image_base64}`);
+        setResultImageBase64(r.image_base64);
         setStep("result");
       } else {
         setError("The result didn't come back — please try again.");
@@ -152,6 +168,50 @@ export function TryOnForm({
     }
   };
 
+  const pollAnimation = async (operation: ApiVideoOperation) => {
+    try {
+      const r = await checkTryOnAnimationStatus(operation);
+      if (!r.done) {
+        pollTimeoutRef.current = setTimeout(() => pollAnimation(operation), VIDEO_POLL_INTERVAL_MS);
+        return;
+      }
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setAnimating(false);
+      if (r.credits_remaining !== null) setCredits(r.credits_remaining);
+      if (r.video_base64) {
+        setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
+        setStep("video-result");
+      } else {
+        setError("The video didn't come back — please try again.");
+        setStep("result");
+      }
+    } catch (err) {
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setAnimating(false);
+      setError(err instanceof Error ? err.message : "Couldn't check the video's status.");
+      setStep("result");
+    }
+  };
+
+  const handleAnimate = async () => {
+    if (!resultImageBase64 || animating || insufficientVideoCredits) return;
+    setAnimating(true);
+    setError(null);
+    setVideoUrl(null);
+    setElapsedSeconds(0);
+    setStep("animating");
+    elapsedIntervalRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    try {
+      const r = await startTryOnAnimation(resultImageBase64);
+      pollTimeoutRef.current = setTimeout(() => pollAnimation(r.operation), VIDEO_POLL_INTERVAL_MS);
+    } catch (err) {
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setAnimating(false);
+      setError(err instanceof Error ? err.message : "Couldn't start animating.");
+      setStep("result");
+    }
+  };
+
   const handleReset = () => {
     setStep("photo");
     handleModelFileChange(null);
@@ -159,6 +219,8 @@ export function TryOnForm({
     setSelectedProduct(null);
     handleGarmentFileChange(null);
     setResultUrl(null);
+    setResultImageBase64(null);
+    setVideoUrl(null);
     setError(null);
     setElapsedSeconds(0);
     // Re-fetch on the next "garment" visit — otherwise a product added to
@@ -202,11 +264,88 @@ export function TryOnForm({
           Download
         </a>
         <button
+          onClick={handleAnimate}
+          disabled={insufficientVideoCredits}
+          className="mb-3 flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-5 py-4 text-base font-semibold text-secondary-foreground disabled:opacity-60"
+        >
+          <Video className="h-5 w-5" />
+          Animate ({VIDEO_CREDIT_COST} credits)
+        </button>
+        {error && (
+          <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {error}
+          </p>
+        )}
+        <button
           onClick={handleReset}
           className="w-full rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-secondary-foreground"
         >
           Try another
         </button>
+      </div>
+    );
+  }
+
+  if (step === "video-result" && videoUrl) {
+    return (
+      <div className="flex flex-col items-center text-center">
+        <h1 className="font-display mb-1 flex items-center gap-2 text-xl font-extrabold text-foreground">
+          Your look, animated
+          <Sparkles className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
+        </h1>
+        <p className="mb-5 text-sm text-muted-foreground">Generated just for you — yours to keep.</p>
+
+        <div
+          className="animate-fade-rise mb-5 w-full overflow-hidden rounded-3xl bg-card"
+          style={{ boxShadow: "0 12px 40px -12px rgba(0,0,0,0.28), var(--shadow-card)" }}
+        >
+          <video src={videoUrl} controls autoPlay loop muted className="w-full object-contain" />
+        </div>
+
+        <a
+          href={videoUrl}
+          download="try-on-video.mp4"
+          className="mb-3 flex w-full items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground"
+          style={{ background: "var(--gradient-primary)" }}
+        >
+          <Download className="h-5 w-5" />
+          Download
+        </a>
+        <button
+          onClick={() => setStep("result")}
+          className="mb-3 w-full rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-secondary-foreground"
+        >
+          Back to photo
+        </button>
+        <button
+          onClick={handleReset}
+          className="w-full rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-secondary-foreground"
+        >
+          Try another
+        </button>
+      </div>
+    );
+  }
+
+  if (step === "animating") {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 rounded-3xl bg-card p-8 text-center" style={{ boxShadow: "var(--shadow-card)" }}>
+        {resultUrl && (
+          <div className="relative h-40 w-40 overflow-hidden rounded-2xl">
+            <img src={resultUrl} alt="" className="h-full w-full animate-pulse object-cover opacity-50" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+              <Loader2 className="h-8 w-8 animate-spin text-white" />
+            </div>
+          </div>
+        )}
+        <div>
+          <p className="text-sm font-semibold text-foreground">Animating your look...</p>
+          <p className="mt-1 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            {minutes}:{seconds.toString().padStart(2, "0")} elapsed — usually takes 30-60 sec
+          </p>
+        </div>
       </div>
     );
   }

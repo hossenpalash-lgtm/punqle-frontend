@@ -258,7 +258,14 @@ export function CalendarView({ onGoToWeeklyPlan }: { onGoToWeeklyPlan: () => voi
                               <PlatformIcon className="h-3 w-3" />
                               {new Date(post.scheduled_time).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
                             </span>
-                            <span className={["flex items-center gap-0.5 text-[10px] font-medium", meta.className].join(" ")}>
+                            <span
+                              className={["flex items-center gap-0.5 text-[10px] font-medium", meta.className].join(" ")}
+                              title={
+                                post.status === "published"
+                                  ? "Based on the platform accepting the scheduled post — not independently confirmed."
+                                  : meta.label
+                              }
+                            >
                               <StatusIcon className="h-3 w-3" />
                             </span>
                           </div>
@@ -307,13 +314,18 @@ export function CalendarView({ onGoToWeeklyPlan }: { onGoToWeeklyPlan: () => voi
               />
             )}
 
-            <p className={["mb-3 flex items-center gap-1.5 text-sm font-medium", STATUS_META[selectedPost.status].className].join(" ")}>
+            <p className={[selectedPost.status === "published" ? "mb-1" : "mb-3", "flex items-center gap-1.5 text-sm font-medium", STATUS_META[selectedPost.status].className].join(" ")}>
               {(() => {
                 const StatusIcon = STATUS_META[selectedPost.status].icon;
                 return <StatusIcon className="h-4 w-4" />;
               })()}
               {STATUS_META[selectedPost.status].label}
             </p>
+            {selectedPost.status === "published" && (
+              <p className="mb-3 text-xs text-muted-foreground">
+                Based on the platform accepting the scheduled post — Punqle doesn't independently confirm it went live.
+              </p>
+            )}
 
             {selectedPost.status === "failed" && selectedPost.error && (
               <p className="mb-3 text-sm text-destructive">{selectedPost.error}</p>

@@ -1,6 +1,7 @@
 import {
   Binoculars,
   Calendar,
+  CalendarClock,
   Clock,
   CreditCard,
   Facebook,
@@ -27,6 +28,7 @@ import { useScrolled } from "@/lib/use-scrolled";
 export type NavTab =
   | "single"
   | "plan"
+  | "calendar"
   | "history"
   | "competitor"
   | "video"
@@ -61,6 +63,7 @@ const ECOMMERCE_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[
 // primary creation categories above.
 const TOOLS_ITEMS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "plan", label: "Weekly Plan", icon: Calendar },
+  { tab: "calendar", label: "Content Calendar", icon: CalendarClock },
   { tab: "competitor", label: "Competitive Edge", icon: Binoculars },
 ];
 
@@ -353,6 +356,16 @@ export function Sidebar({
               ].join(" ")}
             >
               <Calendar className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onNavigate("calendar")}
+              aria-label="Content Calendar"
+              className={[
+                "flex h-9 w-9 items-center justify-center rounded-full",
+                tab === "calendar" ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+              ].join(" ")}
+            >
+              <CalendarClock className="h-4 w-4" />
             </button>
             <button
               onClick={() => onNavigate("history")}

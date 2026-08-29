@@ -683,6 +683,8 @@ export function publishToMeta(
   postToFacebook: boolean,
   postToInstagram: boolean,
   scheduledTime?: string,
+  contentPlanId?: string,
+  contentPlanDay?: string,
 ): Promise<ApiMetaPublishResponse> {
   const match = compositedDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
@@ -695,6 +697,11 @@ export function publishToMeta(
   formData.append("post_to_facebook", String(postToFacebook));
   formData.append("post_to_instagram", String(postToInstagram));
   if (scheduledTime) formData.append("scheduled_time", scheduledTime);
+  if (contentPlanId && contentPlanDay) {
+    formData.append("source", "weekly_plan");
+    formData.append("content_plan_id", contentPlanId);
+    formData.append("content_plan_day", contentPlanDay);
+  }
   return apiFetch<ApiMetaPublishResponse>("/meta/publish", {
     method: "POST",
     body: formData,
@@ -737,6 +744,8 @@ export function publishToYouTube(
   description: string,
   aspectRatio: VideoAspectRatio,
   scheduledTime?: string,
+  contentPlanId?: string,
+  contentPlanDay?: string,
 ): Promise<ApiYouTubePublishResponse> {
   const match = videoDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
@@ -749,10 +758,61 @@ export function publishToYouTube(
   formData.append("description", description);
   formData.append("aspect_ratio", aspectRatio);
   if (scheduledTime) formData.append("scheduled_time", scheduledTime);
+  if (contentPlanId && contentPlanDay) {
+    formData.append("source", "weekly_plan");
+    formData.append("content_plan_id", contentPlanId);
+    formData.append("content_plan_day", contentPlanDay);
+  }
   return apiFetch<ApiYouTubePublishResponse>("/youtube/publish", {
     method: "POST",
     body: formData,
   });
+}
+
+// ---- Content Calendar ----
+
+export interface ApiScheduledPost {
+  id: string;
+  platform: "facebook" | "youtube";
+  external_post_id: string | null;
+  caption: string;
+  description: string | null;
+  image_base64: string | null;
+  scheduled_time: string;
+  status: "scheduled" | "published" | "failed";
+  error: string | null;
+  source: "single" | "weekly_plan";
+  content_plan_id: string | null;
+  content_plan_day: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function fetchScheduledPosts(start: Date, end: Date): Promise<{ posts: ApiScheduledPost[] }> {
+  const params = new URLSearchParams({ start: start.toISOString(), end: end.toISOString() });
+  return apiFetch<{ posts: ApiScheduledPost[] }>(`/scheduled-posts?${params.toString()}`);
+}
+
+// Combined reschedule + caption-edit — either or both fields, matching
+// the backend's single POST /scheduled-posts/{id}/update endpoint (this
+// codebase never uses PATCH).
+export function updateScheduledPost(
+  id: string,
+  updates: { caption?: string; scheduledTime?: string },
+): Promise<ApiScheduledPost> {
+  return apiFetch<ApiScheduledPost>(`/scheduled-posts/${id}/update`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ caption: updates.caption, scheduled_time: updates.scheduledTime }),
+  });
+}
+
+export function postScheduledPostNow(id: string): Promise<ApiScheduledPost> {
+  return apiFetch<ApiScheduledPost>(`/scheduled-posts/${id}/post-now`, { method: "POST" });
+}
+
+export function deleteScheduledPost(id: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(`/scheduled-posts/${id}`, { method: "DELETE" });
 }
 
 export type SubscriptionTier = "starter" | "growth" | "pro";

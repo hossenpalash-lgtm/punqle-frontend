@@ -5,6 +5,7 @@ import { fetchAdCredits } from "@/lib/api";
 import { AdCreationForm } from "@/components/ads/AdCreationForm";
 import { AdVideoForm } from "@/components/ads/AdVideoForm";
 import { BulkCreativeForm } from "@/components/ads/BulkCreativeForm";
+import { CalendarView } from "@/components/ads/CalendarView";
 import { CompetitorAnalysis } from "@/components/ads/CompetitorAnalysis";
 import { HistoryTab } from "@/components/ads/HistoryTab";
 import { SinglePostForm } from "@/components/ads/SinglePostForm";
@@ -12,7 +13,7 @@ import { TryOnForm } from "@/components/ads/TryOnForm";
 import { VideoPostForm } from "@/components/ads/VideoPostForm";
 import { WeeklyPlanForm } from "@/components/ads/WeeklyPlanForm";
 
-type Tab = "single" | "plan" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative" | "tryon";
+type Tab = "single" | "plan" | "calendar" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative" | "tryon";
 
 export const Route = createFileRoute("/")({
   component: HomeScreen,
@@ -20,21 +21,23 @@ export const Route = createFileRoute("/")({
     tab:
       search.tab === "plan"
         ? "plan"
-        : search.tab === "history"
-          ? "history"
-          : search.tab === "competitor"
-            ? "competitor"
-            : search.tab === "video"
-              ? "video"
-              : search.tab === "ad"
-                ? "ad"
-                : search.tab === "ad-video"
-                  ? "ad-video"
-                  : search.tab === "bulk-creative"
-                    ? "bulk-creative"
-                    : search.tab === "tryon"
-                      ? "tryon"
-                      : "single",
+        : search.tab === "calendar"
+          ? "calendar"
+          : search.tab === "history"
+            ? "history"
+            : search.tab === "competitor"
+              ? "competitor"
+              : search.tab === "video"
+                ? "video"
+                : search.tab === "ad"
+                  ? "ad"
+                  : search.tab === "ad-video"
+                    ? "ad-video"
+                    : search.tab === "bulk-creative"
+                      ? "bulk-creative"
+                      : search.tab === "tryon"
+                        ? "tryon"
+                        : "single",
   }),
 });
 
@@ -190,6 +193,7 @@ function HomeScreen() {
         />
       )}
       {tab === "plan" && <WeeklyPlanForm credits={credits} setCredits={setCredits} />}
+      {tab === "calendar" && <CalendarView onGoToWeeklyPlan={() => goTo("plan")} />}
       {tab === "video" && <VideoPostForm credits={credits} setCredits={setCredits} />}
       {tab === "history" && <HistoryTab />}
       {tab === "competitor" && (

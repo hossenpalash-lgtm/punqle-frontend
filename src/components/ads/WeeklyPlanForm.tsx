@@ -14,15 +14,19 @@ import {
 } from "@/lib/api";
 import { CATEGORY_LABELS, CATEGORY_OPTIONS } from "@/lib/categories";
 import { compositeImage, deriveOnImageHeadline, type BrandKit } from "@/lib/canvas-text";
+import { MIN_SCHEDULE_MINUTES, formatScheduleDate } from "@/lib/schedule-dates";
 import { DAY_LABELS, PlanDayCard } from "./PlanDayCard";
 
 // Weekly Plan's days are abstract weekday codes (Mon..Fri), not tied to a
 // specific calendar week — mapping them to real dates only happens here,
 // at schedule time, anchored on "today" rather than the plan's original
 // generation date, so a plan reviewed a few days after it was made still
-// schedules into the future, not the past.
+// schedules into the future, not the past. This is a different problem
+// from the Content Calendar's own week navigation (schedule-dates.ts's
+// startOfWeek/addDays) — "next real occurrence of an abstract weekday"
+// vs. "the 7 dates in an arbitrary navigated-to week" — so it stays here
+// rather than being merged into that shared file.
 const DAY_TO_WEEKDAY: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5 };
-const MIN_SCHEDULE_MINUTES = 10;
 
 function nextDateForDay(dayCode: string, timeHHMM: string): Date | null {
   const targetWeekday = DAY_TO_WEEKDAY[dayCode];
@@ -41,12 +45,6 @@ function nextDateForDay(dayCode: string, timeHHMM: string): Date | null {
     candidate.setDate(candidate.getDate() + 7);
   }
   return candidate;
-}
-
-function formatScheduleDate(d: Date): string {
-  const datePart = d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
-  const timePart = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  return `${datePart} · ${timePart}`;
 }
 
 export function WeeklyPlanForm({
@@ -190,6 +188,8 @@ export function WeeklyPlanForm({
           scheduleFacebook,
           scheduleInstagram,
           date.toISOString(),
+          plan?.id,
+          post.day,
         );
         const fbOk = !scheduleFacebook || !!r.facebook?.posted;
         const igOk = !scheduleInstagram || !!r.instagram?.posted;

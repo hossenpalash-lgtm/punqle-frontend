@@ -1,18 +1,7 @@
 import { AlertCircle, CheckCircle2, Clock, Facebook, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchMetaStatus, getMetaConnectUrl, publishToMeta, type ApiMetaPublishResponse } from "@/lib/api";
-
-// Bounds mirror the backend's own validation (_parse_scheduled_time,
-// main.py) — shown here too so a bad pick is caught before the request,
-// not just after a 400 comes back.
-const MIN_SCHEDULE_MINUTES = 10;
-const MAX_SCHEDULE_DAYS = 30;
-
-function toDatetimeLocalMin(minutesFromNow: number): string {
-  const d = new Date(Date.now() + minutesFromNow * 60_000);
-  d.setSeconds(0, 0);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-}
+import { MIN_SCHEDULE_MINUTES, MAX_SCHEDULE_DAYS, toDatetimeLocalMin } from "@/lib/schedule-dates";
 
 // Inline in the Post Kit, next to Download/Schedule — not a modal, matching
 // CarouselBuilder's "tool sits right where the image already is" pattern.

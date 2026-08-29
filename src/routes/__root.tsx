@@ -166,13 +166,15 @@ function RootComponent() {
   const tab: NavTab =
     search.tab === "plan"
       ? "plan"
-      : search.tab === "history"
-        ? "history"
-        : search.tab === "competitor"
-          ? "competitor"
-          : search.tab === "video"
-            ? "video"
-            : "single";
+      : search.tab === "performance"
+        ? "performance"
+        : search.tab === "history"
+          ? "history"
+          : search.tab === "competitor"
+            ? "competitor"
+            : search.tab === "video"
+              ? "video"
+              : "single";
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));

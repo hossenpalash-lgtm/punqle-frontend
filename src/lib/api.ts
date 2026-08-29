@@ -834,6 +834,36 @@ export function deleteScheduledPost(id: string): Promise<{ deleted: boolean }> {
   return apiFetch<{ deleted: boolean }>(`/scheduled-posts/${id}`, { method: "DELETE" });
 }
 
+// ---- Organic Performance ----
+// Reach/impressions are deliberately absent — neither platform exposes
+// them with the permissions Punqle currently has (Facebook needs a
+// separate read_insights grant; YouTube's impression data lives only in
+// the distinct YouTube Analytics API). Only real, currently-fetchable
+// organic numbers are represented here.
+
+export interface ApiPostMetrics {
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  fetched_at: string | null;
+}
+
+export interface ApiPerformancePost {
+  id: string;
+  platform: "facebook" | "youtube";
+  external_post_id: string | null;
+  caption: string;
+  image_base64: string | null;
+  scheduled_time: string;
+  metrics: ApiPostMetrics | null;
+  metrics_unavailable_reason: string | null;
+}
+
+export function fetchOrganicPerformance(): Promise<{ posts: ApiPerformancePost[] }> {
+  return apiFetch<{ posts: ApiPerformancePost[] }>("/performance/posts");
+}
+
 export type SubscriptionTier = "starter" | "growth" | "pro";
 
 export interface ApiSubscriptionStatus {

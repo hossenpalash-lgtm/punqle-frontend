@@ -15,6 +15,7 @@ import {
   Shirt,
   ShoppingBag,
   Sparkles,
+  TrendingUp,
   Video,
   Youtube,
 } from "lucide-react";
@@ -29,6 +30,7 @@ export type NavTab =
   | "single"
   | "plan"
   | "calendar"
+  | "performance"
   | "history"
   | "competitor"
   | "video"
@@ -64,6 +66,7 @@ const ECOMMERCE_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[
 const TOOLS_ITEMS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "plan", label: "Weekly Plan", icon: Calendar },
   { tab: "calendar", label: "Content Calendar", icon: CalendarClock },
+  { tab: "performance", label: "Performance", icon: TrendingUp },
   { tab: "competitor", label: "Competitive Edge", icon: Binoculars },
 ];
 
@@ -366,6 +369,16 @@ export function Sidebar({
               ].join(" ")}
             >
               <CalendarClock className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onNavigate("performance")}
+              aria-label="Performance"
+              className={[
+                "flex h-9 w-9 items-center justify-center rounded-full",
+                tab === "performance" ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+              ].join(" ")}
+            >
+              <TrendingUp className="h-4 w-4" />
             </button>
             <button
               onClick={() => onNavigate("history")}

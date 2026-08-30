@@ -159,10 +159,6 @@ export function YouTubeConnectPanel({ open, onClose }: { open: boolean; onClose:
             Connect YouTube
           </button>
         )}
-
-        <p className="mt-4 text-[11px] text-muted-foreground">
-          While Punqle's Google verification is pending, this only works for accounts added as testers, and connections expire weekly and need reconnecting.
-        </p>
       </div>
     </div>
   );

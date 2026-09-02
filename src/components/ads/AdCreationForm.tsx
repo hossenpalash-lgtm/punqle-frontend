@@ -29,6 +29,7 @@ import { findVisualDirection, PLATFORM_OPTIONS, type Platform } from "@/lib/soci
 import { AdBriefStep, GOALS } from "./AdBriefStep";
 import { GenerationProgress } from "./GenerationProgress";
 import { PostKit } from "./PostKit";
+import { ProductPicker } from "./ProductPicker";
 import { ResultsGrid } from "./ResultsGrid";
 import { SetupStep } from "./SetupStep";
 import { VisualDirectionStep } from "./VisualDirectionStep";
@@ -301,6 +302,30 @@ export function AdCreationForm({
     }
   };
 
+  // Shared by both Quick Create paths below — the URL path (real
+  // scraping + AI enrichment) and the catalog path (already-known data,
+  // no fetch needed at all) only differ in how description/file are
+  // obtained; everything after that is identical.
+  const finishQuickCreate = async (description: string, file: File | null) => {
+    setOfferDescription(description);
+    if (file) {
+      handleFileChange(file);
+    } else {
+      handleUseAiImage();
+    }
+    setAngle(null);
+    setVersions(1);
+    // visualDirection/platform stay at their existing defaults
+    // ("clean_premium"/"instagram") — neither is user-facing here.
+    await handleGenerate({
+      description,
+      file,
+      useAiImage: !file,
+      angle: null,
+      versions: 1,
+    });
+  };
+
   const handleQuickCreate = async () => {
     if (quickFetching || !quickUrl.trim()) return;
     setQuickFetching(true);
@@ -311,25 +336,25 @@ export function AdCreationForm({
       const quickFile = r.image_base64
         ? base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg")
         : null;
-      setOfferDescription(description);
-      if (quickFile) {
-        handleFileChange(quickFile);
-      } else {
-        handleUseAiImage();
-      }
-      setAngle(null);
-      setVersions(1);
-      // visualDirection/platform stay at their existing defaults
-      // ("clean_premium"/"instagram") — neither is user-facing here.
-      await handleGenerate({
-        description,
-        file: quickFile,
-        useAiImage: !quickFile,
-        angle: null,
-        versions: 1,
-      });
+      await finishQuickCreate(description, quickFile);
     } catch (err) {
       setQuickError(err instanceof Error ? err.message : "Couldn't fetch that link.");
+    } finally {
+      setQuickFetching(false);
+    }
+  };
+
+  // Skips fetch-product-link/understand-product-link entirely — a
+  // Shopify-synced (or CSV-imported) catalog item already has a real
+  // name/description/photo saved, so there's nothing to scrape.
+  const handleQuickCreateFromCatalog = async (description: string, file: File | null) => {
+    if (quickFetching) return;
+    setQuickFetching(true);
+    setQuickError(null);
+    try {
+      await finishQuickCreate(description, file);
+    } catch (err) {
+      setQuickError(err instanceof Error ? err.message : "Couldn't use that product.");
     } finally {
       setQuickFetching(false);
     }
@@ -502,8 +527,11 @@ export function AdCreationForm({
             onChange={(e) => setQuickUrl(e.target.value)}
             placeholder="https://yourstore.com/products/..."
             disabled={quickFetching}
-            className="mb-4 w-full rounded-full border border-input bg-background px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="mb-3 w-full rounded-full border border-input bg-background px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
+          <div className="mb-4 w-full text-left">
+            <ProductPicker onSelect={handleQuickCreateFromCatalog} />
+          </div>
 
           <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Goal

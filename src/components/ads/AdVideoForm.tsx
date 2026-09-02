@@ -335,6 +335,38 @@ export function AdVideoForm({
     }
   };
 
+  // Shared by both Quick Create paths below — the URL path (real
+  // scraping + AI enrichment) and the catalog path (already-known data,
+  // no fetch needed at all) only differ in how description/file are
+  // obtained; everything after that, including the angle auto-pick, is
+  // identical.
+  const finishQuickCreate = async (description: string, file: File | null) => {
+    setOfferDescription(description);
+    if (file) handleFileChange(file);
+
+    // Still fetches the same 4-script picker Customize uses — just
+    // auto-applies the AI's own recommended_index instead of showing
+    // it, so Quick Create stays a single tap while the result is still
+    // built from a real, angle-aware script rather than a silent
+    // default.
+    const anglesResult = await generateVideoScriptAngles(description, goal);
+    const picked = anglesResult.angles[anglesResult.recommended_index] ?? anglesResult.angles[0];
+    const script = { headline: picked.headline, narration: picked.narration };
+    setAngle(picked.angle);
+    setPickedScript(script);
+    // videoStyle/aspectRatio stay at their existing defaults
+    // ("product_showcase"/"16:9") — neither is user-facing here.
+    await handleGenerate({
+      description,
+      goal,
+      angle: picked.angle,
+      script,
+      file,
+      videoStyle: "product_showcase",
+      aspectRatio: "16:9",
+    });
+  };
+
   const handleQuickCreate = async () => {
     if (quickFetching || !quickUrl.trim()) return;
     setQuickFetching(true);
@@ -345,32 +377,25 @@ export function AdVideoForm({
       const quickFile = r.image_base64
         ? base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg")
         : null;
-      setOfferDescription(description);
-      if (quickFile) handleFileChange(quickFile);
-
-      // Still fetches the same 4-script picker Customize uses — just
-      // auto-applies the AI's own recommended_index instead of showing
-      // it, so Quick Create stays a single tap while the result is still
-      // built from a real, angle-aware script rather than a silent
-      // default.
-      const anglesResult = await generateVideoScriptAngles(description, goal);
-      const picked = anglesResult.angles[anglesResult.recommended_index] ?? anglesResult.angles[0];
-      const script = { headline: picked.headline, narration: picked.narration };
-      setAngle(picked.angle);
-      setPickedScript(script);
-      // videoStyle/aspectRatio stay at their existing defaults
-      // ("product_showcase"/"16:9") — neither is user-facing here.
-      await handleGenerate({
-        description,
-        goal,
-        angle: picked.angle,
-        script,
-        file: quickFile,
-        videoStyle: "product_showcase",
-        aspectRatio: "16:9",
-      });
+      await finishQuickCreate(description, quickFile);
     } catch (err) {
       setQuickError(err instanceof Error ? err.message : "Couldn't fetch that link.");
+    } finally {
+      setQuickFetching(false);
+    }
+  };
+
+  // Skips fetch-product-link/understand-product-link entirely — a
+  // Shopify-synced (or CSV-imported) catalog item already has a real
+  // name/description/photo saved, so there's nothing to scrape.
+  const handleQuickCreateFromCatalog = async (description: string, file: File | null) => {
+    if (quickFetching) return;
+    setQuickFetching(true);
+    setQuickError(null);
+    try {
+      await finishQuickCreate(description, file);
+    } catch (err) {
+      setQuickError(err instanceof Error ? err.message : "Couldn't use that product.");
     } finally {
       setQuickFetching(false);
     }
@@ -544,8 +569,11 @@ export function AdVideoForm({
             onChange={(e) => setQuickUrl(e.target.value)}
             placeholder="https://yourstore.com/products/..."
             disabled={quickFetching}
-            className="mb-4 w-full rounded-full border border-input bg-background px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="mb-3 w-full rounded-full border border-input bg-background px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
+          <div className="mb-4 w-full text-left">
+            <ProductPicker onSelect={handleQuickCreateFromCatalog} />
+          </div>
 
           <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Goal

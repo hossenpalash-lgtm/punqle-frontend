@@ -1,8 +1,10 @@
-import { Loader2 } from "lucide-react";
+import { Loader2, Rocket, Settings2, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
+  base64ToFile,
   enhanceImage,
   fetchBusinessProfile,
+  fetchProductLink,
   generateAd,
   generateAdCaptions,
   generateAdImageVariant,
@@ -24,7 +26,7 @@ import {
   type EditOptions,
 } from "@/lib/canvas-text";
 import { findVisualDirection, PLATFORM_OPTIONS, type Platform } from "@/lib/social-wizard";
-import { AdBriefStep } from "./AdBriefStep";
+import { AdBriefStep, GOALS } from "./AdBriefStep";
 import { GenerationProgress } from "./GenerationProgress";
 import { PostKit } from "./PostKit";
 import { ResultsGrid } from "./ResultsGrid";
@@ -32,7 +34,7 @@ import { SetupStep } from "./SetupStep";
 import { VisualDirectionStep } from "./VisualDirectionStep";
 import { WizardProgress } from "./WizardProgress";
 
-type WizardStep = "brief" | "direction" | "setup" | "generating" | "results" | "result" | "receiving";
+type WizardStep = "choose" | "quick" | "brief" | "direction" | "setup" | "generating" | "results" | "result" | "receiving";
 
 const PROGRESS_STAGE: Partial<Record<WizardStep, 1 | 2 | 3 | 4>> = {
   brief: 1,
@@ -79,7 +81,16 @@ export function AdCreationForm({
   initialGeneratedImage?: { imageBase64: string; itemDescription: string; goal: AdGoal };
   onInitialGeneratedImageConsumed?: () => void;
 }) {
-  const [step, setStep] = useState<WizardStep>(initialGeneratedImage ? "receiving" : "brief");
+  const [step, setStep] = useState<WizardStep>(initialGeneratedImage ? "receiving" : "choose");
+
+  // Quick Create — paste a product URL, pick a Goal, skip straight to
+  // handleGenerate() with versions=1. Reuses fetchProductLink (the same
+  // free call SetupStep.tsx's own "More options -> Product link" uses)
+  // and the existing static "clean_premium" default style — no new AI
+  // call for either the fetch or the style choice.
+  const [quickUrl, setQuickUrl] = useState("");
+  const [quickFetching, setQuickFetching] = useState(false);
+  const [quickError, setQuickError] = useState<string | null>(null);
   const [generationStage, setGenerationStage] = useState(0);
 
   // Brief
@@ -214,6 +225,10 @@ export function AdCreationForm({
 
   const handleGenerate = async () => {
     if (generating) return;
+    const cameFrom = step; // captured before setStep("generating") below, so a
+    // failure can return to wherever generation was actually triggered from
+    // (the full wizard's "setup" step, or Quick Create's own "quick" step)
+    // instead of always assuming the full wizard.
     setGenerating(true);
     setError(null);
     setGenerationStage(0);
@@ -261,9 +276,33 @@ export function AdCreationForm({
       setStep(versions > 1 ? "results" : "result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't generate your ads.");
-      setStep("setup");
+      setStep(cameFrom === "quick" ? "quick" : "setup");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleQuickCreate = async () => {
+    if (quickFetching || !quickUrl.trim()) return;
+    setQuickFetching(true);
+    setQuickError(null);
+    try {
+      const r = await fetchProductLink(quickUrl.trim());
+      setOfferDescription([r.title, r.description].filter(Boolean).join(" — "));
+      if (r.image_base64) {
+        handleFileChange(base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg"));
+      } else {
+        handleUseAiImage();
+      }
+      setAngle(null);
+      setVersions(1);
+      // visualDirection/platform stay at their existing defaults
+      // ("clean_premium"/"instagram") — neither is user-facing here.
+      await handleGenerate();
+    } catch (err) {
+      setQuickError(err instanceof Error ? err.message : "Couldn't fetch that link.");
+    } finally {
+      setQuickFetching(false);
     }
   };
 
@@ -359,7 +398,9 @@ export function AdCreationForm({
   };
 
   const handleReset = () => {
-    setStep("brief");
+    setStep("choose");
+    setQuickUrl("");
+    setQuickError(null);
     setGenerationStage(0);
     setOfferDescription("");
     setGoal("sales");
@@ -390,6 +431,92 @@ export function AdCreationForm({
     <>
       {PROGRESS_STAGE[step] && (
         <WizardProgress currentStage={PROGRESS_STAGE[step]!} onNavigate={handleProgressNavigate} />
+      )}
+
+      {step === "choose" && (
+        <div className="flex flex-col items-center text-center">
+          <h1 className="font-display mb-2 text-xl font-extrabold text-foreground">Create an ad</h1>
+          <p className="mb-6 text-sm text-muted-foreground">Two ways to get there.</p>
+          <button
+            onClick={() => setStep("quick")}
+            className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left"
+            style={{ boxShadow: "var(--shadow-card)" }}
+          >
+            <Rocket className="h-5 w-5 shrink-0" style={{ color: "var(--color-accent)" }} />
+            <span>
+              <span className="block text-sm font-semibold text-foreground">Quick Create</span>
+              <span className="block text-xs text-muted-foreground">Paste a product link, pick a goal, get an ad.</span>
+            </span>
+          </button>
+          <button
+            onClick={() => setStep("brief")}
+            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left"
+            style={{ boxShadow: "var(--shadow-card)" }}
+          >
+            <Settings2 className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <span>
+              <span className="block text-sm font-semibold text-foreground">Customize</span>
+              <span className="block text-xs text-muted-foreground">Full control — offer, angle, style, platform, versions.</span>
+            </span>
+          </button>
+        </div>
+      )}
+
+      {step === "quick" && (
+        <div className="flex flex-col items-center text-center">
+          <h1 className="font-display mb-2 text-xl font-extrabold text-foreground">Quick Create</h1>
+          <p className="mb-6 text-sm text-muted-foreground">Paste your product link — Punqle handles the rest.</p>
+
+          <input
+            type="url"
+            value={quickUrl}
+            onChange={(e) => setQuickUrl(e.target.value)}
+            placeholder="https://yourstore.com/products/..."
+            disabled={quickFetching}
+            className="mb-4 w-full rounded-full border border-input bg-background px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+
+          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Goal
+          </label>
+          <div className="mb-6 grid w-full grid-cols-2 gap-2">
+            {GOALS.map((g) => (
+              <button
+                key={g.value}
+                onClick={() => setGoal(g.value)}
+                className={[
+                  "rounded-full px-3 py-2.5 text-sm font-semibold",
+                  goal === g.value ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                ].join(" ")}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+
+          {quickError && (
+            <p className="mb-4 text-sm font-medium text-destructive">{quickError}</p>
+          )}
+
+          <div className="flex w-full gap-2">
+            <button
+              onClick={() => setStep("choose")}
+              disabled={quickFetching}
+              className="rounded-full bg-secondary px-5 py-4 text-sm font-semibold text-secondary-foreground disabled:opacity-60"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleQuickCreate}
+              disabled={!quickUrl.trim() || quickFetching || outOfCredits}
+              className="flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              {quickFetching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+              Create My Ad
+            </button>
+          </div>
+        </div>
       )}
 
       {step === "brief" && (

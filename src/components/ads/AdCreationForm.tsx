@@ -4,12 +4,12 @@ import {
   base64ToFile,
   enhanceImage,
   fetchBusinessProfile,
-  fetchProductLink,
   generateAd,
   generateAdCaptions,
   generateAdImageVariant,
   removeBackground,
   translateCaptions,
+  understandProductLink,
   type ApiAdCaptionVariantWithAngle,
   type AdGoal,
   type AspectRatio,
@@ -306,8 +306,8 @@ export function AdCreationForm({
     setQuickFetching(true);
     setQuickError(null);
     try {
-      const r = await fetchProductLink(quickUrl.trim());
-      const description = [r.title, r.description].filter(Boolean).join(" — ");
+      const r = await understandProductLink(quickUrl.trim());
+      const description = r.enriched_description || [r.title, r.description].filter(Boolean).join(" — ");
       const quickFile = r.image_base64
         ? base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg")
         : null;

@@ -308,6 +308,34 @@ export function fetchProductLink(url: string): Promise<ApiFetchProductLinkRespon
   });
 }
 
+export interface ApiProductUnderstanding {
+  title: string;
+  description: string;
+  image_base64: string | null;
+  mime_type: string | null;
+  // Everything below is grounded in the page's real body text, not just
+  // its Open Graph tags — see understand_product_link on the backend.
+  enriched_description: string;
+  product_name: string;
+  benefits: string[];
+  features: string[];
+  offer: string | null;
+  target_audience: string | null;
+  tone: string | null;
+}
+
+// Quick Create's product-understanding step (Image and Video both use
+// this instead of fetchProductLink) — same shape plus a richer,
+// AI-synthesized description built from the page's actual content, used
+// as the item_description passed into angle/caption generation.
+export function understandProductLink(url: string): Promise<ApiProductUnderstanding> {
+  return apiFetch<ApiProductUnderstanding>("/ads/understand-product-link", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+}
+
 export interface ApiStockPhotoResult {
   id: string;
   thumbnail_url: string;

@@ -20,6 +20,7 @@ import {
   generateAdCaptions,
   generateVideoScriptAngles,
   startVideoGeneration,
+  understandProductLink,
   type AdGoal,
   type ApiVideoOperation,
   type ApiVideoScriptAngle,
@@ -339,8 +340,8 @@ export function AdVideoForm({
     setQuickFetching(true);
     setQuickError(null);
     try {
-      const r = await fetchProductLink(quickUrl.trim());
-      const description = [r.title, r.description].filter(Boolean).join(" — ");
+      const r = await understandProductLink(quickUrl.trim());
+      const description = r.enriched_description || [r.title, r.description].filter(Boolean).join(" — ");
       const quickFile = r.image_base64
         ? base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg")
         : null;

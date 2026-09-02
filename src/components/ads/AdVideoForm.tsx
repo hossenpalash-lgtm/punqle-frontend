@@ -1,4 +1,16 @@
-import { AlertCircle, Camera, ChevronDown, Clock, Download, Link2, Loader2, Video } from "lucide-react";
+import {
+  AlertCircle,
+  Camera,
+  ChevronDown,
+  Clock,
+  Download,
+  Link2,
+  Loader2,
+  Rocket,
+  Settings2,
+  Sparkles,
+  Video,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   base64ToFile,
@@ -14,7 +26,7 @@ import {
   type VideoAspectRatio,
 } from "@/lib/api";
 import { findVideoStyle, type VideoStyle } from "@/lib/video-style";
-import { AdBriefStep } from "./AdBriefStep";
+import { AdBriefStep, GOALS } from "./AdBriefStep";
 import { EditVideoPanel } from "./EditVideoPanel";
 import { ProductPicker } from "./ProductPicker";
 import { PublishToYouTube } from "./PublishToYouTube";
@@ -25,7 +37,7 @@ import { WizardProgress } from "./WizardProgress";
 const VIDEO_CREDIT_COST = 10;
 const POLL_INTERVAL_MS = 8000;
 
-type WizardStep = "brief" | "angles" | "style" | "setup" | "generating" | "result" | "receiving";
+type WizardStep = "choose" | "quick" | "brief" | "angles" | "style" | "setup" | "generating" | "result" | "receiving";
 
 const PROGRESS_STAGE: Partial<Record<WizardStep, 1 | 2 | 3>> = {
   brief: 1,
@@ -75,7 +87,7 @@ export function AdVideoForm({
   initialVideo?: { videoBase64: string; operation: ApiVideoOperation; itemDescription: string; goal: AdGoal };
   onInitialVideoConsumed?: () => void;
 }) {
-  const [step, setStep] = useState<WizardStep>(initialVideo ? "receiving" : "brief");
+  const [step, setStep] = useState<WizardStep>(initialVideo ? "receiving" : "choose");
 
   // Brief
   const [offerDescription, setOfferDescription] = useState("");
@@ -90,7 +102,20 @@ export function AdVideoForm({
   const [anglesLoading, setAnglesLoading] = useState(false);
   const [anglesError, setAnglesError] = useState<string | null>(null);
   const [selectedAngleIndex, setSelectedAngleIndex] = useState<number | null>(null);
+  const [recommendedAngleIndex, setRecommendedAngleIndex] = useState(0);
   const [pickedScript, setPickedScript] = useState<{ headline: string; narration: string } | null>(null);
+
+  // Quick Create — Video option: paste a link, pick a Goal, get a
+  // finished video ad in one tap. Mirrors AdCreationForm.tsx's Image Ad
+  // Quick Create exactly (same state shape, same fetchProductLink +
+  // override pattern) — the only real difference is that instead of
+  // skipping the angle silently (Image Ad's angle=null), it fetches the
+  // same 4-script picker Video Ad's Customize path uses and auto-applies
+  // the AI's own recommended_index, so the result is still angle-aware
+  // without adding an extra required tap to a "quick" flow.
+  const [quickUrl, setQuickUrl] = useState("");
+  const [quickFetching, setQuickFetching] = useState(false);
+  const [quickError, setQuickError] = useState<string | null>(null);
 
   // Try-On's animate step always renders 9:16 (a portrait photo of a
   // standing person) — the handed-off video really is that shape,
@@ -214,6 +239,7 @@ export function AdVideoForm({
     generateVideoScriptAngles(offerDescription.trim(), goal)
       .then((r) => {
         setScriptAngles(r.angles);
+        setRecommendedAngleIndex(r.recommended_index);
         setAnglesLoading(false);
       })
       .catch((err) => {
@@ -238,8 +264,37 @@ export function AdVideoForm({
     setStep("style");
   };
 
-  const handleGenerate = async () => {
-    if (!offerDescription.trim() || generating || (credits !== null && credits < VIDEO_CREDIT_COST)) return;
+  // `override` exists for Quick Create's Video option: it calls
+  // setOfferDescription/setAngle/setPickedScript/etc. and wants to
+  // generate off those values immediately, but React state setters don't
+  // apply until the next render, so reading them from closure state here
+  // would still see the pre-update values in that same tick (same
+  // stale-closure issue AdCreationForm.tsx's Image Ad Quick Create hit
+  // and fixed the same way). The normal Customize path (Setup step's
+  // Generate button) doesn't hit this — every relevant setter has already
+  // committed across earlier renders by the time it's clickable — so it
+  // keeps calling this with no override and reads current state.
+  const handleGenerate = async (override?: {
+    description: string;
+    goal: AdGoal;
+    angle: string | null;
+    script: { headline: string; narration: string } | null;
+    file: File | null;
+    videoStyle: VideoStyle;
+    aspectRatio: VideoAspectRatio;
+  }) => {
+    const finalDescription = (override?.description ?? offerDescription).trim();
+    const effectiveGoal = override?.goal ?? goal;
+    const effectiveAngle = override ? override.angle : angle;
+    const effectiveScript = override ? override.script : pickedScript;
+    const effectiveFile = override ? override.file : file;
+    const effectiveVideoStyle = override?.videoStyle ?? videoStyle;
+    const effectiveAspectRatio = override?.aspectRatio ?? aspectRatio;
+
+    if (!finalDescription || generating || (credits !== null && credits < VIDEO_CREDIT_COST)) return;
+    const cameFrom = step; // captured before setStep("generating") below, so a
+    // failure returns to wherever generation was actually triggered from
+    // (Customize's "setup" step, or Quick Create's own "quick" step).
     setGenerating(true);
     setError(null);
     setVideoUrl(null);
@@ -251,20 +306,20 @@ export function AdVideoForm({
       // auto-CTA already baked in by the goal-aware prompt. Not used for
       // the on-screen burned headline (wrong shape — this is 2-4 lines,
       // the headline needs to be a single <40-char hook).
-      const capResult = await generateAdCaptions(offerDescription.trim(), goal, angle, 1);
+      const capResult = await generateAdCaptions(finalDescription, effectiveGoal, effectiveAngle, 1);
       setCaption(capResult.captions[0]?.facebook_caption ?? "");
 
-      const style = findVideoStyle(videoStyle);
-      const styledDescription = `${offerDescription.trim()}, ${style.promptModifier}`;
-      const imageBase64 = file ? await fileToBase64(file) : undefined;
+      const style = findVideoStyle(effectiveVideoStyle);
+      const styledDescription = `${finalDescription}, ${style.promptModifier}`;
+      const imageBase64 = effectiveFile ? await fileToBase64(effectiveFile) : undefined;
       const r = await startVideoGeneration(
         styledDescription,
         imageBase64,
-        file?.type,
-        aspectRatio,
-        goal,
-        angle ?? undefined,
-        pickedScript ?? undefined,
+        effectiveFile?.type,
+        effectiveAspectRatio,
+        effectiveGoal,
+        effectiveAngle ?? undefined,
+        effectiveScript ?? undefined,
       );
       setHeadline(r.headline);
       headlineRef.current = r.headline;
@@ -275,12 +330,55 @@ export function AdVideoForm({
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
       setGenerating(false);
       setError(err instanceof Error ? err.message : "Couldn't start the video.");
-      setStep("setup");
+      setStep(cameFrom === "quick" ? "quick" : "setup");
+    }
+  };
+
+  const handleQuickCreate = async () => {
+    if (quickFetching || !quickUrl.trim()) return;
+    setQuickFetching(true);
+    setQuickError(null);
+    try {
+      const r = await fetchProductLink(quickUrl.trim());
+      const description = [r.title, r.description].filter(Boolean).join(" — ");
+      const quickFile = r.image_base64
+        ? base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg")
+        : null;
+      setOfferDescription(description);
+      if (quickFile) handleFileChange(quickFile);
+
+      // Still fetches the same 4-script picker Customize uses — just
+      // auto-applies the AI's own recommended_index instead of showing
+      // it, so Quick Create stays a single tap while the result is still
+      // built from a real, angle-aware script rather than a silent
+      // default.
+      const anglesResult = await generateVideoScriptAngles(description, goal);
+      const picked = anglesResult.angles[anglesResult.recommended_index] ?? anglesResult.angles[0];
+      const script = { headline: picked.headline, narration: picked.narration };
+      setAngle(picked.angle);
+      setPickedScript(script);
+      // videoStyle/aspectRatio stay at their existing defaults
+      // ("product_showcase"/"16:9") — neither is user-facing here.
+      await handleGenerate({
+        description,
+        goal,
+        angle: picked.angle,
+        script,
+        file: quickFile,
+        videoStyle: "product_showcase",
+        aspectRatio: "16:9",
+      });
+    } catch (err) {
+      setQuickError(err instanceof Error ? err.message : "Couldn't fetch that link.");
+    } finally {
+      setQuickFetching(false);
     }
   };
 
   const handleReset = () => {
-    setStep("brief");
+    setStep("choose");
+    setQuickUrl("");
+    setQuickError(null);
     setOfferDescription("");
     setGoal("sales");
     setAngle(null);
@@ -288,6 +386,7 @@ export function AdVideoForm({
     setAnglesLoading(false);
     setAnglesError(null);
     setSelectedAngleIndex(null);
+    setRecommendedAngleIndex(0);
     setPickedScript(null);
     setVideoStyle("product_showcase");
     setAspectRatio("16:9");
@@ -404,6 +503,96 @@ export function AdVideoForm({
         <WizardProgress currentStage={PROGRESS_STAGE[step]!} onNavigate={handleProgressNavigate} />
       )}
 
+      {step === "choose" && (
+        <div className="flex flex-col items-center text-center">
+          <h1 className="font-display mb-2 text-xl font-extrabold text-foreground">Create a video ad</h1>
+          <p className="mb-6 text-sm text-muted-foreground">Two ways to get there.</p>
+          <button
+            onClick={() => setStep("quick")}
+            className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left"
+            style={{ boxShadow: "var(--shadow-card)" }}
+          >
+            <Rocket className="h-5 w-5 shrink-0" style={{ color: "var(--color-accent)" }} />
+            <span>
+              <span className="block text-sm font-semibold text-foreground">Quick Create</span>
+              <span className="block text-xs text-muted-foreground">Paste a product link, pick a goal, get a video.</span>
+            </span>
+          </button>
+          <button
+            onClick={() => setStep("brief")}
+            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left"
+            style={{ boxShadow: "var(--shadow-card)" }}
+          >
+            <Settings2 className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <span>
+              <span className="block text-sm font-semibold text-foreground">Customize</span>
+              <span className="block text-xs text-muted-foreground">Full control — offer, script, style, format.</span>
+            </span>
+          </button>
+        </div>
+      )}
+
+      {step === "quick" && (
+        <div className="flex flex-col items-center text-center">
+          <h1 className="font-display mb-2 text-xl font-extrabold text-foreground">Quick Create</h1>
+          <p className="mb-6 text-sm text-muted-foreground">Paste your product link — Punqle handles the rest.</p>
+
+          <input
+            type="url"
+            value={quickUrl}
+            onChange={(e) => setQuickUrl(e.target.value)}
+            placeholder="https://yourstore.com/products/..."
+            disabled={quickFetching}
+            className="mb-4 w-full rounded-full border border-input bg-background px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+
+          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Goal
+          </label>
+          <div className="mb-6 grid w-full grid-cols-2 gap-2">
+            {GOALS.map((g) => (
+              <button
+                key={g.value}
+                onClick={() => setGoal(g.value)}
+                className={[
+                  "rounded-full px-3 py-2.5 text-sm font-semibold",
+                  goal === g.value ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                ].join(" ")}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mb-5 w-full rounded-2xl border border-dashed border-border bg-secondary/60 p-3 text-center text-xs font-semibold text-foreground">
+            1 video · {VIDEO_CREDIT_COST} credits · about 1-2 min
+          </div>
+
+          {(quickError || error) && (
+            <p className="mb-4 text-sm font-medium text-destructive">{quickError || error}</p>
+          )}
+
+          <div className="flex w-full gap-2">
+            <button
+              onClick={() => setStep("choose")}
+              disabled={quickFetching}
+              className="rounded-full bg-secondary px-5 py-4 text-sm font-semibold text-secondary-foreground disabled:opacity-60"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleQuickCreate}
+              disabled={!quickUrl.trim() || quickFetching || insufficientCredits}
+              className="flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              {quickFetching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+              Create My Video
+            </button>
+          </div>
+        </div>
+      )}
+
       {step === "brief" && (
         <AdBriefStep
           offerDescription={offerDescription}
@@ -427,6 +616,7 @@ export function AdVideoForm({
           onContinue={handleContinueFromAngles}
           onBack={() => setStep("brief")}
           onRetry={fetchAngles}
+          recommendedIndex={recommendedAngleIndex}
         />
       )}
 
@@ -575,7 +765,7 @@ export function AdVideoForm({
           )}
 
           <button
-            onClick={handleGenerate}
+            onClick={() => handleGenerate()}
             disabled={!offerDescription.trim() || generating || insufficientCredits}
             className="flex w-full items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
             style={{ background: "var(--gradient-primary)" }}

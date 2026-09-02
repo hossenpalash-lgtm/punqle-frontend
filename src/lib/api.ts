@@ -133,6 +133,8 @@ export interface ApiVideoScriptAngle {
 
 export interface ApiVideoScriptAnglesResponse {
   angles: ApiVideoScriptAngle[];
+  recommended_index: number;
+  recommended_reason: string;
 }
 
 export function generateVideoScriptAngles(

@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Check, Loader2, Star } from "lucide-react";
 import type { ApiVideoScriptAngle } from "@/lib/api";
 
 // New step 2 of Video Ad (between Brief and Style) — shows several real,
@@ -16,6 +16,8 @@ export function VideoAnglesStep({
   onContinue,
   onBack,
   onRetry,
+  recommendedIndex,
+  recommendedReason,
 }: {
   angles: ApiVideoScriptAngle[];
   loading: boolean;
@@ -25,6 +27,12 @@ export function VideoAnglesStep({
   onContinue: () => void;
   onBack: () => void;
   onRetry: () => void;
+  // Same AI-picked-best-option data Quick Create's Video option auto-uses
+  // without showing this screen at all — surfaced here too (a small
+  // badge) so a user who does see the picker knows which one Punqle
+  // itself would have picked.
+  recommendedIndex?: number;
+  recommendedReason?: string;
 }) {
   return (
     <div className="flex flex-col items-center text-center">
@@ -71,6 +79,18 @@ export function VideoAnglesStep({
                 <span className="flex items-center gap-1.5 text-sm font-semibold">
                   {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
                   {a.angle}
+                  {i === recommendedIndex && (
+                    <span
+                      className="ml-auto flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                      style={{
+                        background: isSelected ? "rgba(255,255,255,0.2)" : "var(--color-accent)",
+                        color: isSelected ? "inherit" : "var(--color-accent-foreground)",
+                      }}
+                    >
+                      <Star className="h-2.5 w-2.5 fill-current" />
+                      Recommended
+                    </span>
+                  )}
                 </span>
                 <span className={["text-xs", isSelected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}>
                   {a.explanation}

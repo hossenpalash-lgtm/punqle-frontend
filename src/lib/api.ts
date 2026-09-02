@@ -192,6 +192,11 @@ export type AvatarTier = "standard" | "premium";
 
 export interface ApiAvatarVideoOperation {
   video_id: string;
+  // True when the requested tier wasn't supported by this avatar and the
+  // backend automatically retried with Standard instead of failing —
+  // the lower price is what actually gets charged in this case.
+  fell_back: boolean;
+  actual_tier: AvatarTier;
 }
 
 export function startAvatarVideoGeneration(

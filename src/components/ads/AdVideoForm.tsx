@@ -138,6 +138,11 @@ export function AdVideoForm({
   const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
   const [selectedAvatarGender, setSelectedAvatarGender] = useState<string | null>(null);
   const [avatarVideoId, setAvatarVideoId] = useState<string | null>(null);
+  // Set when the backend automatically fell back from Premium to
+  // Standard because this specific avatar didn't support Premium —
+  // shown so the user knows why they were charged less than expected,
+  // rather than a silent discrepancy.
+  const [avatarFellBack, setAvatarFellBack] = useState(false);
   // True only for a result produced via the avatar path — the result
   // screen skips EditVideoPanel for these (HeyGen's response shape isn't
   // a Veo operation handle, and burning a headline over a speaking
@@ -456,6 +461,7 @@ export function AdVideoForm({
         aspectRatio,
       );
       setAvatarVideoId(r.video_id);
+      setAvatarFellBack(r.fell_back);
       pollTimeoutRef.current = setTimeout(() => pollAvatarVideo(r.video_id), POLL_INTERVAL_MS);
     } catch (err) {
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
@@ -568,6 +574,7 @@ export function AdVideoForm({
     setSelectedAvatarGender(null);
     setAvatarVideoId(null);
     setIsAvatarResult(false);
+    setAvatarFellBack(false);
   };
 
   const handleHeadlineChange = (value: string) => {
@@ -607,6 +614,13 @@ export function AdVideoForm({
           />
         )}
 
+        {isAvatarResult && avatarFellBack && (
+          <p className="mb-3 rounded-2xl bg-secondary/60 px-4 py-3 text-xs text-muted-foreground">
+            This avatar didn't support Premium quality, so Standard was used instead — you were charged{" "}
+            {AVATAR_STANDARD_CREDIT_COST} credits, not the Premium price.
+          </p>
+        )}
+
         {caption && (
           <div className="mb-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Caption</p>
@@ -638,6 +652,27 @@ export function AdVideoForm({
       <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
         Preparing your ad...
+      </div>
+    );
+  }
+
+  if (step === "generating" && videoStyle === "avatar") {
+    return (
+      <div className="rounded-2xl bg-card p-6" style={{ boxShadow: "var(--shadow-card)" }}>
+        <div className="flex flex-col items-center justify-center gap-3 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm font-semibold text-foreground">Generating your AI presenter video...</p>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            {minutes}:{seconds.toString().padStart(2, "0")} elapsed — usually a few minutes
+          </p>
+          {avatarFellBack && (
+            <p className="mt-2 rounded-xl bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
+              This avatar doesn't support Premium — using Standard instead, so you'll only be charged{" "}
+              {AVATAR_STANDARD_CREDIT_COST} credits.
+            </p>
+          )}
+        </div>
       </div>
     );
   }

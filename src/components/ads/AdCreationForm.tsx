@@ -223,7 +223,22 @@ export function AdCreationForm({
     setStep(STAGE_STEP[stage]);
   };
 
-  const handleGenerate = async () => {
+  // `override` exists for Quick Create: it calls setOfferDescription/
+  // setVersions/etc. and wants to generate off those values immediately,
+  // but React state setters don't apply until the next render, so reading
+  // offerDescription/file/angle/versions from closure state here would
+  // still see the pre-update values in that same tick. The normal wizard
+  // path (SetupStep's onGenerate) doesn't hit this — by the time its
+  // Generate button is clickable, every relevant setter has already
+  // committed across earlier renders — so it keeps calling this with no
+  // override and reads current state, unchanged from before.
+  const handleGenerate = async (override?: {
+    description: string;
+    file: File | null;
+    useAiImage: boolean;
+    angle: string | null;
+    versions: number;
+  }) => {
     if (generating) return;
     const cameFrom = step; // captured before setStep("generating") below, so a
     // failure can return to wherever generation was actually triggered from
@@ -235,12 +250,16 @@ export function AdCreationForm({
     setStep("generating");
 
     const direction = findVisualDirection(visualDirection);
-    const finalDescription = offerDescription.trim();
+    const finalDescription = (override?.description ?? offerDescription).trim();
     const finalStyledDescription = `${finalDescription}, ${direction.promptModifier}`;
     setStyledDescription(finalStyledDescription);
     const aspectRatio: AspectRatio = PLATFORM_OPTIONS.find((p) => p.id === platform)?.aspectRatio ?? "square";
-    const sourceFile = useAiImage ? null : file;
-    const requestedVersions = versions as 1 | 3 | 5;
+    const effectiveUseAiImage = override ? override.useAiImage : useAiImage;
+    const effectiveFile = override ? override.file : file;
+    const effectiveAngle = override ? override.angle : angle;
+    const effectiveVersions = override ? override.versions : versions;
+    const sourceFile = effectiveUseAiImage ? null : effectiveFile;
+    const requestedVersions = effectiveVersions as 1 | 3 | 5;
 
     try {
       await pause(300);
@@ -250,7 +269,7 @@ export function AdCreationForm({
       await pause(250);
       setGenerationStage(3);
 
-      const capResult = await generateAdCaptions(finalDescription, goal, angle, requestedVersions);
+      const capResult = await generateAdCaptions(finalDescription, goal, effectiveAngle, requestedVersions);
       setAdCaptions(capResult.captions);
       setRecommendedIndex(capResult.recommended_index);
       setRecommendedReason(capResult.recommended_reason);
@@ -265,7 +284,7 @@ export function AdCreationForm({
       setCredits(firstImage.credits_remaining);
       setGenerationStage(5);
 
-      for (let i = 1; i < versions; i++) {
+      for (let i = 1; i < effectiveVersions; i++) {
         const r = await generateAdImageVariant(finalStyledDescription, sourceFile, aspectRatio);
         setImages((prev) => [...prev, r.banner_image_base64]);
         setCredits(r.credits_remaining);
@@ -273,7 +292,7 @@ export function AdCreationForm({
 
       setSelectedCaptionIndex(0);
       setSelectedImageIndex(0);
-      setStep(versions > 1 ? "results" : "result");
+      setStep(effectiveVersions > 1 ? "results" : "result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't generate your ads.");
       setStep(cameFrom === "quick" ? "quick" : "setup");
@@ -288,9 +307,13 @@ export function AdCreationForm({
     setQuickError(null);
     try {
       const r = await fetchProductLink(quickUrl.trim());
-      setOfferDescription([r.title, r.description].filter(Boolean).join(" — "));
-      if (r.image_base64) {
-        handleFileChange(base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg"));
+      const description = [r.title, r.description].filter(Boolean).join(" — ");
+      const quickFile = r.image_base64
+        ? base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg")
+        : null;
+      setOfferDescription(description);
+      if (quickFile) {
+        handleFileChange(quickFile);
       } else {
         handleUseAiImage();
       }
@@ -298,7 +321,13 @@ export function AdCreationForm({
       setVersions(1);
       // visualDirection/platform stay at their existing defaults
       // ("clean_premium"/"instagram") — neither is user-facing here.
-      await handleGenerate();
+      await handleGenerate({
+        description,
+        file: quickFile,
+        useAiImage: !quickFile,
+        angle: null,
+        versions: 1,
+      });
     } catch (err) {
       setQuickError(err instanceof Error ? err.message : "Couldn't fetch that link.");
     } finally {
@@ -494,8 +523,8 @@ export function AdCreationForm({
             ))}
           </div>
 
-          {quickError && (
-            <p className="mb-4 text-sm font-medium text-destructive">{quickError}</p>
+          {(quickError || error) && (
+            <p className="mb-4 text-sm font-medium text-destructive">{quickError || error}</p>
           )}
 
           <div className="flex w-full gap-2">

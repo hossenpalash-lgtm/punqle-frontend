@@ -95,6 +95,10 @@ export type VideoAspectRatio = "16:9" | "9:16";
 // goal/angle are only ever set by Ad Creation's Video Ad flow — Social
 // Content's Video tab omits both, leaving the backend's behavior for it
 // byte-identical to before (see GenerateVideoRequest in main.py).
+// scriptOverride is set when the caller already has an exact headline +
+// narration the user reviewed and picked (Video Ad's angle picker) — the
+// backend uses it verbatim instead of writing a fresh (non-deterministic)
+// script, so the video gets exactly the script the user chose.
 export function startVideoGeneration(
   itemDescription: string,
   imageBase64?: string,
@@ -102,6 +106,7 @@ export function startVideoGeneration(
   aspectRatio: VideoAspectRatio = "16:9",
   goal?: AdGoal,
   angle?: string | null,
+  scriptOverride?: { headline: string; narration: string },
 ): Promise<ApiVideoOperationResponse> {
   return apiFetch<ApiVideoOperationResponse>("/ads/generate-video", {
     method: "POST",
@@ -113,7 +118,31 @@ export function startVideoGeneration(
       aspect_ratio: aspectRatio,
       goal,
       angle,
+      headline: scriptOverride?.headline,
+      narration: scriptOverride?.narration,
     }),
+  });
+}
+
+export interface ApiVideoScriptAngle {
+  angle: string;
+  explanation: string;
+  headline: string;
+  narration: string;
+}
+
+export interface ApiVideoScriptAnglesResponse {
+  angles: ApiVideoScriptAngle[];
+}
+
+export function generateVideoScriptAngles(
+  itemDescription: string,
+  goal: AdGoal,
+): Promise<ApiVideoScriptAnglesResponse> {
+  return apiFetch<ApiVideoScriptAnglesResponse>("/ads/generate-video-angles", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ item_description: itemDescription, goal }),
   });
 }
 

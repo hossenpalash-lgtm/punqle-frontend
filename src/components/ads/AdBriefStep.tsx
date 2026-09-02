@@ -36,6 +36,7 @@ export function AdBriefStep({
   angle,
   onAngleChange,
   onContinue,
+  showAngle = true,
 }: {
   offerDescription: string;
   onOfferDescriptionChange: (v: string) => void;
@@ -44,6 +45,10 @@ export function AdBriefStep({
   angle: string | null;
   onAngleChange: (v: string | null) => void;
   onContinue: () => void;
+  // Video Ad hides this — its own next step shows full written scripts
+  // for 3-4 angles to pick between, which makes picking a blind angle
+  // label here redundant. Image Ad (the default) keeps it unchanged.
+  showAngle?: boolean;
 }) {
   const [submitting, setSubmitting] = useState(false);
 
@@ -102,6 +107,7 @@ export function AdBriefStep({
         </div>
       </div>
 
+      {showAngle && (
       <div className="mb-6 w-full text-left">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           What should the ad say?
@@ -126,6 +132,7 @@ export function AdBriefStep({
           })}
         </div>
       </div>
+      )}
 
       <button
         onClick={handleContinue}

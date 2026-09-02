@@ -6,9 +6,11 @@ import {
   fetchBusinessProfile,
   fetchProductLink,
   generateAdCaptions,
+  generateVideoScriptAngles,
   startVideoGeneration,
   type AdGoal,
   type ApiVideoOperation,
+  type ApiVideoScriptAngle,
   type VideoAspectRatio,
 } from "@/lib/api";
 import { findVideoStyle, type VideoStyle } from "@/lib/video-style";
@@ -16,13 +18,14 @@ import { AdBriefStep } from "./AdBriefStep";
 import { EditVideoPanel } from "./EditVideoPanel";
 import { ProductPicker } from "./ProductPicker";
 import { PublishToYouTube } from "./PublishToYouTube";
+import { VideoAnglesStep } from "./VideoAnglesStep";
 import { VideoStyleStep } from "./VideoStyleStep";
 import { WizardProgress } from "./WizardProgress";
 
 const VIDEO_CREDIT_COST = 10;
 const POLL_INTERVAL_MS = 8000;
 
-type WizardStep = "brief" | "style" | "setup" | "generating" | "result" | "receiving";
+type WizardStep = "brief" | "angles" | "style" | "setup" | "generating" | "result" | "receiving";
 
 const PROGRESS_STAGE: Partial<Record<WizardStep, 1 | 2 | 3>> = {
   brief: 1,
@@ -79,6 +82,15 @@ export function AdVideoForm({
   const [goal, setGoal] = useState<AdGoal>(initialVideo?.goal ?? "sales");
   const [angle, setAngle] = useState<string | null>(null);
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("product_showcase");
+
+  // Multi-angle script picker (between Brief and Style) — replaces the old
+  // blind angle-label chip in AdBriefStep with real, AI-written scripts to
+  // choose between. pickedScript is passed verbatim into generation.
+  const [scriptAngles, setScriptAngles] = useState<ApiVideoScriptAngle[]>([]);
+  const [anglesLoading, setAnglesLoading] = useState(false);
+  const [anglesError, setAnglesError] = useState<string | null>(null);
+  const [selectedAngleIndex, setSelectedAngleIndex] = useState<number | null>(null);
+  const [pickedScript, setPickedScript] = useState<{ headline: string; narration: string } | null>(null);
 
   // Try-On's animate step always renders 9:16 (a portrait photo of a
   // standing person) — the handed-off video really is that shape,
@@ -196,6 +208,36 @@ export function AdVideoForm({
     }
   };
 
+  const fetchAngles = () => {
+    setAnglesLoading(true);
+    setAnglesError(null);
+    generateVideoScriptAngles(offerDescription.trim(), goal)
+      .then((r) => {
+        setScriptAngles(r.angles);
+        setAnglesLoading(false);
+      })
+      .catch((err) => {
+        setAnglesError(err instanceof Error ? err.message : "Couldn't write scripts — please try again.");
+        setAnglesLoading(false);
+      });
+  };
+
+  const handleBriefContinue = () => {
+    setSelectedAngleIndex(null);
+    setPickedScript(null);
+    setScriptAngles([]);
+    setStep("angles");
+    fetchAngles();
+  };
+
+  const handleContinueFromAngles = () => {
+    if (selectedAngleIndex === null) return;
+    const picked = scriptAngles[selectedAngleIndex];
+    setAngle(picked.angle);
+    setPickedScript({ headline: picked.headline, narration: picked.narration });
+    setStep("style");
+  };
+
   const handleGenerate = async () => {
     if (!offerDescription.trim() || generating || (credits !== null && credits < VIDEO_CREDIT_COST)) return;
     setGenerating(true);
@@ -215,7 +257,15 @@ export function AdVideoForm({
       const style = findVideoStyle(videoStyle);
       const styledDescription = `${offerDescription.trim()}, ${style.promptModifier}`;
       const imageBase64 = file ? await fileToBase64(file) : undefined;
-      const r = await startVideoGeneration(styledDescription, imageBase64, file?.type, aspectRatio, goal, angle ?? undefined);
+      const r = await startVideoGeneration(
+        styledDescription,
+        imageBase64,
+        file?.type,
+        aspectRatio,
+        goal,
+        angle ?? undefined,
+        pickedScript ?? undefined,
+      );
       setHeadline(r.headline);
       headlineRef.current = r.headline;
       setNarration(r.narration);
@@ -234,6 +284,11 @@ export function AdVideoForm({
     setOfferDescription("");
     setGoal("sales");
     setAngle(null);
+    setScriptAngles([]);
+    setAnglesLoading(false);
+    setAnglesError(null);
+    setSelectedAngleIndex(null);
+    setPickedScript(null);
     setVideoStyle("product_showcase");
     setAspectRatio("16:9");
     handleFileChange(null);
@@ -357,7 +412,21 @@ export function AdVideoForm({
           onGoalChange={setGoal}
           angle={angle}
           onAngleChange={setAngle}
-          onContinue={() => setStep("style")}
+          onContinue={handleBriefContinue}
+          showAngle={false}
+        />
+      )}
+
+      {step === "angles" && (
+        <VideoAnglesStep
+          angles={scriptAngles}
+          loading={anglesLoading}
+          error={anglesError}
+          selectedIndex={selectedAngleIndex}
+          onSelect={setSelectedAngleIndex}
+          onContinue={handleContinueFromAngles}
+          onBack={() => setStep("brief")}
+          onRetry={fetchAngles}
         />
       )}
 
@@ -366,7 +435,7 @@ export function AdVideoForm({
           selected={videoStyle}
           onSelect={setVideoStyle}
           onContinue={() => setStep("setup")}
-          onBack={() => setStep("brief")}
+          onBack={() => setStep("angles")}
         />
       )}
 

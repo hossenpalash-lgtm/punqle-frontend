@@ -5,7 +5,7 @@
 // needs for v1. Each style is just a short phrase appended client-side
 // to the offer description before it reaches Veo — the same
 // `${description}, ${modifier}` pattern used for image style.
-export type VideoStyle = "product_showcase" | "lifestyle" | "problem_solution" | "before_after" | "cinematic";
+export type VideoStyle = "product_showcase" | "lifestyle" | "problem_solution" | "before_after" | "cinematic" | "avatar";
 
 export interface VideoStyleOption {
   id: VideoStyle;
@@ -44,6 +44,14 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     label: "Cinematic",
     description: "Dramatic, film-like look",
     promptModifier: "cinematic lighting, dramatic composition, film-like color grading",
+  },
+  {
+    id: "avatar",
+    label: "AI Presenter",
+    description: "A talking avatar reads your script",
+    // Unused — Avatar bypasses Veo/promptModifier entirely; handleGenerate
+    // special-cases videoStyle === "avatar" and calls HeyGen instead.
+    promptModifier: "",
   },
 ];
 

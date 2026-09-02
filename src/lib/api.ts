@@ -169,6 +169,65 @@ export function checkVideoStatus(
   });
 }
 
+// Talking-avatar video (HeyGen) — a second, parallel video path picked
+// from Video Ad's Style step, alongside (not replacing) Veo. See
+// AvatarPickerStep.tsx for the tier+avatar picker UI this powers.
+export interface ApiAvatarOption {
+  avatar_id: string;
+  name: string;
+  gender: string | null;
+  preview_image_url: string | null;
+  preview_video_url: string | null;
+}
+
+export interface ApiAvatarOptionsResponse {
+  avatars: ApiAvatarOption[];
+}
+
+export function fetchAvatarOptions(): Promise<ApiAvatarOptionsResponse> {
+  return apiFetch<ApiAvatarOptionsResponse>("/ads/avatar-options");
+}
+
+export type AvatarTier = "standard" | "premium";
+
+export interface ApiAvatarVideoOperation {
+  video_id: string;
+}
+
+export function startAvatarVideoGeneration(
+  narration: string,
+  avatarId: string,
+  gender: string | null,
+  tier: AvatarTier,
+  aspectRatio: VideoAspectRatio,
+): Promise<ApiAvatarVideoOperation> {
+  return apiFetch<ApiAvatarVideoOperation>("/ads/generate-avatar-video", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      narration,
+      avatar_id: avatarId,
+      gender,
+      tier,
+      aspect_ratio: aspectRatio,
+    }),
+  });
+}
+
+export interface ApiAvatarVideoStatusResponse {
+  done: boolean;
+  video_base64: string | null;
+  credits_remaining: number | null;
+}
+
+export function checkAvatarVideoStatus(videoId: string): Promise<ApiAvatarVideoStatusResponse> {
+  return apiFetch<ApiAvatarVideoStatusResponse>("/ads/avatar-video-status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ video_id: videoId }),
+  });
+}
+
 export type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 export type TextPosition = "top" | "center" | "bottom";
 export type TtsVoice = "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer";

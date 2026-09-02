@@ -14,20 +14,26 @@ import {
 import { useEffect, useRef, useState } from "react";
 import {
   base64ToFile,
+  checkAvatarVideoStatus,
   checkVideoStatus,
+  fetchAvatarOptions,
   fetchBusinessProfile,
   fetchProductLink,
   generateAdCaptions,
   generateVideoScriptAngles,
+  startAvatarVideoGeneration,
   startVideoGeneration,
   understandProductLink,
   type AdGoal,
+  type ApiAvatarOption,
   type ApiVideoOperation,
   type ApiVideoScriptAngle,
+  type AvatarTier,
   type VideoAspectRatio,
 } from "@/lib/api";
 import { findVideoStyle, type VideoStyle } from "@/lib/video-style";
 import { AdBriefStep, GOALS } from "./AdBriefStep";
+import { AvatarPickerStep } from "./AvatarPickerStep";
 import { EditVideoPanel } from "./EditVideoPanel";
 import { ProductPicker } from "./ProductPicker";
 import { PublishToYouTube } from "./PublishToYouTube";
@@ -37,8 +43,22 @@ import { WizardProgress } from "./WizardProgress";
 
 const VIDEO_CREDIT_COST = 10;
 const POLL_INTERVAL_MS = 8000;
+// Avatar "premium" tier costs the same real amount as a Veo video, so it
+// reuses VIDEO_CREDIT_COST directly (see main.py's AVATAR_PREMIUM_CREDIT_COST);
+// "standard" gets its own, cheaper constant matching main.py's real one.
+const AVATAR_STANDARD_CREDIT_COST = 4;
 
-type WizardStep = "choose" | "quick" | "brief" | "angles" | "style" | "setup" | "generating" | "result" | "receiving";
+type WizardStep =
+  | "choose"
+  | "quick"
+  | "brief"
+  | "angles"
+  | "style"
+  | "avatar-picker"
+  | "setup"
+  | "generating"
+  | "result"
+  | "receiving";
 
 const PROGRESS_STAGE: Partial<Record<WizardStep, 1 | 2 | 3>> = {
   brief: 1,
@@ -105,6 +125,24 @@ export function AdVideoForm({
   const [selectedAngleIndex, setSelectedAngleIndex] = useState<number | null>(null);
   const [recommendedAngleIndex, setRecommendedAngleIndex] = useState(0);
   const [pickedScript, setPickedScript] = useState<{ headline: string; narration: string } | null>(null);
+
+  // "AI Presenter" style — a talking avatar (HeyGen) reads the already-
+  // picked script's narration, instead of Veo's b-roll-style video. Tier
+  // is picked first (any avatar works at either tier — confirmed live
+  // against HeyGen's real API), then an avatar from the live catalog.
+  const [avatarTier, setAvatarTier] = useState<AvatarTier>("standard");
+  const [avatarOptions, setAvatarOptions] = useState<ApiAvatarOption[]>([]);
+  const [avatarOptionsLoading, setAvatarOptionsLoading] = useState(false);
+  const [avatarOptionsError, setAvatarOptionsError] = useState<string | null>(null);
+  const [avatarGenderFilter, setAvatarGenderFilter] = useState<"all" | "female" | "male">("all");
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
+  const [selectedAvatarGender, setSelectedAvatarGender] = useState<string | null>(null);
+  const [avatarVideoId, setAvatarVideoId] = useState<string | null>(null);
+  // True only for a result produced via the avatar path — the result
+  // screen skips EditVideoPanel for these (HeyGen's response shape isn't
+  // a Veo operation handle, and burning a headline over a speaking
+  // presenter's face would look wrong anyway).
+  const [isAvatarResult, setIsAvatarResult] = useState(false);
 
   // Quick Create — Video option: paste a link, pick a Goal, get a
   // finished video ad in one tap. Mirrors AdCreationForm.tsx's Image Ad
@@ -265,6 +303,36 @@ export function AdVideoForm({
     setStep("style");
   };
 
+  const fetchAvatarOptionsForStep = () => {
+    setAvatarOptionsLoading(true);
+    setAvatarOptionsError(null);
+    fetchAvatarOptions()
+      .then((r) => {
+        setAvatarOptions(r.avatars);
+        setAvatarOptionsLoading(false);
+      })
+      .catch((err) => {
+        setAvatarOptionsError(err instanceof Error ? err.message : "Couldn't load avatars — please try again.");
+        setAvatarOptionsLoading(false);
+      });
+  };
+
+  const handleContinueFromStyle = () => {
+    if (videoStyle === "avatar") {
+      setSelectedAvatarId(null);
+      setSelectedAvatarGender(null);
+      setStep("avatar-picker");
+      if (avatarOptions.length === 0) fetchAvatarOptionsForStep();
+    } else {
+      setStep("setup");
+    }
+  };
+
+  const handleSelectAvatar = (avatarId: string, gender: string | null) => {
+    setSelectedAvatarId(avatarId);
+    setSelectedAvatarGender(gender);
+  };
+
   // `override` exists for Quick Create's Video option: it calls
   // setOfferDescription/setAngle/setPickedScript/etc. and wants to
   // generate off those values immediately, but React state setters don't
@@ -332,6 +400,68 @@ export function AdVideoForm({
       setGenerating(false);
       setError(err instanceof Error ? err.message : "Couldn't start the video.");
       setStep(cameFrom === "quick" ? "quick" : "setup");
+    }
+  };
+
+  const pollAvatarVideo = async (videoId: string) => {
+    try {
+      const r = await checkAvatarVideoStatus(videoId);
+      if (!r.done) {
+        pollTimeoutRef.current = setTimeout(() => pollAvatarVideo(videoId), POLL_INTERVAL_MS);
+        return;
+      }
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setGenerating(false);
+      if (r.credits_remaining !== null) setCredits(r.credits_remaining);
+      if (r.video_base64) {
+        setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
+        setIsAvatarResult(true);
+        setStep("result");
+      } else {
+        setError("The avatar video didn't come back — please try again.");
+        setStep("setup");
+      }
+    } catch (err) {
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setGenerating(false);
+      setError(err instanceof Error ? err.message : "Couldn't check the avatar video's status.");
+    }
+  };
+
+  // Separate from handleGenerate — HeyGen's response shape (a bare
+  // video_id, then a signed video_url) is structurally different from
+  // Veo's operation-handle shape, so this doesn't share the Veo polling
+  // path. The script is already picked (same narration the Angles step
+  // or Quick Create's auto-pick already produced) — no new AI writing
+  // happens here, just handing that text to a different video engine.
+  const handleGenerateAvatarVideo = async () => {
+    const avatarCreditCost = avatarTier === "premium" ? VIDEO_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST;
+    if (!selectedAvatarId || !pickedScript || generating || (credits !== null && credits < avatarCreditCost)) return;
+    setGenerating(true);
+    setError(null);
+    setVideoUrl(null);
+    setElapsedSeconds(0);
+    setStep("generating");
+    elapsedIntervalRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    try {
+      const capResult = await generateAdCaptions(offerDescription.trim(), goal, angle, 1);
+      setCaption(capResult.captions[0]?.facebook_caption ?? "");
+      setHeadline(pickedScript.headline);
+
+      const r = await startAvatarVideoGeneration(
+        pickedScript.narration,
+        selectedAvatarId,
+        selectedAvatarGender,
+        avatarTier,
+        aspectRatio,
+      );
+      setAvatarVideoId(r.video_id);
+      pollTimeoutRef.current = setTimeout(() => pollAvatarVideo(r.video_id), POLL_INTERVAL_MS);
+    } catch (err) {
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setGenerating(false);
+      setError(err instanceof Error ? err.message : "Couldn't start the avatar video.");
+      setStep("setup");
     }
   };
 
@@ -429,6 +559,15 @@ export function AdVideoForm({
     setShowLinkInput(false);
     setProductUrl("");
     setLinkError(null);
+    setAvatarTier("standard");
+    setAvatarOptions([]);
+    setAvatarOptionsLoading(false);
+    setAvatarOptionsError(null);
+    setAvatarGenderFilter("all");
+    setSelectedAvatarId(null);
+    setSelectedAvatarGender(null);
+    setAvatarVideoId(null);
+    setIsAvatarResult(false);
   };
 
   const handleHeadlineChange = (value: string) => {
@@ -439,6 +578,8 @@ export function AdVideoForm({
   const minutes = Math.floor(elapsedSeconds / 60);
   const seconds = elapsedSeconds % 60;
   const insufficientCredits = credits !== null && credits < VIDEO_CREDIT_COST;
+  const avatarInsufficientCredits =
+    credits !== null && credits < (avatarTier === "premium" ? VIDEO_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST);
 
   if (step === "result" && videoUrl) {
     return (
@@ -447,17 +588,24 @@ export function AdVideoForm({
           <video src={videoUrl} controls className="w-full" />
         </div>
 
-        <EditVideoPanel
-          videoOperation={videoOperation}
-          headline={headline}
-          narration={narration}
-          aspectRatio={aspectRatio}
-          hasLogo={hasLogo}
-          hasBrandColor={hasBrandColor}
-          credits={credits}
-          setCredits={setCredits}
-          onSaved={(videoBase64) => setVideoUrl(`data:video/mp4;base64,${videoBase64}`)}
-        />
+        {/* Avatar results skip this — HeyGen's response shape isn't a Veo
+            operation handle EditVideoPanel can re-download from, and
+            burning a headline bar over a speaking presenter's face would
+            look wrong anyway (the avatar already says the brand's name
+            through the script itself). */}
+        {!isAvatarResult && (
+          <EditVideoPanel
+            videoOperation={videoOperation}
+            headline={headline}
+            narration={narration}
+            aspectRatio={aspectRatio}
+            hasLogo={hasLogo}
+            hasBrandColor={hasBrandColor}
+            credits={credits}
+            setCredits={setCredits}
+            onSaved={(videoBase64) => setVideoUrl(`data:video/mp4;base64,${videoBase64}`)}
+          />
+        )}
 
         {caption && (
           <div className="mb-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
@@ -653,93 +801,118 @@ export function AdVideoForm({
         <VideoStyleStep
           selected={videoStyle}
           onSelect={setVideoStyle}
-          onContinue={() => setStep("setup")}
+          onContinue={handleContinueFromStyle}
           onBack={() => setStep("angles")}
+        />
+      )}
+
+      {step === "avatar-picker" && (
+        <AvatarPickerStep
+          tier={avatarTier}
+          onTierChange={setAvatarTier}
+          avatars={avatarOptions}
+          loading={avatarOptionsLoading}
+          error={avatarOptionsError}
+          genderFilter={avatarGenderFilter}
+          onGenderFilterChange={setAvatarGenderFilter}
+          selectedAvatarId={selectedAvatarId}
+          onSelectAvatar={handleSelectAvatar}
+          onContinue={() => setStep("setup")}
+          onBack={() => setStep("style")}
+          onRetry={fetchAvatarOptionsForStep}
         />
       )}
 
       {step === "setup" && (
         <>
-          <div className="mb-5">
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Product photo (optional)
-            </label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-card p-6 text-center transition-colors active:bg-secondary/40"
-              style={{ minHeight: previewUrl ? undefined : "8rem" }}
-            >
-              {previewUrl ? (
-                <img src={previewUrl} alt="Product photo" className="max-h-44 rounded-xl object-contain" />
-              ) : (
-                <>
-                  <Camera className="h-7 w-7 text-muted-foreground" />
-                  <span className="text-sm font-semibold text-muted-foreground">
-                    Add a photo to guide the video, or skip for text-only
-                  </span>
-                </>
-              )}
-            </button>
-          </div>
+          {videoStyle !== "avatar" && (
+            <div className="mb-5">
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Product photo (optional)
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-card p-6 text-center transition-colors active:bg-secondary/40"
+                style={{ minHeight: previewUrl ? undefined : "8rem" }}
+              >
+                {previewUrl ? (
+                  <img src={previewUrl} alt="Product photo" className="max-h-44 rounded-xl object-contain" />
+                ) : (
+                  <>
+                    <Camera className="h-7 w-7 text-muted-foreground" />
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      Add a photo to guide the video, or skip for text-only
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Same "paste a product link / pick from catalog" pattern
               SetupStep.tsx already proves out for Image Ad — reused as-is
               (fetchProductLink is free, no new backend work), just not
               previously wired into Video Ad. Overwrites offerDescription
               from the "brief" step, same as Image Ad's SetupStep already
-              does via onDescriptionOverride={setOfferDescription}. */}
-          <button
-            onClick={() => setMoreOptionsOpen((v) => !v)}
-            className="mb-3 flex items-center gap-1 text-xs font-semibold text-muted-foreground"
-          >
-            More options
-            <ChevronDown className={["h-3.5 w-3.5 transition-transform", moreOptionsOpen ? "rotate-180" : ""].join(" ")} />
-          </button>
-          {moreOptionsOpen && (
-            <div className="mb-6 flex w-full flex-col items-center gap-2">
-              {!showLinkInput ? (
-                <button
-                  onClick={() => setShowLinkInput(true)}
-                  className="flex items-center gap-1 text-xs font-semibold text-primary underline-offset-2 hover:underline"
-                >
-                  <Link2 className="h-3 w-3" />
-                  Product link
-                </button>
-              ) : (
-                <div className="flex w-full gap-2">
-                  <input
-                    type="url"
-                    value={productUrl}
-                    onChange={(e) => setProductUrl(e.target.value)}
-                    placeholder="https://yourstore.com/products/..."
-                    disabled={fetchingLink}
-                    className="flex-1 rounded-full border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              does via onDescriptionOverride={setOfferDescription}. Not
+              shown for Avatar style — there's no product photo slot to
+              fill, and offerDescription is already set from Brief. */}
+          {videoStyle !== "avatar" && (
+            <>
+              <button
+                onClick={() => setMoreOptionsOpen((v) => !v)}
+                className="mb-3 flex items-center gap-1 text-xs font-semibold text-muted-foreground"
+              >
+                More options
+                <ChevronDown className={["h-3.5 w-3.5 transition-transform", moreOptionsOpen ? "rotate-180" : ""].join(" ")} />
+              </button>
+              {moreOptionsOpen && (
+                <div className="mb-6 flex w-full flex-col items-center gap-2">
+                  {!showLinkInput ? (
+                    <button
+                      onClick={() => setShowLinkInput(true)}
+                      className="flex items-center gap-1 text-xs font-semibold text-primary underline-offset-2 hover:underline"
+                    >
+                      <Link2 className="h-3 w-3" />
+                      Product link
+                    </button>
+                  ) : (
+                    <div className="flex w-full gap-2">
+                      <input
+                        type="url"
+                        value={productUrl}
+                        onChange={(e) => setProductUrl(e.target.value)}
+                        placeholder="https://yourstore.com/products/..."
+                        disabled={fetchingLink}
+                        className="flex-1 rounded-full border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                      <button
+                        onClick={handleFetchProductLink}
+                        disabled={!productUrl.trim() || fetchingLink}
+                        className="flex shrink-0 items-center justify-center gap-1 rounded-full bg-secondary px-3 py-2 text-xs font-semibold text-secondary-foreground disabled:opacity-60"
+                      >
+                        {fetchingLink ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Fetch"}
+                      </button>
+                    </div>
+                  )}
+                  <ProductPicker
+                    onSelect={(desc, photoFile) => {
+                      setOfferDescription(desc);
+                      if (photoFile) handleFileChange(photoFile);
+                    }}
                   />
-                  <button
-                    onClick={handleFetchProductLink}
-                    disabled={!productUrl.trim() || fetchingLink}
-                    className="flex shrink-0 items-center justify-center gap-1 rounded-full bg-secondary px-3 py-2 text-xs font-semibold text-secondary-foreground disabled:opacity-60"
-                  >
-                    {fetchingLink ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Fetch"}
-                  </button>
+                  {linkError && <p className="text-xs font-medium text-destructive">{linkError}</p>}
                 </div>
               )}
-              <ProductPicker
-                onSelect={(desc, photoFile) => {
-                  setOfferDescription(desc);
-                  if (photoFile) handleFileChange(photoFile);
-                }}
-              />
-              {linkError && <p className="text-xs font-medium text-destructive">{linkError}</p>}
-            </div>
+            </>
           )}
 
           <div className="mb-6">
@@ -772,17 +945,24 @@ export function AdVideoForm({
               only when credits are short (unlike Social Content's
               Video tab today) — a single click here is 10x the cost of
               an Image Ad click, so nothing about it should be a surprise. */}
-          <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-center text-sm font-semibold text-foreground">
-            1 video · {VIDEO_CREDIT_COST} credits · about 1-2 min
-          </div>
+          {videoStyle === "avatar" ? (
+            <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-center text-sm font-semibold text-foreground">
+              1 video · {avatarTier === "premium" ? VIDEO_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST} credits · usually a few
+              minutes
+            </div>
+          ) : (
+            <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-center text-sm font-semibold text-foreground">
+              1 video · {VIDEO_CREDIT_COST} credits · about 1-2 min
+            </div>
+          )}
 
-          {insufficientCredits && (
+          {(videoStyle === "avatar" ? avatarInsufficientCredits : insufficientCredits) && (
             <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-sm text-foreground">
               You have {credits} credits — not enough for a video. Upgrade to keep generating.
             </div>
           )}
 
-          {hasLogo && (
+          {hasLogo && videoStyle !== "avatar" && (
             <p className="mb-4 text-xs text-muted-foreground">Your Brand Kit logo will be added to this video automatically.</p>
           )}
 
@@ -794,8 +974,12 @@ export function AdVideoForm({
           )}
 
           <button
-            onClick={() => handleGenerate()}
-            disabled={!offerDescription.trim() || generating || insufficientCredits}
+            onClick={() => (videoStyle === "avatar" ? handleGenerateAvatarVideo() : handleGenerate())}
+            disabled={
+              !offerDescription.trim() ||
+              generating ||
+              (videoStyle === "avatar" ? avatarInsufficientCredits || !selectedAvatarId : insufficientCredits)
+            }
             className="flex w-full items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
             style={{ background: "var(--gradient-primary)" }}
           >

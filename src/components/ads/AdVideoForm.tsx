@@ -338,6 +338,16 @@ export function AdVideoForm({
     setSelectedAvatarGender(gender);
   };
 
+  // Switching tier can hide the currently-picked avatar (Premium filters
+  // out "expressive"-named avatars, confirmed to reject it) — clear the
+  // stale selection rather than leaving an invisible, soon-to-fail pick
+  // sitting in state.
+  const handleAvatarTierChange = (t: AvatarTier) => {
+    setAvatarTier(t);
+    setSelectedAvatarId(null);
+    setSelectedAvatarGender(null);
+  };
+
   // `override` exists for Quick Create's Video option: it calls
   // setOfferDescription/setAngle/setPickedScript/etc. and wants to
   // generate off those values immediately, but React state setters don't
@@ -844,7 +854,7 @@ export function AdVideoForm({
       {step === "avatar-picker" && (
         <AvatarPickerStep
           tier={avatarTier}
-          onTierChange={setAvatarTier}
+          onTierChange={handleAvatarTierChange}
           avatars={avatarOptions}
           loading={avatarOptionsLoading}
           error={avatarOptionsError}

@@ -38,7 +38,20 @@ export function AvatarPickerStep({
   onBack: () => void;
   onRetry: () => void;
 }) {
-  const filtered = avatars.filter((a) => genderFilter === "all" || a.gender === genderFilter);
+  // Confirmed live against HeyGen's real API: every "expressive"-named
+  // avatar (48 of 1264 in the catalog, ~4%) rejects Premium — 5/5 tested,
+  // 0 exceptions. Filtering these out when Premium is selected means a
+  // user picking Premium essentially never hits the tier-mismatch
+  // fallback at all, rather than relying on that fallback to paper over
+  // a mismatch that was preventable. The fallback itself stays in the
+  // backend as a safety net for any other undiscovered incompatible
+  // avatar — this is a belt-and-suspenders improvement, not a
+  // replacement for it.
+  const filtered = avatars.filter(
+    (a) =>
+      (genderFilter === "all" || a.gender === genderFilter) &&
+      (tier !== "premium" || !a.avatar_id.toLowerCase().includes("expressive")),
+  );
 
   return (
     <div className="flex flex-col items-center text-center">

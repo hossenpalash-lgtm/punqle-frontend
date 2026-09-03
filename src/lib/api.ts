@@ -979,11 +979,47 @@ export function publishToYouTube(
   });
 }
 
+export interface ApiTikTokPublishResponse {
+  posted: boolean;
+  publish_id?: string;
+  error?: string;
+}
+
+// isOwnBrand maps to TikTok's own mandatory branded-content disclosure
+// (brand_organic_toggle vs brand_content_toggle) — TikTok's guidelines
+// require this be a real, visible user choice, never silently defaulted.
+export function publishToTikTok(
+  videoDataUrl: string,
+  caption: string,
+  isOwnBrand: boolean,
+  contentPlanId?: string,
+  contentPlanDay?: string,
+): Promise<ApiTikTokPublishResponse> {
+  const match = videoDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) {
+    return Promise.reject(new Error("Couldn't read the generated video."));
+  }
+  const [, mimeType, base64] = match;
+  const formData = new FormData();
+  formData.append("file", base64ToFile(base64, mimeType, "ad-video.mp4"));
+  formData.append("caption", caption);
+  formData.append("is_own_brand", String(isOwnBrand));
+  if (contentPlanId && contentPlanDay) {
+    formData.append("source", "weekly_plan");
+    formData.append("content_plan_id", contentPlanId);
+    formData.append("content_plan_day", contentPlanDay);
+  }
+  return apiFetch<ApiTikTokPublishResponse>("/tiktok/publish", {
+    method: "POST",
+    body: formData,
+  });
+}
+
 // ---- Content Calendar ----
 
 export interface ApiScheduledPost {
   id: string;
-  platform: "facebook" | "youtube";
+  platform: "facebook" | "youtube" | "tiktok";
   external_post_id: string | null;
   caption: string;
   description: string | null;

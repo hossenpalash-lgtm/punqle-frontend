@@ -42,6 +42,7 @@ import { AdBriefStep, GOALS } from "./AdBriefStep";
 import { AvatarPickerStep } from "./AvatarPickerStep";
 import { EditVideoPanel } from "./EditVideoPanel";
 import { ProductPicker } from "./ProductPicker";
+import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
 import { VideoAnglesStep } from "./VideoAnglesStep";
 import { VideoStyleStep } from "./VideoStyleStep";
@@ -855,6 +856,7 @@ export function AdVideoForm({
           </div>
         )}
         <PublishToYouTube videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} />
+        <PublishToTikTok videoUrl={videoUrl} headline={headline} />
         <a
           href={videoUrl}
           download="ad-video.mp4"

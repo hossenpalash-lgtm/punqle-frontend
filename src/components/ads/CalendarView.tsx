@@ -12,7 +12,7 @@ import {
   X,
   Youtube,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import {
   deleteScheduledPost,
   fetchCurrentContentPlan,
@@ -22,8 +22,18 @@ import {
   type ApiScheduledPost,
 } from "@/lib/api";
 import { addDays, startOfWeek, toDatetimeLocalValue } from "@/lib/schedule-dates";
+import { TikTokIcon } from "@/components/TikTokIcon";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const PLATFORM_META: Record<
+  ApiScheduledPost["platform"],
+  { icon: ComponentType<{ className?: string }>; label: string }
+> = {
+  facebook: { icon: Facebook, label: "Facebook" },
+  youtube: { icon: Youtube, label: "YouTube" },
+  tiktok: { icon: TikTokIcon, label: "TikTok" },
+};
 
 function formatWeekRange(start: Date): string {
   const end = addDays(start, 6);
@@ -233,7 +243,7 @@ export function CalendarView({ onGoToWeeklyPlan }: { onGoToWeeklyPlan: () => voi
                     dayPosts.map((post) => {
                       const meta = STATUS_META[post.status];
                       const StatusIcon = meta.icon;
-                      const PlatformIcon = post.platform === "facebook" ? Facebook : Youtube;
+                      const PlatformIcon = PLATFORM_META[post.platform].icon;
                       return (
                         <button
                           key={post.id}
@@ -288,13 +298,12 @@ export function CalendarView({ onGoToWeeklyPlan }: { onGoToWeeklyPlan: () => voi
           >
             <div className="mb-5 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {selectedPost.platform === "facebook" ? (
-                  <Facebook className="h-5 w-5 text-primary" />
-                ) : (
-                  <Youtube className="h-5 w-5 text-primary" />
-                )}
+                {(() => {
+                  const SelectedIcon = PLATFORM_META[selectedPost.platform].icon;
+                  return <SelectedIcon className="h-5 w-5 text-primary" />;
+                })()}
                 <h2 className="font-display text-lg font-extrabold text-foreground">
-                  {selectedPost.platform === "facebook" ? "Facebook" : "YouTube"} post
+                  {PLATFORM_META[selectedPost.platform].label} post
                 </h2>
               </div>
               <button

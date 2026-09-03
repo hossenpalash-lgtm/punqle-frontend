@@ -250,6 +250,21 @@ export function addMusicToAvatarVideo(
   });
 }
 
+// Free — real cost is a fraction of a cent (whisper-1 transcription on an
+// ~8-15s clip). Transcribes whatever audio the video currently has (the
+// avatar's real spoken dialogue, not a script) and burns synced caption
+// bars on top, keeping the existing audio untouched.
+export function addCaptionsToAvatarVideo(
+  videoBase64: string,
+  aspectRatio: string,
+): Promise<{ video_base64: string }> {
+  return apiFetch<{ video_base64: string }>("/ads/avatar-video-add-captions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ video_base64: videoBase64, aspect_ratio: aspectRatio }),
+  });
+}
+
 // Free — pure local ffmpeg compositing of two already-generated (already-paid-for)
 // videos into one, hard cut, no transition. Used for multi-scene ad assembly:
 // avatar clip + a separately-generated Veo B-roll product clip.

@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   Camera,
+  Captions,
   ChevronDown,
   Clock,
   Download,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
+  addCaptionsToAvatarVideo,
   addMusicToAvatarVideo,
   concatVideos,
   base64ToFile,
@@ -157,6 +159,9 @@ export function AdVideoForm({
   const [addingScene, setAddingScene] = useState(false);
   const [sceneError, setSceneError] = useState<string | null>(null);
   const [hasAddedScene, setHasAddedScene] = useState(false);
+  const [addingCaptions, setAddingCaptions] = useState(false);
+  const [captionsError, setCaptionsError] = useState<string | null>(null);
+  const [hasAddedCaptions, setHasAddedCaptions] = useState(false);
   // True only for a result produced via the avatar path — the result
   // screen skips EditVideoPanel for these (HeyGen's response shape isn't
   // a Veo operation handle, and burning a headline over a speaking
@@ -525,6 +530,30 @@ export function AdVideoForm({
     }
   };
 
+  // Free — transcribes whatever's currently playing (works whether music
+  // and/or a product scene were already added) and burns synced captions
+  // on top. Unlike handleAddMusic, updates avatarVideoBase64 too — so a
+  // later music pick re-mixes under the captioned video instead of
+  // silently discarding the captions, matching handleAddProductScene's
+  // "advance the base forward" behavior rather than music's "always
+  // reset to original" one.
+  const handleAddCaptions = async () => {
+    if (addingCaptions || !videoUrl) return;
+    setAddingCaptions(true);
+    setCaptionsError(null);
+    try {
+      const currentBase64 = videoUrl.split(",")[1] ?? videoUrl;
+      const r = await addCaptionsToAvatarVideo(currentBase64, aspectRatio);
+      setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
+      setAvatarVideoBase64(r.video_base64);
+      setHasAddedCaptions(true);
+    } catch (err) {
+      setCaptionsError(err instanceof Error ? err.message : "Couldn't add captions.");
+    } finally {
+      setAddingCaptions(false);
+    }
+  };
+
   // Separate from handleGenerate — HeyGen's response shape (a bare
   // video_id, then a signed video_url) is structurally different from
   // Veo's operation-handle shape, so this doesn't share the Veo polling
@@ -674,6 +703,9 @@ export function AdVideoForm({
     setAddingScene(false);
     setSceneError(null);
     setHasAddedScene(false);
+    setAddingCaptions(false);
+    setCaptionsError(null);
+    setHasAddedCaptions(false);
   };
 
   const handleHeadlineChange = (value: string) => {
@@ -780,6 +812,39 @@ export function AdVideoForm({
         {isAvatarResult && hasAddedScene && (
           <p className="mb-3 rounded-2xl bg-secondary/60 px-4 py-3 text-xs text-muted-foreground">
             Product scene added.
+          </p>
+        )}
+
+        {isAvatarResult && !hasAddedCaptions && (
+          <div className="mb-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Captions className="h-3.5 w-3.5" />
+              Captions
+            </p>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Add synced on-screen captions — helps on social, where most people watch muted. Free.
+            </p>
+            <button
+              onClick={handleAddCaptions}
+              disabled={addingCaptions}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-4 py-3 text-sm font-semibold text-secondary-foreground disabled:opacity-60"
+            >
+              {addingCaptions ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Adding captions…
+                </>
+              ) : (
+                "Add captions"
+              )}
+            </button>
+            {captionsError && <p className="mt-2 text-xs font-medium text-destructive">{captionsError}</p>}
+          </div>
+        )}
+
+        {isAvatarResult && hasAddedCaptions && (
+          <p className="mb-3 rounded-2xl bg-secondary/60 px-4 py-3 text-xs text-muted-foreground">
+            Captions added.
           </p>
         )}
 

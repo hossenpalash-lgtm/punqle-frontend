@@ -15,6 +15,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import {
   addMusicToAvatarVideo,
+  concatVideos,
   base64ToFile,
   checkAvatarVideoStatus,
   checkVideoStatus,
@@ -153,6 +154,9 @@ export function AdVideoForm({
   const [addingMusic, setAddingMusic] = useState(false);
   const [musicError, setMusicError] = useState<string | null>(null);
   const [musicMood, setMusicMood] = useState<AvatarMusicMood | null>(null);
+  const [addingScene, setAddingScene] = useState(false);
+  const [sceneError, setSceneError] = useState<string | null>(null);
+  const [hasAddedScene, setHasAddedScene] = useState(false);
   // True only for a result produced via the avatar path — the result
   // screen skips EditVideoPanel for these (HeyGen's response shape isn't
   // a Veo operation handle, and burning a headline over a speaking
@@ -474,6 +478,53 @@ export function AdVideoForm({
     }
   };
 
+  // Polls a separately-generated Veo B-roll clip, then concatenates it
+  // onto whatever's currently showing (avatar clip, or avatar+music if a
+  // mood was already picked) via the free /ads/concat-videos endpoint.
+  // baseVideoBase64 is captured once at the start of handleAddProductScene
+  // so a slow Veo generation can't race a later videoUrl change.
+  const pollProductScene = async (operation: ApiVideoOperation, baseVideoBase64: string): Promise<void> => {
+    const r = await checkVideoStatus(operation, "", aspectRatio);
+    if (!r.done) {
+      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      return pollProductScene(operation, baseVideoBase64);
+    }
+    if (r.credits_remaining !== null) setCredits(r.credits_remaining);
+    if (!r.video_base64) {
+      setSceneError("The product scene didn't come back — please try again.");
+      return;
+    }
+    const combined = await concatVideos(baseVideoBase64, r.video_base64, aspectRatio);
+    setVideoUrl(`data:video/mp4;base64,${combined.video_base64}`);
+    setAvatarVideoBase64(combined.video_base64);
+    setHasAddedScene(true);
+  };
+
+  // Costs VIDEO_CREDIT_COST — generates a brand-new Veo product B-roll
+  // clip (the concat step itself is free, but it needs a fresh clip to
+  // attach). One scene only for V1, not a full timeline — the button
+  // hides once hasAddedScene is true.
+  const handleAddProductScene = async () => {
+    if (addingScene || !videoUrl || generating) return;
+    if (credits !== null && credits < VIDEO_CREDIT_COST) {
+      setSceneError(`You need ${VIDEO_CREDIT_COST} credits for a product scene.`);
+      return;
+    }
+    setAddingScene(true);
+    setSceneError(null);
+    try {
+      const baseVideoBase64 = videoUrl.split(",")[1] ?? videoUrl;
+      const style = findVideoStyle("product_showcase");
+      const styledDescription = `${offerDescription.trim()}, ${style.promptModifier}`;
+      const r = await startVideoGeneration(styledDescription, undefined, undefined, aspectRatio, goal, angle);
+      await pollProductScene(r.operation, baseVideoBase64);
+    } catch (err) {
+      setSceneError(err instanceof Error ? err.message : "Couldn't add a product scene.");
+    } finally {
+      setAddingScene(false);
+    }
+  };
+
   // Separate from handleGenerate — HeyGen's response shape (a bare
   // video_id, then a signed video_url) is structurally different from
   // Veo's operation-handle shape, so this doesn't share the Veo polling
@@ -620,6 +671,9 @@ export function AdVideoForm({
     setAddingMusic(false);
     setMusicError(null);
     setMusicMood(null);
+    setAddingScene(false);
+    setSceneError(null);
+    setHasAddedScene(false);
   };
 
   const handleHeadlineChange = (value: string) => {
@@ -693,6 +747,40 @@ export function AdVideoForm({
               <p className="mt-2 text-xs text-muted-foreground">Free — pick a different mood any time to replace it.</p>
             )}
           </div>
+        )}
+
+        {isAvatarResult && !hasAddedScene && (
+          <div className="mb-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Video className="h-3.5 w-3.5" />
+              Add a product scene
+            </p>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Generate a separate product shot and attach it after your presenter — {VIDEO_CREDIT_COST} credits.
+            </p>
+            <button
+              onClick={handleAddProductScene}
+              disabled={addingScene || (credits !== null && credits < VIDEO_CREDIT_COST)}
+              className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              {addingScene ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating product scene…
+                </>
+              ) : (
+                `Add product scene (${VIDEO_CREDIT_COST} credits)`
+              )}
+            </button>
+            {sceneError && <p className="mt-2 text-xs font-medium text-destructive">{sceneError}</p>}
+          </div>
+        )}
+
+        {isAvatarResult && hasAddedScene && (
+          <p className="mb-3 rounded-2xl bg-secondary/60 px-4 py-3 text-xs text-muted-foreground">
+            Product scene added.
+          </p>
         )}
 
         {caption && (

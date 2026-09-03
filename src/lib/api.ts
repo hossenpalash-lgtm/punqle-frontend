@@ -250,6 +250,25 @@ export function addMusicToAvatarVideo(
   });
 }
 
+// Free — pure local ffmpeg compositing of two already-generated (already-paid-for)
+// videos into one, hard cut, no transition. Used for multi-scene ad assembly:
+// avatar clip + a separately-generated Veo B-roll product clip.
+export function concatVideos(
+  firstVideoBase64: string,
+  secondVideoBase64: string,
+  aspectRatio: string,
+): Promise<{ video_base64: string }> {
+  return apiFetch<{ video_base64: string }>("/ads/concat-videos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      first_video_base64: firstVideoBase64,
+      second_video_base64: secondVideoBase64,
+      aspect_ratio: aspectRatio,
+    }),
+  });
+}
+
 export type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 export type TextPosition = "top" | "center" | "bottom";
 export type TtsVoice = "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer";

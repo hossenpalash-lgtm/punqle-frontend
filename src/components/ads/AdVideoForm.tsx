@@ -6,6 +6,7 @@ import {
   Download,
   Link2,
   Loader2,
+  Music,
   Rocket,
   Settings2,
   Sparkles,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
+  addMusicToAvatarVideo,
   base64ToFile,
   checkAvatarVideoStatus,
   checkVideoStatus,
@@ -28,6 +30,7 @@ import {
   type ApiAvatarOption,
   type ApiVideoOperation,
   type ApiVideoScriptAngle,
+  type AvatarMusicMood,
   type AvatarTier,
   type VideoAspectRatio,
 } from "@/lib/api";
@@ -143,6 +146,13 @@ export function AdVideoForm({
   // shown so the user knows why they were charged less than expected,
   // rather than a silent discrepancy.
   const [avatarFellBack, setAvatarFellBack] = useState(false);
+  // Raw base64 of the current avatar result — needed to send back to
+  // /ads/avatar-video-add-music (videoUrl is a data: URL, not the bare
+  // base64 the backend expects).
+  const [avatarVideoBase64, setAvatarVideoBase64] = useState<string | null>(null);
+  const [addingMusic, setAddingMusic] = useState(false);
+  const [musicError, setMusicError] = useState<string | null>(null);
+  const [musicMood, setMusicMood] = useState<AvatarMusicMood | null>(null);
   // True only for a result produced via the avatar path — the result
   // screen skips EditVideoPanel for these (HeyGen's response shape isn't
   // a Veo operation handle, and burning a headline over a speaking
@@ -430,6 +440,7 @@ export function AdVideoForm({
       if (r.credits_remaining !== null) setCredits(r.credits_remaining);
       if (r.video_base64) {
         setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
+        setAvatarVideoBase64(r.video_base64);
         setIsAvatarResult(true);
         setStep("result");
       } else {
@@ -440,6 +451,26 @@ export function AdVideoForm({
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
       setGenerating(false);
       setError(err instanceof Error ? err.message : "Couldn't check the avatar video's status.");
+    }
+  };
+
+  // Free — mixes a real licensed track under the avatar's existing
+  // dialogue (not a replacement), so re-picking a mood always starts
+  // from the same original avatarVideoBase64, never re-mixing an
+  // already-mixed result (which would just make the music quieter each
+  // time rather than swapping tracks).
+  const handleAddMusic = async (mood: AvatarMusicMood) => {
+    if (addingMusic || !avatarVideoBase64) return;
+    setAddingMusic(true);
+    setMusicError(null);
+    try {
+      const r = await addMusicToAvatarVideo(avatarVideoBase64, mood);
+      setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
+      setMusicMood(mood);
+    } catch (err) {
+      setMusicError(err instanceof Error ? err.message : "Couldn't add music.");
+    } finally {
+      setAddingMusic(false);
     }
   };
 
@@ -585,6 +616,10 @@ export function AdVideoForm({
     setAvatarVideoId(null);
     setIsAvatarResult(false);
     setAvatarFellBack(false);
+    setAvatarVideoBase64(null);
+    setAddingMusic(false);
+    setMusicError(null);
+    setMusicMood(null);
   };
 
   const handleHeadlineChange = (value: string) => {
@@ -629,6 +664,35 @@ export function AdVideoForm({
             This avatar didn't support Premium quality, so Standard was used instead — you were charged{" "}
             {AVATAR_STANDARD_CREDIT_COST} credits, not the Premium price.
           </p>
+        )}
+
+        {isAvatarResult && (
+          <div className="mb-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Music className="h-3.5 w-3.5" />
+              Background music
+            </p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {(["upbeat", "calm", "energetic", "corporate"] as AvatarMusicMood[]).map((mood) => (
+                <button
+                  key={mood}
+                  onClick={() => handleAddMusic(mood)}
+                  disabled={addingMusic}
+                  className={[
+                    "rounded-full px-2 py-2 text-xs font-semibold capitalize disabled:opacity-60",
+                    musicMood === mood ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                  ].join(" ")}
+                >
+                  {addingMusic && musicMood !== mood ? "" : mood}
+                  {addingMusic && musicMood === mood && <Loader2 className="mx-auto h-3.5 w-3.5 animate-spin" />}
+                </button>
+              ))}
+            </div>
+            {musicError && <p className="mt-2 text-xs font-medium text-destructive">{musicError}</p>}
+            {musicMood && !addingMusic && (
+              <p className="mt-2 text-xs text-muted-foreground">Free — pick a different mood any time to replace it.</p>
+            )}
+          </div>
         )}
 
         {caption && (

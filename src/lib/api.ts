@@ -233,6 +233,23 @@ export function checkAvatarVideoStatus(videoId: string): Promise<ApiAvatarVideoS
   });
 }
 
+export type AvatarMusicMood = "upbeat" | "calm" | "energetic" | "corporate";
+
+// Free — mixes a real licensed background track (HeyGen's own music
+// catalog) under the avatar's existing dialogue audio, ducked low so it
+// never competes with the speech. Returns the whole re-mixed video, same
+// "always start fresh" pattern EditVideoPanel's Veo-based edits use.
+export function addMusicToAvatarVideo(
+  videoBase64: string,
+  mood: AvatarMusicMood,
+): Promise<{ video_base64: string }> {
+  return apiFetch<{ video_base64: string }>("/ads/avatar-video-add-music", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ video_base64: videoBase64, mood }),
+  });
+}
+
 export type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 export type TextPosition = "top" | "center" | "bottom";
 export type TtsVoice = "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer";

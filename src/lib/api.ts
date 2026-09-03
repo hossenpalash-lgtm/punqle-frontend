@@ -918,6 +918,23 @@ export function disconnectYouTube(): Promise<void> {
   return apiFetch<void>("/youtube/disconnect", { method: "DELETE" });
 }
 
+export function getTikTokConnectUrl(): Promise<{ authorize_url: string }> {
+  return apiFetch<{ authorize_url: string }>("/tiktok/connect-url");
+}
+
+export interface ApiTikTokStatus {
+  connected: boolean;
+  display_name: string | null;
+}
+
+export function fetchTikTokStatus(): Promise<ApiTikTokStatus> {
+  return apiFetch<ApiTikTokStatus>("/tiktok/status");
+}
+
+export function disconnectTikTok(): Promise<void> {
+  return apiFetch<void>("/tiktok/disconnect", { method: "DELETE" });
+}
+
 export interface ApiYouTubePublishResponse {
   posted: boolean;
   video_id?: string;

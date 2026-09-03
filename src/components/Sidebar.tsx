@@ -20,6 +20,7 @@ import {
   Youtube,
 } from "lucide-react";
 import { PunqleLogo } from "@/components/PunqleLogo";
+import { TikTokIcon } from "@/components/TikTokIcon";
 import { useScrolled } from "@/lib/use-scrolled";
 
 // "single"/"video" have no dedicated nav row on mobile (both are reached
@@ -83,6 +84,7 @@ export function Sidebar({
   onOpenBilling,
   onOpenMetaConnect,
   onOpenYouTubeConnect,
+  onOpenTikTokConnect,
   onSignOut,
 }: {
   tab: NavTab;
@@ -93,6 +95,7 @@ export function Sidebar({
   onOpenBilling: () => void;
   onOpenMetaConnect: () => void;
   onOpenYouTubeConnect: () => void;
+  onOpenTikTokConnect: () => void;
   onSignOut: () => void;
 }) {
   const scrolled = useScrolled();
@@ -252,6 +255,13 @@ export function Sidebar({
           >
             <Youtube className="h-3.5 w-3.5" />
             YouTube
+          </button>
+          <button
+            onClick={onOpenTikTokConnect}
+            className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
+          >
+            <TikTokIcon className="h-3.5 w-3.5" />
+            TikTok
           </button>
 
           <span className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -427,6 +437,13 @@ export function Sidebar({
               className="flex h-9 w-9 items-center justify-center rounded-full text-secondary-foreground hover:bg-secondary"
             >
               <Youtube className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onOpenTikTokConnect}
+              aria-label="TikTok"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-secondary-foreground hover:bg-secondary"
+            >
+              <TikTokIcon className="h-4 w-4" />
             </button>
             <button
               onClick={onOpenReferral}

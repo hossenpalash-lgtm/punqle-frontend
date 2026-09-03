@@ -21,6 +21,7 @@ import { LegalFooter } from "../components/LegalFooter";
 import { BillingPanel } from "../components/ads/BillingPanel";
 import { BrandKitPanel } from "../components/ads/BrandKitPanel";
 import { MetaConnectPanel } from "../components/ads/MetaConnectPanel";
+import { TikTokConnectPanel } from "../components/ads/TikTokConnectPanel";
 import { YouTubeConnectPanel } from "../components/ads/YouTubeConnectPanel";
 import { ProductCatalogPanel } from "../components/ads/ProductCatalogPanel";
 import { ReferralPanel } from "../components/ads/ReferralPanel";
@@ -149,6 +150,7 @@ function RootComponent() {
   const [referralOpen, setReferralOpen] = useState(false);
   const [metaConnectOpen, setMetaConnectOpen] = useState(false);
   const [youtubeConnectOpen, setYoutubeConnectOpen] = useState(false);
+  const [tiktokConnectOpen, setTiktokConnectOpen] = useState(false);
   // Lazy initializer (runs synchronously at first render, before any
   // effect) rather than a useEffect checking window.location.search —
   // the router normalizes the URL and strips unrecognised params like
@@ -227,6 +229,15 @@ function RootComponent() {
     }
   }, []);
 
+  // Same round-trip pattern again — TikTok's callback redirects back to
+  // "/" with ?tiktok=connected|error. TikTokConnectPanel itself reads
+  // and clears the param.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("tiktok")) {
+      setTiktokConnectOpen(true);
+    }
+  }, []);
+
   // Stripe Checkout redirects the whole browser back to "/" with
   // ?billing=success or ?billing=cancelled — same round-trip pattern as
   // the Shopify OAuth callback above (see billingOpen's lazy initializer
@@ -293,6 +304,7 @@ function RootComponent() {
               onOpenBilling={() => setBillingOpen(true)}
               onOpenMetaConnect={() => setMetaConnectOpen(true)}
               onOpenYouTubeConnect={() => setYoutubeConnectOpen(true)}
+              onOpenTikTokConnect={() => setTiktokConnectOpen(true)}
               onSignOut={() => signOut()}
             />
             <div className="mx-auto flex w-full max-w-md flex-1 flex-col lg:max-w-3xl">
@@ -305,6 +317,7 @@ function RootComponent() {
             <BillingPanel open={billingOpen} onClose={() => setBillingOpen(false)} />
             <MetaConnectPanel open={metaConnectOpen} onClose={() => setMetaConnectOpen(false)} />
             <YouTubeConnectPanel open={youtubeConnectOpen} onClose={() => setYoutubeConnectOpen(false)} />
+            <TikTokConnectPanel open={tiktokConnectOpen} onClose={() => setTiktokConnectOpen(false)} />
           </>
         )}
       </div>

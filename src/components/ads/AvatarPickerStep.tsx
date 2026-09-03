@@ -126,14 +126,25 @@ export function AvatarPickerStep({
                 key={a.avatar_id}
                 onClick={() => onSelectAvatar(a.avatar_id, a.gender)}
                 className={[
-                  "relative overflow-hidden rounded-xl border-2 text-left transition-colors",
+                  // aspect-[3/4] lives on the button (the grid item) itself,
+                  // not just the img inside it — a grid item's own auto-height
+                  // doesn't reliably pick up a descendant <img>'s aspect-ratio-
+                  // derived size (confirmed live: the button collapsed to 4px
+                  // and clipped its 300px-tall image via overflow-hidden),
+                  // so the button needs a real, definite size of its own.
+                  "relative aspect-[3/4] w-full overflow-hidden rounded-xl border-2 text-left transition-colors",
                   isSelected ? "border-primary" : "border-transparent",
                 ].join(" ")}
               >
                 {a.preview_image_url ? (
-                  <img src={a.preview_image_url} alt={a.name} loading="lazy" className="aspect-[3/4] w-full object-cover" />
+                  <img
+                    src={a.preview_image_url}
+                    alt={a.name}
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
                 ) : (
-                  <div className="aspect-[3/4] w-full bg-secondary" />
+                  <div className="absolute inset-0 h-full w-full bg-secondary" />
                 )}
                 {isSelected && (
                   <span
@@ -143,7 +154,9 @@ export function AvatarPickerStep({
                     <Check className="h-3 w-3 text-white" />
                   </span>
                 )}
-                <span className="block truncate bg-black/60 px-1.5 py-1 text-[10px] font-semibold text-white">{a.name}</span>
+                <span className="absolute inset-x-0 bottom-0 block truncate bg-black/60 px-1.5 py-1 text-[10px] font-semibold text-white">
+                  {a.name}
+                </span>
               </button>
             );
           })}

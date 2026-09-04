@@ -685,6 +685,8 @@ export function AdCreationForm({
           whatsappMessage={adCaptions[selectedCaptionIndex]?.whatsapp_message ?? ""}
           cta={AD_GOAL_CTA[goal]}
           visualDirection={visualDirection}
+          goal={goal}
+          angle={angle}
           error={error}
           onReset={handleReset}
           showCaptionStyleControls={false}

@@ -29,10 +29,16 @@ export function PublishToYouTube({
   videoUrl,
   headline,
   aspectRatio,
+  goal,
+  angle,
+  style,
 }: {
   videoUrl: string | null;
   headline: string;
   aspectRatio: VideoAspectRatio;
+  goal?: string | null;
+  angle?: string | null;
+  style?: string | null;
 }) {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [connected, setConnected] = useState(false);
@@ -94,7 +100,10 @@ export function PublishToYouTube({
       // datetime-local has no timezone — new Date() reads it as local time,
       // and toISOString() converts to the UTC the backend expects.
       const scheduledIso = scheduling && scheduledAt ? new Date(scheduledAt).toISOString() : undefined;
-      const r = await publishToYouTube(videoUrl, title.trim(), description.trim(), aspectRatio, scheduledIso);
+      const r = await publishToYouTube(
+        videoUrl, title.trim(), description.trim(), aspectRatio, scheduledIso,
+        undefined, undefined, goal, angle, style,
+      );
       setResult(r);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't publish. Please try again.");

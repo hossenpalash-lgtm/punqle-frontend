@@ -62,6 +62,8 @@ export function PostKit({
   whatsappMessage,
   cta,
   visualDirection,
+  goal,
+  angle,
   error,
   onReset,
   // Both default to Image Post's existing behavior — Ad Creation is the
@@ -114,6 +116,8 @@ export function PostKit({
   whatsappMessage: string;
   cta?: string;
   visualDirection?: string;
+  goal?: string | null;
+  angle?: string | null;
   error: string | null;
   onReset: () => void;
   showCaptionStyleControls?: boolean;
@@ -259,7 +263,7 @@ export function PostKit({
         Download image
       </a>
 
-      <PublishToMeta compositedUrl={compositedUrl} caption={editedCaption} />
+      <PublishToMeta compositedUrl={compositedUrl} caption={editedCaption} goal={goal} angle={angle} style={visualDirection} />
 
       {showLaunchCampaignPlaceholder && (
         <button

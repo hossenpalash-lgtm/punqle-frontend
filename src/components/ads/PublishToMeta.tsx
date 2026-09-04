@@ -9,7 +9,19 @@ import { MIN_SCHEDULE_MINUTES, MAX_SCHEDULE_DAYS, toDatetimeLocalMin } from "@/l
 // ratios today (see social-wizard.ts's PLATFORM_OPTIONS) — Instagram's
 // 4:5–1.91:1 feed limit isn't a live concern yet, but would need handling
 // here if a "story" (9:16) option is ever added to that entry point.
-export function PublishToMeta({ compositedUrl, caption }: { compositedUrl: string | null; caption: string }) {
+export function PublishToMeta({
+  compositedUrl,
+  caption,
+  goal,
+  angle,
+  style,
+}: {
+  compositedUrl: string | null;
+  caption: string;
+  goal?: string | null;
+  angle?: string | null;
+  style?: string | null;
+}) {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [connected, setConnected] = useState(false);
   const [pageName, setPageName] = useState<string | null>(null);
@@ -70,7 +82,10 @@ export function PublishToMeta({ compositedUrl, caption }: { compositedUrl: strin
       // datetime-local has no timezone — new Date() reads it as local time,
       // and toISOString() converts to the UTC the backend expects.
       const scheduledIso = scheduling && scheduledAt ? new Date(scheduledAt).toISOString() : undefined;
-      const r = await publishToMeta(compositedUrl, caption, postFacebook, postInstagram, scheduledIso);
+      const r = await publishToMeta(
+        compositedUrl, caption, postFacebook, postInstagram, scheduledIso,
+        undefined, undefined, goal, angle, style,
+      );
       setResult(r);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't publish. Please try again.");

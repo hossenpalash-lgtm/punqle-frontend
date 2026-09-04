@@ -900,8 +900,8 @@ export function AdVideoForm({
             <p className="text-sm text-foreground">{caption}</p>
           </div>
         )}
-        <PublishToYouTube videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} />
-        <PublishToTikTok videoUrl={videoUrl} headline={headline} />
+        <PublishToYouTube videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} goal={goal} angle={angle} style={videoStyle} />
+        <PublishToTikTok videoUrl={videoUrl} headline={headline} goal={goal} angle={angle} style={videoStyle} />
         <a
           href={videoUrl}
           download="ad-video.mp4"

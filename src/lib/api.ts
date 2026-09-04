@@ -911,6 +911,9 @@ export function publishToMeta(
   scheduledTime?: string,
   contentPlanId?: string,
   contentPlanDay?: string,
+  goal?: string | null,
+  angle?: string | null,
+  style?: string | null,
 ): Promise<ApiMetaPublishResponse> {
   const match = compositedDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
@@ -928,6 +931,9 @@ export function publishToMeta(
     formData.append("content_plan_id", contentPlanId);
     formData.append("content_plan_day", contentPlanDay);
   }
+  if (goal) formData.append("goal", goal);
+  if (angle) formData.append("angle", angle);
+  if (style) formData.append("style", style);
   return apiFetch<ApiMetaPublishResponse>("/meta/publish", {
     method: "POST",
     body: formData,
@@ -989,6 +995,9 @@ export function publishToYouTube(
   scheduledTime?: string,
   contentPlanId?: string,
   contentPlanDay?: string,
+  goal?: string | null,
+  angle?: string | null,
+  style?: string | null,
 ): Promise<ApiYouTubePublishResponse> {
   const match = videoDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
@@ -1006,6 +1015,9 @@ export function publishToYouTube(
     formData.append("content_plan_id", contentPlanId);
     formData.append("content_plan_day", contentPlanDay);
   }
+  if (goal) formData.append("goal", goal);
+  if (angle) formData.append("angle", angle);
+  if (style) formData.append("style", style);
   return apiFetch<ApiYouTubePublishResponse>("/youtube/publish", {
     method: "POST",
     body: formData,
@@ -1027,6 +1039,9 @@ export function publishToTikTok(
   isOwnBrand: boolean,
   contentPlanId?: string,
   contentPlanDay?: string,
+  goal?: string | null,
+  angle?: string | null,
+  style?: string | null,
 ): Promise<ApiTikTokPublishResponse> {
   const match = videoDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
@@ -1042,6 +1057,9 @@ export function publishToTikTok(
     formData.append("content_plan_id", contentPlanId);
     formData.append("content_plan_day", contentPlanDay);
   }
+  if (goal) formData.append("goal", goal);
+  if (angle) formData.append("angle", angle);
+  if (style) formData.append("style", style);
   return apiFetch<ApiTikTokPublishResponse>("/tiktok/publish", {
     method: "POST",
     body: formData,
@@ -1118,6 +1136,9 @@ export interface ApiPerformancePost {
   scheduled_time: string;
   metrics: ApiPostMetrics | null;
   metrics_unavailable_reason: string | null;
+  goal: string | null;
+  angle: string | null;
+  style: string | null;
 }
 
 export function fetchOrganicPerformance(): Promise<{ posts: ApiPerformancePost[] }> {

@@ -9,7 +9,19 @@ import { TikTokIcon } from "@/components/TikTokIcon";
 // native future-publish the way Facebook/YouTube have) and one extra
 // required control: the branded-content disclosure checkbox, since
 // TikTok's own guidelines forbid silently defaulting that choice.
-export function PublishToTikTok({ videoUrl, headline }: { videoUrl: string | null; headline: string }) {
+export function PublishToTikTok({
+  videoUrl,
+  headline,
+  goal,
+  angle,
+  style,
+}: {
+  videoUrl: string | null;
+  headline: string;
+  goal?: string | null;
+  angle?: string | null;
+  style?: string | null;
+}) {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [connected, setConnected] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -64,7 +76,7 @@ export function PublishToTikTok({ videoUrl, headline }: { videoUrl: string | nul
     setError(null);
     setResult(null);
     try {
-      const r = await publishToTikTok(videoUrl, caption.trim(), isOwnBrand);
+      const r = await publishToTikTok(videoUrl, caption.trim(), isOwnBrand, undefined, undefined, goal, angle, style);
       setResult(r);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't publish. Please try again.");

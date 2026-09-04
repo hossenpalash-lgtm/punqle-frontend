@@ -569,7 +569,7 @@ export function AdVideoForm({
     setCaptionsError(null);
     try {
       const currentBase64 = videoUrl.split(",")[1] ?? videoUrl;
-      const r = await addCaptionsToAvatarVideo(currentBase64, aspectRatio, captionStyle, scriptLanguage);
+      const r = await addCaptionsToAvatarVideo(currentBase64, aspectRatio, captionStyle, scriptLanguage, pickedScript?.narration);
       setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
       setAvatarVideoBase64(r.video_base64);
       setHasAddedCaptions(true);

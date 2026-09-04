@@ -279,16 +279,22 @@ export type CaptionStyle = "bold" | "clean" | "highlight" | "box" | "glow" | "mi
 // ~8-15s clip). Transcribes whatever audio the video currently has (the
 // avatar's real spoken dialogue, not a script) and burns synced caption
 // bars on top, keeping the existing audio untouched.
+//
+// narration (only used for Bangla) is the exact script that was actually
+// spoken — whisper-1 mis-transcribes real Bangla speech as phonetic
+// Hindi/Devanagari without this, a real bug found live, not a
+// theoretical one (see main.py's AddCaptionsToAvatarVideoRequest).
 export function addCaptionsToAvatarVideo(
   videoBase64: string,
   aspectRatio: string,
   style: CaptionStyle = "bold",
   language: AvatarLanguage = "english",
+  narration?: string,
 ): Promise<{ video_base64: string }> {
   return apiFetch<{ video_base64: string }>("/ads/avatar-video-add-captions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ video_base64: videoBase64, aspect_ratio: aspectRatio, style, language }),
+    body: JSON.stringify({ video_base64: videoBase64, aspect_ratio: aspectRatio, style, language, narration }),
   });
 }
 

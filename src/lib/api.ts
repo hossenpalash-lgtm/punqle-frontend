@@ -1030,13 +1030,40 @@ export interface ApiTikTokPublishResponse {
   error?: string;
 }
 
-// isOwnBrand maps to TikTok's own mandatory branded-content disclosure
-// (brand_organic_toggle vs brand_content_toggle) — TikTok's guidelines
-// require this be a real, visible user choice, never silently defaulted.
+// Fetched fresh every time the publish panel opens — TikTok's own
+// Content Sharing Guidelines require the creator's real privacy options
+// and duet/stitch/comment settings be reflected in the confirmation UI,
+// never a hardcoded app-wide default (a creator could have changed
+// these in the TikTok app since last time).
+export interface ApiTikTokCreatorInfo {
+  nickname: string;
+  avatar_url: string | null;
+  privacy_level_options: string[];
+  comment_disabled: boolean;
+  duet_disabled: boolean;
+  stitch_disabled: boolean;
+  max_video_post_duration_sec: number;
+}
+
+export function fetchTikTokCreatorInfo(): Promise<ApiTikTokCreatorInfo> {
+  return apiFetch<ApiTikTokCreatorInfo>("/tiktok/creator-info");
+}
+
+// promotesOwnBrand/hasPaidPartnership map to TikTok's own mandatory
+// branded-content disclosure (brand_organic_toggle / brand_content_
+// toggle) — TikTok's guidelines require this be a real, visible user
+// choice with at least one selected, never silently defaulted, and
+// allow both simultaneously (a post can promote your own business AND
+// be a paid partnership).
 export function publishToTikTok(
   videoDataUrl: string,
   caption: string,
-  isOwnBrand: boolean,
+  privacyLevel: string,
+  allowComment: boolean,
+  allowDuet: boolean,
+  allowStitch: boolean,
+  promotesOwnBrand: boolean,
+  hasPaidPartnership: boolean,
   contentPlanId?: string,
   contentPlanDay?: string,
   goal?: string | null,
@@ -1051,7 +1078,12 @@ export function publishToTikTok(
   const formData = new FormData();
   formData.append("file", base64ToFile(base64, mimeType, "ad-video.mp4"));
   formData.append("caption", caption);
-  formData.append("is_own_brand", String(isOwnBrand));
+  formData.append("privacy_level", privacyLevel);
+  formData.append("allow_comment", String(allowComment));
+  formData.append("allow_duet", String(allowDuet));
+  formData.append("allow_stitch", String(allowStitch));
+  formData.append("promotes_own_brand", String(promotesOwnBrand));
+  formData.append("has_paid_partnership", String(hasPaidPartnership));
   if (contentPlanId && contentPlanDay) {
     formData.append("source", "weekly_plan");
     formData.append("content_plan_id", contentPlanId);

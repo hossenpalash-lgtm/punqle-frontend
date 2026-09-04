@@ -172,7 +172,17 @@ export function AvatarPickerStep({
                   // derived size (confirmed live: the button collapsed to 4px
                   // and clipped its 300px-tall image via overflow-hidden),
                   // so the button needs a real, definite size of its own.
-                  "relative aspect-[3/4] w-full overflow-hidden rounded-xl border-2 text-left transition-colors",
+                  //
+                  // isolate + [contain:paint] is a second, separate real bug
+                  // fix: without it, Chrome would occasionally paint bleed
+                  // from a *different* cell's downscaled WebP into this one
+                  // (avatar thumbnails showing as ghosted, shingled stacks of
+                  // several different photos) — a real GPU compositor-layer
+                  // bug between adjacent grid cells, reproduced and fixed in
+                  // isolation (a plain HTML/CSS grid, no React/Tailwind
+                  // involved) before landing here. Forcing each cell into its
+                  // own paint containment context stops the bleed entirely.
+                  "relative isolate aspect-[3/4] w-full overflow-hidden rounded-xl border-2 text-left transition-colors [contain:paint]",
                   isSelected ? "border-primary" : "border-transparent",
                 ].join(" ")}
               >

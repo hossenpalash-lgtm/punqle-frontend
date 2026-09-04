@@ -1111,7 +1111,7 @@ export interface ApiPostMetrics {
 
 export interface ApiPerformancePost {
   id: string;
-  platform: "facebook" | "youtube";
+  platform: "facebook" | "youtube" | "tiktok";
   external_post_id: string | null;
   caption: string;
   image_base64: string | null;

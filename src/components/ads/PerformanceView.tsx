@@ -1,6 +1,13 @@
 import { Eye, Facebook, Heart, Loader2, MessageCircle, RefreshCw, Share2, TrendingUp, Youtube } from "lucide-react";
 import { useEffect, useState } from "react";
+import { TikTokIcon } from "@/components/TikTokIcon";
 import { fetchOrganicPerformance, type ApiPerformancePost } from "@/lib/api";
+
+function PlatformIcon({ platform, className }: { platform: ApiPerformancePost["platform"]; className: string }) {
+  if (platform === "youtube") return <Youtube className={className} />;
+  if (platform === "tiktok") return <TikTokIcon className={className} />;
+  return <Facebook className={className} />;
+}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -80,15 +87,13 @@ export function PerformanceView() {
               <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
                 {post.image_base64 ? (
                   <img src={`data:image/jpeg;base64,${post.image_base64}`} alt="" className="h-full w-full object-cover" />
-                ) : post.platform === "youtube" ? (
-                  <Youtube className="h-6 w-6 text-muted-foreground" />
                 ) : (
-                  <Facebook className="h-6 w-6 text-muted-foreground" />
+                  <PlatformIcon platform={post.platform} className="h-6 w-6 text-muted-foreground" />
                 )}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="mb-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                  {post.platform === "youtube" ? <Youtube className="h-3 w-3" /> : <Facebook className="h-3 w-3" />}
+                  <PlatformIcon platform={post.platform} className="h-3 w-3" />
                   {formatDate(post.scheduled_time)}
                 </div>
                 <p className="mb-2 line-clamp-2 text-sm text-foreground">{post.caption || "(no caption)"}</p>

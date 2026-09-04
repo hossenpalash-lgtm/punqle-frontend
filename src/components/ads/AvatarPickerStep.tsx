@@ -1,5 +1,5 @@
 import { AlertCircle, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
-import type { ApiAvatarOption, AvatarTier } from "@/lib/api";
+import type { ApiAvatarOption, ApiAvatarVoice, ApiAvatarVoicesResponse, AvatarLanguage, AvatarTier } from "@/lib/api";
 
 const TIERS: { value: AvatarTier; label: string; description: string; credits: number }[] = [
   { value: "standard", label: "Standard", description: "Great quality, lower cost", credits: 4 },
@@ -21,6 +21,10 @@ export function AvatarPickerStep({
   onGenderFilterChange,
   selectedAvatarId,
   onSelectAvatar,
+  language,
+  voices,
+  selectedVoiceId,
+  onSelectVoice,
   onContinue,
   onBack,
   onRetry,
@@ -34,10 +38,24 @@ export function AvatarPickerStep({
   onGenderFilterChange: (g: "all" | "female" | "male") => void;
   selectedAvatarId: string | null;
   onSelectAvatar: (avatarId: string, gender: string | null) => void;
+  language: AvatarLanguage;
+  voices: ApiAvatarVoicesResponse | null;
+  selectedVoiceId: string | null;
+  onSelectVoice: (voiceId: string) => void;
   onContinue: () => void;
   onBack: () => void;
   onRetry: () => void;
 }) {
+  // Voice options for the chosen script language, regardless of the
+  // avatar gender *filter* above (that filter only narrows the visible
+  // grid) — a user can pair any avatar with any voice; this app doesn't
+  // enforce gender-matching as a hard rule, just offers sensible options.
+  const voiceOptions: (ApiAvatarVoice & { gender: "female" | "male" })[] = voices
+    ? [
+        ...voices[language].female.map((v) => ({ ...v, gender: "female" as const })),
+        ...voices[language].male.map((v) => ({ ...v, gender: "male" as const })),
+      ]
+    : [];
   // Confirmed live against HeyGen's real API: every "expressive"-named
   // avatar (48 of 1264 in the catalog, ~4%) rejects Premium — 5/5 tested,
   // 0 exceptions. Filtering these out when Premium is selected means a
@@ -97,6 +115,28 @@ export function AvatarPickerStep({
           </button>
         ))}
       </div>
+
+      {voiceOptions.length > 0 && (
+        <div className="mb-4 w-full">
+          <p className="mb-1.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Voice
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {voiceOptions.map((v) => (
+              <button
+                key={v.voice_id}
+                onClick={() => onSelectVoice(v.voice_id)}
+                className={[
+                  "rounded-full px-3 py-1.5 text-xs font-semibold",
+                  selectedVoiceId === v.voice_id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                ].join(" ")}
+              >
+                {v.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading && (
         <div className="mb-6 flex flex-col items-center justify-center gap-3 py-10 text-sm text-muted-foreground">

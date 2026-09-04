@@ -137,14 +137,21 @@ export interface ApiVideoScriptAnglesResponse {
   recommended_reason: string;
 }
 
+export type AvatarLanguage = "english" | "bangla";
+
+// language only matters to the Avatar path (defaults to "english",
+// matching every other caller's existing behavior) — Veo-based styles
+// always burn English text regardless, so passing "bangla" there would
+// do nothing useful.
 export function generateVideoScriptAngles(
   itemDescription: string,
   goal: AdGoal,
+  language: AvatarLanguage = "english",
 ): Promise<ApiVideoScriptAnglesResponse> {
   return apiFetch<ApiVideoScriptAnglesResponse>("/ads/generate-video-angles", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ item_description: itemDescription, goal }),
+    body: JSON.stringify({ item_description: itemDescription, goal, language }),
   });
 }
 
@@ -188,6 +195,20 @@ export function fetchAvatarOptions(): Promise<ApiAvatarOptionsResponse> {
   return apiFetch<ApiAvatarOptionsResponse>("/ads/avatar-options");
 }
 
+export interface ApiAvatarVoice {
+  voice_id: string;
+  name: string;
+}
+
+export interface ApiAvatarVoicesResponse {
+  english: { female: ApiAvatarVoice[]; male: ApiAvatarVoice[] };
+  bangla: { female: ApiAvatarVoice[]; male: ApiAvatarVoice[] };
+}
+
+export function fetchAvatarVoices(): Promise<ApiAvatarVoicesResponse> {
+  return apiFetch<ApiAvatarVoicesResponse>("/ads/avatar-voices");
+}
+
 export type AvatarTier = "standard" | "premium";
 
 export interface ApiAvatarVideoOperation {
@@ -205,6 +226,7 @@ export function startAvatarVideoGeneration(
   gender: string | null,
   tier: AvatarTier,
   aspectRatio: VideoAspectRatio,
+  voiceId?: string | null,
 ): Promise<ApiAvatarVideoOperation> {
   return apiFetch<ApiAvatarVideoOperation>("/ads/generate-avatar-video", {
     method: "POST",
@@ -215,6 +237,7 @@ export function startAvatarVideoGeneration(
       gender,
       tier,
       aspect_ratio: aspectRatio,
+      voice_id: voiceId || undefined,
     }),
   });
 }
@@ -250,6 +273,8 @@ export function addMusicToAvatarVideo(
   });
 }
 
+export type CaptionStyle = "bold" | "clean" | "highlight" | "box" | "glow" | "minimal";
+
 // Free — real cost is a fraction of a cent (whisper-1 transcription on an
 // ~8-15s clip). Transcribes whatever audio the video currently has (the
 // avatar's real spoken dialogue, not a script) and burns synced caption
@@ -257,11 +282,13 @@ export function addMusicToAvatarVideo(
 export function addCaptionsToAvatarVideo(
   videoBase64: string,
   aspectRatio: string,
+  style: CaptionStyle = "bold",
+  language: AvatarLanguage = "english",
 ): Promise<{ video_base64: string }> {
   return apiFetch<{ video_base64: string }>("/ads/avatar-video-add-captions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ video_base64: videoBase64, aspect_ratio: aspectRatio }),
+    body: JSON.stringify({ video_base64: videoBase64, aspect_ratio: aspectRatio, style, language }),
   });
 }
 

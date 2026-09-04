@@ -22,6 +22,7 @@ import {
   checkAvatarVideoStatus,
   checkVideoStatus,
   fetchAvatarOptions,
+  fetchAvatarVoices,
   fetchBusinessProfile,
   fetchProductLink,
   generateAdCaptions,
@@ -31,10 +32,13 @@ import {
   understandProductLink,
   type AdGoal,
   type ApiAvatarOption,
+  type ApiAvatarVoicesResponse,
   type ApiVideoOperation,
   type ApiVideoScriptAngle,
+  type AvatarLanguage,
   type AvatarMusicMood,
   type AvatarTier,
+  type CaptionStyle,
   type VideoAspectRatio,
 } from "@/lib/api";
 import { findVideoStyle, type VideoStyle } from "@/lib/video-style";
@@ -122,6 +126,10 @@ export function AdVideoForm({
   const [goal, setGoal] = useState<AdGoal>(initialVideo?.goal ?? "sales");
   const [angle, setAngle] = useState<string | null>(null);
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("product_showcase");
+  // Only matters if AI Presenter ends up picked later (style isn't chosen
+  // until after this step) — HeyGen has real Bangla voices, so a Bangla
+  // script is what makes them actually usable, not just a cosmetic toggle.
+  const [scriptLanguage, setScriptLanguage] = useState<AvatarLanguage>("english");
 
   // Multi-angle script picker (between Brief and Style) — replaces the old
   // blind angle-label chip in AdBriefStep with real, AI-written scripts to
@@ -144,6 +152,9 @@ export function AdVideoForm({
   const [avatarGenderFilter, setAvatarGenderFilter] = useState<"all" | "female" | "male">("all");
   const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
   const [selectedAvatarGender, setSelectedAvatarGender] = useState<string | null>(null);
+  const [avatarVoices, setAvatarVoices] = useState<ApiAvatarVoicesResponse | null>(null);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
+  const [captionStyle, setCaptionStyle] = useState<CaptionStyle>("bold");
   const [avatarVideoId, setAvatarVideoId] = useState<string | null>(null);
   // Set when the backend automatically fell back from Premium to
   // Standard because this specific avatar didn't support Premium —
@@ -300,7 +311,7 @@ export function AdVideoForm({
   const fetchAngles = () => {
     setAnglesLoading(true);
     setAnglesError(null);
-    generateVideoScriptAngles(offerDescription.trim(), goal)
+    generateVideoScriptAngles(offerDescription.trim(), goal, scriptLanguage)
       .then((r) => {
         setScriptAngles(r.angles);
         setRecommendedAngleIndex(r.recommended_index);
@@ -348,6 +359,20 @@ export function AdVideoForm({
       setSelectedAvatarGender(null);
       setStep("avatar-picker");
       if (avatarOptions.length === 0) fetchAvatarOptionsForStep();
+      if (!avatarVoices) {
+        fetchAvatarVoices()
+          .then((r) => {
+            setAvatarVoices(r);
+            setSelectedVoiceId(r[scriptLanguage].female[0]?.voice_id ?? r[scriptLanguage].male[0]?.voice_id ?? null);
+          })
+          .catch(() => {
+            // Silently falls back to the backend's own English default —
+            // the voice picker just won't show, not worth a loud error
+            // over a free, secondary customization.
+          });
+      } else if (!selectedVoiceId) {
+        setSelectedVoiceId(avatarVoices[scriptLanguage].female[0]?.voice_id ?? avatarVoices[scriptLanguage].male[0]?.voice_id ?? null);
+      }
     } else {
       setStep("setup");
     }
@@ -544,7 +569,7 @@ export function AdVideoForm({
     setCaptionsError(null);
     try {
       const currentBase64 = videoUrl.split(",")[1] ?? videoUrl;
-      const r = await addCaptionsToAvatarVideo(currentBase64, aspectRatio);
+      const r = await addCaptionsToAvatarVideo(currentBase64, aspectRatio, captionStyle, scriptLanguage);
       setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
       setAvatarVideoBase64(r.video_base64);
       setHasAddedCaptions(true);
@@ -581,6 +606,7 @@ export function AdVideoForm({
         selectedAvatarGender,
         avatarTier,
         aspectRatio,
+        selectedVoiceId,
       );
       setAvatarVideoId(r.video_id);
       setAvatarFellBack(r.fell_back);
@@ -672,6 +698,7 @@ export function AdVideoForm({
     setSelectedAngleIndex(null);
     setRecommendedAngleIndex(0);
     setPickedScript(null);
+    setScriptLanguage("english");
     setVideoStyle("product_showcase");
     setAspectRatio("16:9");
     handleFileChange(null);
@@ -694,6 +721,7 @@ export function AdVideoForm({
     setAvatarGenderFilter("all");
     setSelectedAvatarId(null);
     setSelectedAvatarGender(null);
+    setAvatarVoices(null);
     setAvatarVideoId(null);
     setIsAvatarResult(false);
     setAvatarFellBack(false);
@@ -707,6 +735,8 @@ export function AdVideoForm({
     setAddingCaptions(false);
     setCaptionsError(null);
     setHasAddedCaptions(false);
+    setSelectedVoiceId(null);
+    setCaptionStyle("bold");
   };
 
   const handleHeadlineChange = (value: string) => {
@@ -825,6 +855,21 @@ export function AdVideoForm({
             <p className="mb-2 text-xs text-muted-foreground">
               Add synced on-screen captions — helps on social, where most people watch muted. Free.
             </p>
+            <div className="mb-2 grid grid-cols-3 gap-1.5">
+              {(["bold", "clean", "highlight", "box", "glow", "minimal"] as CaptionStyle[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setCaptionStyle(s)}
+                  disabled={addingCaptions}
+                  className={[
+                    "rounded-full px-2 py-1.5 text-xs font-semibold capitalize disabled:opacity-60",
+                    captionStyle === s ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                  ].join(" ")}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
             <button
               onClick={handleAddCaptions}
               disabled={addingCaptions}
@@ -1035,16 +1080,40 @@ export function AdVideoForm({
       )}
 
       {step === "brief" && (
-        <AdBriefStep
-          offerDescription={offerDescription}
-          onOfferDescriptionChange={setOfferDescription}
-          goal={goal}
-          onGoalChange={setGoal}
-          angle={angle}
-          onAngleChange={setAngle}
-          onContinue={handleBriefContinue}
-          showAngle={false}
-        />
+        <>
+          <div className="mb-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Script language
+            </p>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Only matters if you pick AI Presenter later — HeyGen has real Bangla voices.
+            </p>
+            <div className="flex gap-2">
+              {(["english", "bangla"] as AvatarLanguage[]).map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => setScriptLanguage(lang)}
+                  className={[
+                    "flex-1 rounded-full px-4 py-2 text-sm font-semibold capitalize",
+                    scriptLanguage === lang ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                  ].join(" ")}
+                >
+                  {lang === "bangla" ? "বাংলা" : "English"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <AdBriefStep
+            offerDescription={offerDescription}
+            onOfferDescriptionChange={setOfferDescription}
+            goal={goal}
+            onGoalChange={setGoal}
+            angle={angle}
+            onAngleChange={setAngle}
+            onContinue={handleBriefContinue}
+            showAngle={false}
+          />
+        </>
       )}
 
       {step === "angles" && (
@@ -1081,6 +1150,10 @@ export function AdVideoForm({
           onGenderFilterChange={setAvatarGenderFilter}
           selectedAvatarId={selectedAvatarId}
           onSelectAvatar={handleSelectAvatar}
+          language={scriptLanguage}
+          voices={avatarVoices}
+          selectedVoiceId={selectedVoiceId}
+          onSelectVoice={setSelectedVoiceId}
           onContinue={() => setStep("setup")}
           onBack={() => setStep("style")}
           onRetry={fetchAvatarOptionsForStep}

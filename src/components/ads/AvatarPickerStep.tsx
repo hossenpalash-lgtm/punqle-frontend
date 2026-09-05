@@ -1,10 +1,24 @@
 import { AlertCircle, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { ApiAvatarOption, ApiAvatarVoice, ApiAvatarVoicesResponse, AvatarLanguage, AvatarTier } from "@/lib/api";
 
 const TIERS: { value: AvatarTier; label: string; description: string; credits: number }[] = [
   { value: "standard", label: "Standard", description: "Great quality, lower cost", credits: 4 },
   { value: "premium", label: "Premium", description: "Higher fidelity, more realistic movement", credits: 10 },
 ];
+
+// HeyGen's catalog is 1264 avatars — even gender-filtered, that's several
+// hundred full-size images. Rendering all of them into one small
+// max-h-96 scrollbox at once (the previous behavior) is excessive DOM/
+// paint work on its own, and was very likely what triggered a real,
+// live-reproduced Chrome compositor bug (avatar thumbnails ghosting into
+// a shingled stack of several different photos while scrolling this
+// grid) — confirmed independently by the founder's own trackpad
+// scrolling and by a from-scratch, framework-free HTML/CSS repro.
+// Capping how many are ever mounted at once is a real, structural fix
+// for that class of bug (far fewer simultaneously-composited image
+// layers), not just a performance nicety.
+const AVATAR_PAGE_SIZE = 24;
 
 // Video Ad's "AI Presenter" style — shown only when videoStyle === "avatar".
 // Tier is picked first since it changes the credit cost shown throughout;
@@ -70,6 +84,13 @@ export function AvatarPickerStep({
       (genderFilter === "all" || a.gender === genderFilter) &&
       (tier !== "premium" || !a.avatar_id.toLowerCase().includes("expressive")),
   );
+
+  // Resets whenever the visible set actually changes (gender/tier), not
+  // on every render — a filter change means the previous "how many to
+  // show" count no longer means anything.
+  const [visibleCount, setVisibleCount] = useState(AVATAR_PAGE_SIZE);
+  useEffect(() => setVisibleCount(AVATAR_PAGE_SIZE), [genderFilter, tier]);
+  const visible = filtered.slice(0, visibleCount);
 
   return (
     <div className="flex flex-col items-center text-center">
@@ -159,7 +180,7 @@ export function AvatarPickerStep({
 
       {!loading && !error && (
         <div className="mb-6 grid max-h-96 w-full grid-cols-3 gap-2 overflow-y-auto">
-          {filtered.map((a) => {
+          {visible.map((a) => {
             const isSelected = selectedAvatarId === a.avatar_id;
             return (
               <button
@@ -211,6 +232,15 @@ export function AvatarPickerStep({
             );
           })}
         </div>
+      )}
+
+      {!loading && !error && visibleCount < filtered.length && (
+        <button
+          onClick={() => setVisibleCount((n) => n + AVATAR_PAGE_SIZE)}
+          className="mb-4 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+        >
+          Load more ({filtered.length - visibleCount} more)
+        </button>
       )}
 
       <div className="flex w-full gap-2">

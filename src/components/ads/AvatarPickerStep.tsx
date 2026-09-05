@@ -8,16 +8,20 @@ const TIERS: { value: AvatarTier; label: string; description: string; credits: n
 ];
 
 // HeyGen's catalog is 1264 avatars — even gender-filtered, that's several
-// hundred full-size images. Rendering all of them into one small
-// max-h-96 scrollbox at once (the previous behavior) is excessive DOM/
-// paint work on its own, and was very likely what triggered a real,
-// live-reproduced Chrome compositor bug (avatar thumbnails ghosting into
-// a shingled stack of several different photos while scrolling this
-// grid) — confirmed independently by the founder's own trackpad
-// scrolling and by a from-scratch, framework-free HTML/CSS repro.
-// Capping how many are ever mounted at once is a real, structural fix
-// for that class of bug (far fewer simultaneously-composited image
-// layers), not just a performance nicety.
+// hundred full-size images. A real, live-reproduced Chrome compositor
+// bug (avatar thumbnails ghosting into a shingled stack of several
+// different photos) was hit here — confirmed independently by the
+// founder's own trackpad scrolling and by a from-scratch, framework-
+// free HTML/CSS repro using the real HeyGen image URLs. Narrowed to:
+// only a genuine OS-level/native scroll gesture over a scrollable
+// (overflow-y: auto) box triggers it — a direct scrollTop jump, a
+// smooth-scroll animation, and synthetic dispatched wheel events never
+// did. Capping how many images mount at once (this constant) did NOT
+// fix it alone (still reproduced at 24) — the real fix was removing
+// the grid's own internal overflow-y:auto scrollbox entirely (below),
+// letting the page scroll instead of nesting a second scrollable
+// region. Keeping this cap anyway: still real, worthwhile DOM/paint
+// savings against a catalog this size, independent of the ghosting bug.
 const AVATAR_PAGE_SIZE = 24;
 
 // Video Ad's "AI Presenter" style — shown only when videoStyle === "avatar".
@@ -179,7 +183,7 @@ export function AvatarPickerStep({
       )}
 
       {!loading && !error && (
-        <div className="mb-6 grid max-h-96 w-full grid-cols-3 gap-2 overflow-y-auto">
+        <div className="mb-6 grid w-full grid-cols-3 gap-2">
           {visible.map((a) => {
             const isSelected = selectedAvatarId === a.avatar_id;
             return (

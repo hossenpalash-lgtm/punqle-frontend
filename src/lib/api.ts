@@ -1043,6 +1043,7 @@ export interface ApiTikTokCreatorInfo {
   duet_disabled: boolean;
   stitch_disabled: boolean;
   max_video_post_duration_sec: number;
+  is_audited: boolean;
 }
 
 export function fetchTikTokCreatorInfo(): Promise<ApiTikTokCreatorInfo> {

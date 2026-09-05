@@ -91,7 +91,15 @@ export function PublishToTikTok({
     fetchTikTokCreatorInfo()
       .then((info) => {
         setCreatorInfo(info);
-        setPrivacyLevel(info.privacy_level_options[0] ?? "");
+        // While unaudited, TikTok's real API rejects (403) any
+        // privacy_level other than SELF_ONLY — confirmed live by
+        // replaying the exact publish request with only this field
+        // changed. privacy_level_options reflects the creator's own
+        // account settings, not the app's audit status, so it can
+        // legitimately list options that would still fail right now —
+        // default to the one that's actually usable instead of
+        // whichever option happens to sort first.
+        setPrivacyLevel(info.is_audited ? info.privacy_level_options[0] ?? "" : "SELF_ONLY");
       })
       .catch((err) => setCreatorInfoError(err instanceof Error ? err.message : "Couldn't load your TikTok posting options."))
       .finally(() => setLoadingCreatorInfo(false));
@@ -220,17 +228,32 @@ export function PublishToTikTok({
           <select
             value={privacyLevel}
             onChange={(e) => setPrivacyLevel(e.target.value)}
-            className="mb-3 w-full rounded-full border border-input bg-background px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            disabled={!creatorInfo.is_audited}
+            className="mb-1.5 w-full rounded-full border border-input bg-background px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
           >
-            <option value="" disabled>
-              Choose who can see this
-            </option>
-            {creatorInfo.privacy_level_options.map((opt) => (
-              <option key={opt} value={opt}>
-                {PRIVACY_LABELS[opt] ?? opt}
-              </option>
-            ))}
+            {creatorInfo.is_audited ? (
+              <>
+                <option value="" disabled>
+                  Choose who can see this
+                </option>
+                {creatorInfo.privacy_level_options.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {PRIVACY_LABELS[opt] ?? opt}
+                  </option>
+                ))}
+              </>
+            ) : (
+              <option value="SELF_ONLY">Only me</option>
+            )}
           </select>
+          {creatorInfo.is_audited ? (
+            <div className="mb-3" />
+          ) : (
+            <p className="mb-3 text-xs text-muted-foreground">
+              Locked to "Only me" until Punqle's TikTok app passes review — TikTok itself rejects any other
+              option from an app that hasn't been audited yet.
+            </p>
+          )}
 
           <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">Allow on this post</label>
           <div className="mb-3 flex flex-wrap gap-3">

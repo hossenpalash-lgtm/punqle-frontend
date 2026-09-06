@@ -25,7 +25,7 @@ import { TikTokConnectPanel } from "../components/ads/TikTokConnectPanel";
 import { YouTubeConnectPanel } from "../components/ads/YouTubeConnectPanel";
 import { ProductCatalogPanel } from "../components/ads/ProductCatalogPanel";
 import { ReferralPanel } from "../components/ads/ReferralPanel";
-import { Sidebar, type NavTab } from "../components/Sidebar";
+import { ALL_NAV_TABS, Sidebar, type NavTab } from "../components/Sidebar";
 
 // These render their own full page (header/footer, no sidebar) and must
 // stay reachable regardless of auth state — signed out, mid-splash, or
@@ -165,18 +165,7 @@ function RootComponent() {
   // There's only one real route today, but this keeps root decoupled
   // from that route's specifics.
   const search = useSearch({ strict: false }) as { tab?: string };
-  const tab: NavTab =
-    search.tab === "plan"
-      ? "plan"
-      : search.tab === "performance"
-        ? "performance"
-        : search.tab === "history"
-          ? "history"
-          : search.tab === "competitor"
-            ? "competitor"
-            : search.tab === "video"
-              ? "video"
-              : "single";
+  const tab: NavTab = ALL_NAV_TABS.includes(search.tab as NavTab) ? (search.tab as NavTab) : "single";
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));

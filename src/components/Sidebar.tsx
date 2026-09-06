@@ -40,6 +40,27 @@ export type NavTab =
   | "bulk-creative"
   | "tryon";
 
+// The single source of truth for "every real tab value" — __root.tsx
+// validates its own separately-computed `search.tab` against this list
+// rather than hand-duplicating a second match chain. A real bug this
+// exact duplication caused: 5 tabs (calendar/ad/ad-video/bulk-creative/
+// tryon) were added here over time but never added to __root.tsx's own
+// ternary, so the Sidebar silently highlighted "Image Post" no matter
+// which of those 5 pages was actually open — found live, not by review.
+export const ALL_NAV_TABS: NavTab[] = [
+  "single",
+  "plan",
+  "calendar",
+  "performance",
+  "history",
+  "competitor",
+  "video",
+  "ad",
+  "ad-video",
+  "bulk-creative",
+  "tryon",
+];
+
 // Punqle's 3 primary creation categories (locked in 2026-08-21) — all
 // three are now built. Social Content and Ad Creation each split into 2
 // formats; E-commerce now has 2 (Bulk Creative shipped 2026-08-27,

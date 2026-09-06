@@ -256,6 +256,40 @@ export function checkAvatarVideoStatus(videoId: string): Promise<ApiAvatarVideoS
   });
 }
 
+// Cinematic UGC (Seedance 2.5, via Replicate) — reuses AvatarTier's
+// standard/premium naming and picker shape, split by resolution instead
+// of engine version since Seedance has no separate cheap/expensive
+// engine the way HeyGen's Avatar III/V split does.
+export interface ApiCinematicUgcOperation {
+  prediction_id: string;
+}
+
+export function startCinematicUgcGeneration(
+  itemDescription: string,
+  stylePrompt: string,
+  tier: AvatarTier,
+  aspectRatio: VideoAspectRatio,
+): Promise<ApiCinematicUgcOperation> {
+  return apiFetch<ApiCinematicUgcOperation>("/ads/generate-cinematic-ugc", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      item_description: itemDescription,
+      style_prompt: stylePrompt,
+      tier,
+      aspect_ratio: aspectRatio,
+    }),
+  });
+}
+
+export function checkCinematicUgcStatus(predictionId: string): Promise<ApiAvatarVideoStatusResponse> {
+  return apiFetch<ApiAvatarVideoStatusResponse>("/ads/cinematic-ugc-status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prediction_id: predictionId }),
+  });
+}
+
 export type AvatarMusicMood = "upbeat" | "calm" | "energetic" | "corporate";
 
 // Free — mixes a real licensed background track (HeyGen's own music

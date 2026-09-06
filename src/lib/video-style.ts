@@ -5,7 +5,14 @@
 // needs for v1. Each style is just a short phrase appended client-side
 // to the offer description before it reaches Veo — the same
 // `${description}, ${modifier}` pattern used for image style.
-export type VideoStyle = "product_showcase" | "lifestyle" | "problem_solution" | "before_after" | "cinematic" | "avatar";
+export type VideoStyle =
+  | "product_showcase"
+  | "lifestyle"
+  | "problem_solution"
+  | "before_after"
+  | "cinematic"
+  | "avatar"
+  | "cinematic_ugc";
 
 export interface VideoStyleOption {
   id: VideoStyle;
@@ -51,6 +58,18 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     description: "A talking avatar reads your script",
     // Unused — Avatar bypasses Veo/promptModifier entirely; handleGenerate
     // special-cases videoStyle === "avatar" and calls HeyGen instead.
+    promptModifier: "",
+  },
+  {
+    id: "cinematic_ugc",
+    label: "Cinematic UGC",
+    description: "Real product-in-hand, real human motion",
+    // Unused — like Avatar, Cinematic UGC bypasses Veo/promptModifier
+    // entirely; handleGenerate special-cases videoStyle === "cinematic_ugc"
+    // and calls Seedance 2.5 (via Replicate) instead. Exists for a real
+    // gap neither Veo nor HeyGen covers: HeyGen's avatar motion prompts
+    // don't reach props/held objects (confirmed via HeyGen's own docs),
+    // and Veo has no reliably consistent character across a shot.
     promptModifier: "",
   },
 ];

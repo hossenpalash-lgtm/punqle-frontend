@@ -2,6 +2,7 @@ import {
   AlertCircle,
   Camera,
   Captions,
+  Check,
   ChevronDown,
   Clock,
   Download,
@@ -20,6 +21,7 @@ import {
   concatVideos,
   base64ToFile,
   checkAvatarVideoStatus,
+  checkCinematicUgcStatus,
   checkVideoStatus,
   fetchAvatarOptions,
   fetchAvatarVoices,
@@ -28,6 +30,7 @@ import {
   generateAdCaptions,
   generateVideoScriptAngles,
   startAvatarVideoGeneration,
+  startCinematicUgcGeneration,
   startVideoGeneration,
   understandProductLink,
   type AdGoal,
@@ -58,6 +61,11 @@ const POLL_INTERVAL_MS = 8000;
 // reuses VIDEO_CREDIT_COST directly (see main.py's AVATAR_PREMIUM_CREDIT_COST);
 // "standard" gets its own, cheaper constant matching main.py's real one.
 const AVATAR_STANDARD_CREDIT_COST = 4;
+// Cinematic UGC (Seedance 2.5) — real per-second cost confirmed live
+// against a real billed Replicate invoice 2026-09-06 (~$0.103/s at
+// 480p, ~$0.231/s at 720p for an 8s clip) — matches main.py's
+// CINEMATIC_UGC_CREDIT_COST exactly.
+const CINEMATIC_UGC_CREDIT_COST: Record<AvatarTier, number> = { standard: 25, premium: 46 };
 
 type WizardStep =
   | "choose"
@@ -174,11 +182,22 @@ export function AdVideoForm({
   const [addingCaptions, setAddingCaptions] = useState(false);
   const [captionsError, setCaptionsError] = useState<string | null>(null);
   const [hasAddedCaptions, setHasAddedCaptions] = useState(false);
-  // True only for a result produced via the avatar path — the result
-  // screen skips EditVideoPanel for these (HeyGen's response shape isn't
-  // a Veo operation handle, and burning a headline over a speaking
-  // presenter's face would look wrong anyway).
+  // True for a result produced via the avatar OR Cinematic UGC path —
+  // both return raw base64 bytes, not a Veo operation handle
+  // EditVideoPanel can re-download from, so the result screen skips it
+  // for both and shows the music/scene/captions block instead (also
+  // shared, since both paths write the same avatarVideoBase64 state).
   const [isAvatarResult, setIsAvatarResult] = useState(false);
+
+  // Cinematic UGC (Seedance 2.5) — a third video path alongside Veo and
+  // HeyGen, for real human-product interaction. Tier mirrors Avatar's
+  // Standard/Premium naming, split by resolution (480p/720p) instead of
+  // engine version. No avatar-grid picker step exists for this path —
+  // Seedance has no stock-character catalog (confirmed live against its
+  // real API) — so it goes straight from Style to Setup like every
+  // other non-avatar style.
+  const [cinematicUgcTier, setCinematicUgcTier] = useState<AvatarTier>("standard");
+  const [cinematicUgcScenePrompt, setCinematicUgcScenePrompt] = useState("");
 
   // Quick Create — Video option: paste a link, pick a Goal, get a
   // finished video ad in one tap. Mirrors AdCreationForm.tsx's Image Ad
@@ -619,6 +638,68 @@ export function AdVideoForm({
     }
   };
 
+  const pollCinematicUgcVideo = async (predictionId: string) => {
+    try {
+      const r = await checkCinematicUgcStatus(predictionId);
+      if (!r.done) {
+        pollTimeoutRef.current = setTimeout(() => pollCinematicUgcVideo(predictionId), POLL_INTERVAL_MS);
+        return;
+      }
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setGenerating(false);
+      if (r.credits_remaining !== null) setCredits(r.credits_remaining);
+      if (r.video_base64) {
+        setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
+        setAvatarVideoBase64(r.video_base64);
+        setIsAvatarResult(true);
+        setStep("result");
+      } else {
+        setError("The video didn't come back — please try again.");
+        setStep("setup");
+      }
+    } catch (err) {
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setGenerating(false);
+      setError(err instanceof Error ? err.message : "Couldn't check the video's status.");
+    }
+  };
+
+  // Cinematic UGC (Seedance 2.5) — a third video path alongside Veo and
+  // HeyGen. Reuses the exact same result-screen state (avatarVideoBase64/
+  // isAvatarResult) the avatar path writes, since both return raw base64
+  // bytes rather than a Veo operation handle — see pollCinematicUgcVideo
+  // above and isAvatarResult's own comment. No script/narration needed
+  // (no dialogue, no avatar) — just the product description plus a real
+  // scene direction (what the person does with the product).
+  const handleGenerateCinematicUgc = async () => {
+    const cost = CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier];
+    if (!offerDescription.trim() || !cinematicUgcScenePrompt.trim() || generating || (credits !== null && credits < cost)) return;
+    setGenerating(true);
+    setError(null);
+    setVideoUrl(null);
+    setElapsedSeconds(0);
+    setStep("generating");
+    elapsedIntervalRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    try {
+      const capResult = await generateAdCaptions(offerDescription.trim(), goal, angle, 1);
+      setCaption(capResult.captions[0]?.facebook_caption ?? "");
+      setHeadline(capResult.captions[0]?.whatsapp_message ?? offerDescription.trim());
+
+      const r = await startCinematicUgcGeneration(
+        offerDescription.trim(),
+        cinematicUgcScenePrompt.trim(),
+        cinematicUgcTier,
+        aspectRatio,
+      );
+      pollTimeoutRef.current = setTimeout(() => pollCinematicUgcVideo(r.prediction_id), POLL_INTERVAL_MS);
+    } catch (err) {
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setGenerating(false);
+      setError(err instanceof Error ? err.message : "Couldn't start the cinematic video.");
+      setStep("setup");
+    }
+  };
+
   // Shared by both Quick Create paths below — the URL path (real
   // scraping + AI enrichment) and the catalog path (already-known data,
   // no fetch needed at all) only differ in how description/file are
@@ -737,6 +818,8 @@ export function AdVideoForm({
     setHasAddedCaptions(false);
     setSelectedVoiceId(null);
     setCaptionStyle("bold");
+    setCinematicUgcTier("standard");
+    setCinematicUgcScenePrompt("");
   };
 
   const handleHeadlineChange = (value: string) => {
@@ -749,6 +832,7 @@ export function AdVideoForm({
   const insufficientCredits = credits !== null && credits < VIDEO_CREDIT_COST;
   const avatarInsufficientCredits =
     credits !== null && credits < (avatarTier === "premium" ? VIDEO_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST);
+  const cinematicUgcInsufficientCredits = credits !== null && credits < CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier];
 
   if (step === "result" && videoUrl) {
     return (
@@ -930,17 +1014,19 @@ export function AdVideoForm({
     );
   }
 
-  if (step === "generating" && videoStyle === "avatar") {
+  if (step === "generating" && (videoStyle === "avatar" || videoStyle === "cinematic_ugc")) {
     return (
       <div className="rounded-2xl bg-card p-6" style={{ boxShadow: "var(--shadow-card)" }}>
         <div className="flex flex-col items-center justify-center gap-3 text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm font-semibold text-foreground">Generating your AI presenter video...</p>
+          <p className="text-sm font-semibold text-foreground">
+            {videoStyle === "avatar" ? "Generating your AI presenter video..." : "Generating your cinematic UGC video..."}
+          </p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
             {minutes}:{seconds.toString().padStart(2, "0")} elapsed — usually a few minutes
           </p>
-          {avatarFellBack && (
+          {videoStyle === "avatar" && avatarFellBack && (
             <p className="mt-2 rounded-xl bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
               This avatar doesn't support Premium — using Standard instead, so you'll only be charged{" "}
               {AVATAR_STANDARD_CREDIT_COST} credits.
@@ -1162,7 +1248,7 @@ export function AdVideoForm({
 
       {step === "setup" && (
         <>
-          {videoStyle !== "avatar" && (
+          {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && (
             <div className="mb-5">
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Product photo (optional)
@@ -1200,9 +1286,10 @@ export function AdVideoForm({
               previously wired into Video Ad. Overwrites offerDescription
               from the "brief" step, same as Image Ad's SetupStep already
               does via onDescriptionOverride={setOfferDescription}. Not
-              shown for Avatar style — there's no product photo slot to
-              fill, and offerDescription is already set from Brief. */}
-          {videoStyle !== "avatar" && (
+              shown for Avatar/Cinematic UGC styles — neither has a
+              product photo slot to fill, and offerDescription is
+              already set from Brief. */}
+          {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && (
             <>
               <button
                 onClick={() => setMoreOptionsOpen((v) => !v)}
@@ -1278,6 +1365,53 @@ export function AdVideoForm({
             </div>
           </div>
 
+          {/* No stock-character catalog exists for Seedance the way
+              HeyGen's avatar grid does (confirmed live against its real
+              API) — tier picker plus a real scene direction (what the
+              person actually does with the product) instead of a
+              narration script. */}
+          {videoStyle === "cinematic_ugc" && (
+            <>
+              <div className="mb-5 grid w-full grid-cols-2 gap-2">
+                {(["standard", "premium"] as AvatarTier[]).map((t) => {
+                  const selected = cinematicUgcTier === t;
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => setCinematicUgcTier(t)}
+                      className={[
+                        "rounded-2xl px-3 py-2.5 text-left transition-colors capitalize",
+                        selected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                      ].join(" ")}
+                    >
+                      <span className="flex items-center gap-1.5 text-sm font-semibold">
+                        {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
+                        {t}
+                        <span className="ml-auto text-xs font-normal opacity-80">{CINEMATIC_UGC_CREDIT_COST[t]} credits</span>
+                      </span>
+                      <span className={["block text-xs normal-case", selected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}>
+                        {t === "premium" ? "720p, higher detail" : "480p, great quality"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mb-5">
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  What happens in the shot?
+                </label>
+                <textarea
+                  value={cinematicUgcScenePrompt}
+                  onChange={(e) => setCinematicUgcScenePrompt(e.target.value)}
+                  rows={2}
+                  placeholder="e.g. she laces up the sneakers and starts jogging down a sunny park path"
+                  className="w-full rounded-2xl border border-input bg-background px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            </>
+          )}
+
           {/* Explicit, unconditional cost line — shown every time, not
               only when credits are short (unlike Social Content's
               Video tab today) — a single click here is 10x the cost of
@@ -1287,19 +1421,27 @@ export function AdVideoForm({
               1 video · {avatarTier === "premium" ? VIDEO_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST} credits · usually a few
               minutes
             </div>
+          ) : videoStyle === "cinematic_ugc" ? (
+            <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-center text-sm font-semibold text-foreground">
+              1 video · {CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier]} credits · usually a few minutes
+            </div>
           ) : (
             <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-center text-sm font-semibold text-foreground">
               1 video · {VIDEO_CREDIT_COST} credits · about 1-2 min
             </div>
           )}
 
-          {(videoStyle === "avatar" ? avatarInsufficientCredits : insufficientCredits) && (
+          {(videoStyle === "avatar"
+            ? avatarInsufficientCredits
+            : videoStyle === "cinematic_ugc"
+              ? cinematicUgcInsufficientCredits
+              : insufficientCredits) && (
             <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-sm text-foreground">
               You have {credits} credits — not enough for a video. Upgrade to keep generating.
             </div>
           )}
 
-          {hasLogo && videoStyle !== "avatar" && (
+          {hasLogo && videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && (
             <p className="mb-4 text-xs text-muted-foreground">Your Brand Kit logo will be added to this video automatically.</p>
           )}
 
@@ -1311,11 +1453,21 @@ export function AdVideoForm({
           )}
 
           <button
-            onClick={() => (videoStyle === "avatar" ? handleGenerateAvatarVideo() : handleGenerate())}
+            onClick={() =>
+              videoStyle === "avatar"
+                ? handleGenerateAvatarVideo()
+                : videoStyle === "cinematic_ugc"
+                  ? handleGenerateCinematicUgc()
+                  : handleGenerate()
+            }
             disabled={
               !offerDescription.trim() ||
               generating ||
-              (videoStyle === "avatar" ? avatarInsufficientCredits || !selectedAvatarId : insufficientCredits)
+              (videoStyle === "avatar"
+                ? avatarInsufficientCredits || !selectedAvatarId
+                : videoStyle === "cinematic_ugc"
+                  ? cinematicUgcInsufficientCredits || !cinematicUgcScenePrompt.trim()
+                  : insufficientCredits)
             }
             className="flex w-full items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
             style={{ background: "var(--gradient-primary)" }}

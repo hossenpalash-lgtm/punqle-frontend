@@ -128,15 +128,25 @@ export function Sidebar({
   const [moreOpen, setMoreOpen] = useState(false);
   return (
     <>
-      {/* Floating frosted-glass rail — translucent + backdrop-blur
-          instead of a flat --card fill, sticky so it stays in view
-          instead of scrolling away with the page content. */}
+      {/* Dark rail as its own structural zone — desktop only, the main
+          content area stays exactly Punqle's existing light identity.
+          Refined-hybrid polish pass (2026-09): reuses this codebase's own
+          already-defined (but previously dormant) `.dark` token block for
+          every child color — text, borders, hover states, the accent —
+          so every existing component picks up correct dark-appropriate
+          colors automatically, with only --background/--card pinned to
+          the specific requested near-black (not the `.dark` block's own
+          slightly lighter default). A solid fill, not glass — the
+          light page's own glass-morphism effect (built to show light
+          content bleeding through) doesn't translate to a dark panel
+          sitting on a light page. */}
       <aside
-        className={[
-          "glass-nav hidden shrink-0 rounded-2xl px-4 py-6 lg:sticky lg:top-4 lg:my-4 lg:ml-4 lg:flex lg:h-[calc(100vh-2rem)] lg:w-60 lg:flex-col",
-          scrolled ? "glass-nav-scrolled" : "",
-        ].join(" ")}
-        style={{ boxShadow: "var(--shadow-card)" }}
+        className="dark hidden shrink-0 rounded-2xl px-4 py-6 lg:sticky lg:top-4 lg:my-4 lg:ml-4 lg:flex lg:h-[calc(100vh-2rem)] lg:w-60 lg:flex-col"
+        style={{
+          background: "#0F1014",
+          boxShadow: "var(--shadow-card)",
+          "--card": "#181A20",
+        } as React.CSSProperties}
       >
         <div className="mb-8 flex items-center gap-2 px-2">
           <div
@@ -229,12 +239,18 @@ export function Sidebar({
               above rather than a plain row: it's a real differentiator
               (person + product → real fit preview → animate → hand off to
               Social/Ad), not a generic utility, and should read as
-              equally primary to the two categories above it. */}
+              equally primary to the two categories above it. In the dark
+              rail specifically, it also gets a soft pink border when
+              inactive — the one deliberate spot of color breaking from
+              the otherwise-neutral rows, so it reads instantly, without
+              needing every row to compete for the same attention. */}
           <button
             onClick={() => onNavigate("tryon")}
             className={[
-              "mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-              tab === "tryon" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
+              "mb-2 flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors",
+              tab === "tryon"
+                ? "border-transparent bg-primary text-primary-foreground"
+                : "border-[#ff8ec7]/40 text-foreground hover:bg-secondary",
             ].join(" ")}
           >
             <span

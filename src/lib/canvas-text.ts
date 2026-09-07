@@ -96,6 +96,13 @@ interface StyleTextConfig {
 }
 
 const INTER = '"Inter","Plus Jakarta Sans",sans-serif';
+// Premium editorial headline pairing (2026-09) — deliberately distinct
+// from the app chrome's own "Playfair Display","Inter" pairing
+// (styles.css's --font-display/--font-sans), so an ad creative doesn't
+// read as "part of the Punqle app" when a business posts it externally.
+// Only loaded at 400/500 (see __root.tsx) — this pairing's whole point
+// is a restrained regular/medium weight, never a heavy bold.
+const LORA = '"Lora","Georgia",serif';
 
 const STYLE_TEXT_CONFIG: Record<string, StyleTextConfig> = {
   clean_premium: {
@@ -118,9 +125,17 @@ const STYLE_TEXT_CONFIG: Record<string, StyleTextConfig> = {
     ctaShape: "pill-filled",
     panelSolid: false,
   },
+  // Editorial pairing (Lora headline / Inter body), 2026-09 — swapped
+  // off Playfair Display specifically to stop overlapping the app
+  // chrome's own headline font. Weight capped at 500 (Medium) per this
+  // pairing's own "regular or medium, never heavy bold" rule — every
+  // other style below keeps its original Inter/weight treatment
+  // untouched, since flattening Bold & Energetic/Vibrant & Playful's
+  // deliberately loud 800-weight uppercase Inter onto a quiet serif
+  // would contradict what those two styles are for.
   warm_lifestyle: {
-    headlineFamily: '"Playfair Display",serif',
-    headlineWeight: 800,
+    headlineFamily: LORA,
+    headlineWeight: 500,
     headlineCase: "none",
     headlineScale: 0.95,
     supportingWeight: 500,
@@ -129,8 +144,8 @@ const STYLE_TEXT_CONFIG: Record<string, StyleTextConfig> = {
     panelSolid: false,
   },
   minimal_editorial: {
-    headlineFamily: INTER,
-    headlineWeight: 600,
+    headlineFamily: LORA,
+    headlineWeight: 500,
     headlineCase: "uppercase",
     headlineScale: 0.85,
     supportingWeight: 400,

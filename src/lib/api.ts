@@ -163,16 +163,22 @@ export interface ApiVideoStatusResponse {
 
 // aspectRatio determines the logo overlay's target size server-side
 // (Veo's two 720p frame sizes differ) — defaults to "16:9" so it's
-// optional at call sites that don't care.
+// optional at call sites that don't care. style is optional and only
+// meaningful to Video Ad — one of Image Ad's 5 visualDirection values
+// (see video-style.ts's headlineFontStyleFor), letting the backend pick
+// an editorial headline font for the one Video Ad style that actually
+// matches one of those directions. undefined is dropped by
+// JSON.stringify, so every existing caller sends byte-identical bodies.
 export function checkVideoStatus(
   operation: ApiVideoOperation,
   headline: string,
   aspectRatio: VideoAspectRatio = "16:9",
+  style?: string,
 ): Promise<ApiVideoStatusResponse> {
   return apiFetch<ApiVideoStatusResponse>("/ads/video-status", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ operation, headline, aspect_ratio: aspectRatio }),
+    body: JSON.stringify({ operation, headline, aspect_ratio: aspectRatio, style }),
   });
 }
 

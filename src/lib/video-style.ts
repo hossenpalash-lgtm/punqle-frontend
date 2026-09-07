@@ -92,3 +92,18 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
 export function findVideoStyle(id: VideoStyle | string): VideoStyleOption {
   return VIDEO_STYLES.find((s) => s.id === id) ?? VIDEO_STYLES[0];
 }
+
+// Maps a Video Ad style to Image Ad's separate 5-value visualDirection
+// vocabulary, for checkVideoStatus's optional `style` param (main.py's
+// _headline_font_path_for_style) — the one place the two otherwise-
+// unrelated taxonomies share real thematic intent: this file's own
+// "lifestyle" ("warm lifestyle setting... genuine everyday use") means
+// the same thing Image Ad's "warm_lifestyle" direction does (natural
+// imagery, human feel, no AI presenter), so it gets the same restrained
+// editorial Lora headline instead of the default Bold treatment. None of
+// the other 6 styles (including avatar/cinematic_ugc, which don't burn a
+// headline bar over the presenter at all) has an equivalent real match,
+// so this deliberately doesn't try to force one.
+export function headlineFontStyleFor(style: VideoStyle): string | undefined {
+  return style === "lifestyle" ? "warm_lifestyle" : undefined;
+}

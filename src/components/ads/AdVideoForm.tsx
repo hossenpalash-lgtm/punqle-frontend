@@ -44,7 +44,7 @@ import {
   type CaptionStyle,
   type VideoAspectRatio,
 } from "@/lib/api";
-import { findVideoStyle, type VideoStyle } from "@/lib/video-style";
+import { findVideoStyle, headlineFontStyleFor, type VideoStyle } from "@/lib/video-style";
 import { AdBriefStep, GOALS } from "./AdBriefStep";
 import { AvatarPickerStep } from "./AvatarPickerStep";
 import { EditVideoPanel } from "./EditVideoPanel";
@@ -305,7 +305,7 @@ export function AdVideoForm({
 
   const poll = async (operation: ApiVideoOperation) => {
     try {
-      const r = await checkVideoStatus(operation, headlineRef.current, aspectRatio);
+      const r = await checkVideoStatus(operation, headlineRef.current, aspectRatio, headlineFontStyleFor(videoStyle));
       if (!r.done) {
         pollTimeoutRef.current = setTimeout(() => poll(operation), POLL_INTERVAL_MS);
         return;

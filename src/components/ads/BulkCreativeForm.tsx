@@ -234,7 +234,7 @@ export function BulkCreativeForm({
             <p className="text-sm font-medium text-destructive">{productsError}</p>
           ) : products.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No products imported yet — add some from Product Catalog in the menu, then come back here.
+              No products imported yet — open Product Catalog (tap More on mobile, or the sidebar on desktop) to add some, then come back here.
             </p>
           ) : (
             <>

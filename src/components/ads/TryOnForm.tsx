@@ -640,7 +640,7 @@ export function TryOnForm({
               <p className="mb-6 text-sm font-medium text-destructive">{productsError}</p>
             ) : products.length === 0 ? (
               <p className="mb-6 text-sm text-muted-foreground">
-                No products imported yet — add some from Product Catalog in the menu, or switch to "Upload photo."
+                No products imported yet — open Product Catalog (tap More on mobile, or the sidebar on desktop) to add some, or switch to "Upload photo."
               </p>
             ) : (
               <div className="mb-6 max-h-80 w-full space-y-1.5 overflow-y-auto">

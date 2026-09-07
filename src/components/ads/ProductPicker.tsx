@@ -81,7 +81,7 @@ export function ProductPicker({
         <p className="mb-2 text-xs font-medium text-destructive">{error}</p>
       ) : products.length === 0 ? (
         <p className="mb-2 text-xs text-muted-foreground">
-          No products imported yet — add some from Product Catalog in the menu.
+          No products imported yet — open Product Catalog (More on mobile, sidebar on desktop) to add some.
         </p>
       ) : (
         <div className="mb-2 max-h-48 space-y-1.5 overflow-y-auto">

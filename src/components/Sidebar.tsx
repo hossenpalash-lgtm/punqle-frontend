@@ -14,7 +14,6 @@ import {
   Package,
   Palette,
   Shirt,
-  ShoppingBag,
   Sparkles,
   TrendingUp,
   Video,
@@ -63,11 +62,14 @@ export const ALL_NAV_TABS: NavTab[] = [
   "tryon",
 ];
 
-// Punqle's 3 primary creation categories (locked in 2026-08-21) — all
-// three are now built. Social Content and Ad Creation each split into 2
-// formats; E-commerce now has 2 (Bulk Creative shipped 2026-08-27,
-// Try-On shipped same day) — "Product Video" was proposed and dropped
-// as redundant with Video Ad, see adcreate_ai_project memory.
+// Punqle's CREATE section (restructured 2026-09-08 per the approved nav
+// wireframe — see adcreate_ai_project memory). Social Content and Ad
+// Creation each split into 2 formats. Bulk Creative and Try-On were
+// previously nested under a single "E-commerce" wrapper; both are now
+// top-level entries in their own right — Try-On specifically, since it's
+// a real differentiator (not a generic utility), gets the same
+// accent-icon-box treatment as Social Content/Ad Creation below instead
+// of a plain link, so it visually reads as equally primary.
 const SOCIAL_CONTENT_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "single", label: "Image Post", icon: ImageIcon },
   { tab: "video", label: "Video", icon: Video },
@@ -78,18 +80,19 @@ const AD_CREATION_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone 
   { tab: "ad-video", label: "Video Ad", icon: Video },
 ];
 
-const ECOMMERCE_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
-  { tab: "bulk-creative", label: "Bulk Creative", icon: Layers },
-  { tab: "tryon", label: "Try-On", icon: Shirt },
-];
-
-// Weekly Plan / Competitor Analysis aren't part of the 3-category CREATE
-// system the 2026-08-21 spec describes — kept working and reachable, just
-// demoted into their own quiet group so they don't compete with the 3
-// primary creation categories above.
-const TOOLS_ITEMS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
+// "Plan & Publish" (renamed from "Tools") — Weekly Plan answers "what
+// should I post," Content Calendar answers "when does it go live." Kept
+// as one group since they're two steps of the same real workflow.
+const PLAN_PUBLISH_ITEMS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "plan", label: "Weekly Plan", icon: Calendar },
   { tab: "calendar", label: "Content Calendar", icon: CalendarClock },
+];
+
+// "Insights" (renamed from being bundled into "Tools") — deliberately not
+// called "Grow": Performance/Competitive Edge don't yet do ROI/paid-ads
+// optimization, so "Insights" is the honest name for what they actually
+// are today.
+const INSIGHTS_ITEMS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "performance", label: "Performance", icon: TrendingUp },
   { tab: "competitor", label: "Competitive Edge", icon: Binoculars },
 ];
@@ -207,46 +210,85 @@ export function Sidebar({
             ))}
           </div>
 
-          {/* E-commerce — 3rd of the 3 primary categories, now real.
-              Same header+sub-items structure as the two above; starts
-              with 1 format (Bulk Creative), more to follow. */}
-          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground">
+          {/* Bulk Creative — promoted out of the old "E-commerce" wrapper
+              to a plain top-level Create row (no sub-formats of its own,
+              so it doesn't need the header+sublist treatment). */}
+          <button
+            onClick={() => onNavigate("bulk-creative")}
+            className={[
+              "mb-0.5 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+              tab === "bulk-creative" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
+            ].join(" ")}
+          >
+            <Layers className="h-4 w-4" />
+            Bulk Creative
+          </button>
+
+          {/* Try-On — also promoted out of "E-commerce," but given the
+              same accent-icon-box treatment as Social Content/Ad Creation
+              above rather than a plain row: it's a real differentiator
+              (person + product → real fit preview → animate → hand off to
+              Social/Ad), not a generic utility, and should read as
+              equally primary to the two categories above it. */}
+          <button
+            onClick={() => onNavigate("tryon")}
+            className={[
+              "mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+              tab === "tryon" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
+            ].join(" ")}
+          >
             <span
               className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
               style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground)" }}
             >
-              <ShoppingBag className="h-3.5 w-3.5" />
+              <Shirt className="h-3.5 w-3.5" />
             </span>
-            E-commerce
-          </div>
-          <div className="mb-2 flex flex-col gap-0.5 pl-6">
-            {ECOMMERCE_FORMATS.map(({ tab: t, label, icon: Icon }) => (
-              <button
-                key={t}
-                onClick={() => onNavigate(t)}
-                className={[
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
-                ].join(" ")}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
+            Try-On
+          </button>
 
           <span className="mb-1 mt-5 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Library
+            Plan &amp; Publish
+          </span>
+          {PLAN_PUBLISH_ITEMS.map(({ tab: t, label, icon: Icon }) => (
+            <button
+              key={t}
+              onClick={() => onNavigate(t)}
+              className={[
+                "flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
+                tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+              ].join(" ")}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+
+          <span className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+            Insights
+          </span>
+          {INSIGHTS_ITEMS.map(({ tab: t, label, icon: Icon }) => (
+            <button
+              key={t}
+              onClick={() => onNavigate(t)}
+              className={[
+                "flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
+                tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+              ].join(" ")}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+
+          <span className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+            Products
           </span>
           <button
-            onClick={() => onNavigate("history")}
-            className={[
-              "flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
-              tab === "history" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
-            ].join(" ")}
+            onClick={onOpenProductCatalog}
+            className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
           >
-            <Clock className="h-3.5 w-3.5" />
-            History
+            <Package className="h-3.5 w-3.5" />
+            Product Catalog
           </button>
 
           <span className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -259,13 +301,10 @@ export function Sidebar({
             <Palette className="h-3.5 w-3.5" />
             Brand Kit
           </button>
-          <button
-            onClick={onOpenProductCatalog}
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
-          >
-            <Package className="h-3.5 w-3.5" />
-            Product Catalog
-          </button>
+
+          <span className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+            Account
+          </span>
           <button
             onClick={onOpenMetaConnect}
             className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
@@ -287,27 +326,16 @@ export function Sidebar({
             <TikTokIcon className="h-3.5 w-3.5" />
             TikTok
           </button>
-
-          <span className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Tools
-          </span>
-          {TOOLS_ITEMS.map(({ tab: t, label, icon: Icon }) => (
-            <button
-              key={t}
-              onClick={() => onNavigate(t)}
-              className={[
-                "flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
-                tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
-              ].join(" ")}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
-
-          <span className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Account
-          </span>
+          <button
+            onClick={() => onNavigate("history")}
+            className={[
+              "flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
+              tab === "history" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+            ].join(" ")}
+          >
+            <Clock className="h-3.5 w-3.5" />
+            History
+          </button>
           <button
             onClick={onOpenReferral}
             className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
@@ -400,13 +428,29 @@ export function Sidebar({
               onClick={() => onNavigate("bulk-creative")}
               className={[
                 "flex items-center gap-1.5 rounded-full px-2.5 py-2 text-xs font-semibold",
-                tab === "bulk-creative" || tab === "tryon"
+                tab === "bulk-creative"
                   ? "bg-primary text-primary-foreground"
                   : "text-secondary-foreground hover:bg-secondary",
               ].join(" ")}
             >
-              <ShoppingBag className="h-3.5 w-3.5" />
-              Shop
+              <Layers className="h-3.5 w-3.5" />
+              Bulk
+            </button>
+            {/* Try-On gets its own pill (not folded into "Bulk" anymore)
+                with an accent border when inactive, matching the desktop
+                rail's accent-icon-box treatment — a real differentiator,
+                not a generic utility, per the approved nav wireframe. */}
+            <button
+              onClick={() => onNavigate("tryon")}
+              className={[
+                "flex items-center gap-1.5 rounded-full px-2.5 py-2 text-xs font-semibold",
+                tab === "tryon"
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-accent text-accent hover:bg-secondary",
+              ].join(" ")}
+            >
+              <Shirt className="h-3.5 w-3.5" />
+              Try-On
             </button>
             <button
               onClick={() => setMoreOpen((v) => !v)}
@@ -434,26 +478,9 @@ export function Sidebar({
               style={{ boxShadow: "var(--shadow-card)" }}
             >
               <span className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                Library
+                Plan &amp; Publish
               </span>
-              <button
-                onClick={() => {
-                  onNavigate("history");
-                  setMoreOpen(false);
-                }}
-                className={[
-                  "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
-                  tab === "history" ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
-                ].join(" ")}
-              >
-                <Clock className="h-4 w-4" />
-                History
-              </button>
-
-              <span className="mb-1 mt-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                Tools
-              </span>
-              {TOOLS_ITEMS.map(({ tab: t, label, icon: Icon }) => (
+              {PLAN_PUBLISH_ITEMS.map(({ tab: t, label, icon: Icon }) => (
                 <button
                   key={t}
                   onClick={() => {
@@ -471,6 +498,40 @@ export function Sidebar({
               ))}
 
               <span className="mb-1 mt-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                Insights
+              </span>
+              {INSIGHTS_ITEMS.map(({ tab: t, label, icon: Icon }) => (
+                <button
+                  key={t}
+                  onClick={() => {
+                    onNavigate(t);
+                    setMoreOpen(false);
+                  }}
+                  className={[
+                    "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
+                    tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+                  ].join(" ")}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
+
+              <span className="mb-1 mt-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                Products
+              </span>
+              <button
+                onClick={() => {
+                  onOpenProductCatalog();
+                  setMoreOpen(false);
+                }}
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary"
+              >
+                <Package className="h-4 w-4" />
+                Product Catalog
+              </button>
+
+              <span className="mb-1 mt-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                 Brand
               </span>
               <button
@@ -483,16 +544,10 @@ export function Sidebar({
                 <Palette className="h-4 w-4" />
                 Brand Kit
               </button>
-              <button
-                onClick={() => {
-                  onOpenProductCatalog();
-                  setMoreOpen(false);
-                }}
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary"
-              >
-                <Package className="h-4 w-4" />
-                Product Catalog
-              </button>
+
+              <span className="mb-1 mt-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                Account
+              </span>
               <button
                 onClick={() => {
                   onOpenMetaConnect();
@@ -523,10 +578,19 @@ export function Sidebar({
                 <TikTokIcon className="h-4 w-4" />
                 TikTok
               </button>
-
-              <span className="mb-1 mt-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                Account
-              </span>
+              <button
+                onClick={() => {
+                  onNavigate("history");
+                  setMoreOpen(false);
+                }}
+                className={[
+                  "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
+                  tab === "history" ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+                ].join(" ")}
+              >
+                <Clock className="h-4 w-4" />
+                History
+              </button>
               <button
                 onClick={() => {
                   onOpenReferral();

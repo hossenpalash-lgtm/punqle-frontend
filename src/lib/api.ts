@@ -547,19 +547,27 @@ export function base64ToFile(base64: string, mimeType: string, filename: string)
   return new File([base64ToBlob(base64, mimeType)], filename, { type: mimeType });
 }
 
+// Expanded 2026-09-08 from the original 13 (a Bangladesh-market trial
+// list) to 18, aimed at Punqle's real US/EU/AU target market — see
+// categories.ts for the full reasoning and labels.
 export type BusinessCategory =
   | "retail"
+  | "ecommerce"
+  | "fashion_apparel"
+  | "beauty_skincare"
+  | "home_living"
+  | "pet_care"
+  | "baby_parenting"
   | "restaurant_cafe"
-  | "health_beauty"
+  | "food_beverage"
+  | "fitness_sports"
   | "professional_services"
   | "home_services"
   | "real_estate"
   | "automotive"
   | "education_coaching"
-  | "fitness_sports"
   | "events_entertainment"
-  | "ecommerce"
-  | "technology_software"
+  | "tech_gaming"
   | "other";
 
 export interface ApiBusinessProfile {

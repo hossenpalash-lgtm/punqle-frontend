@@ -14,11 +14,19 @@ export type VideoStyle =
   | "avatar"
   | "cinematic_ugc";
 
+// `group` drives VideoStyleStep's visual grouping (added 2026-09-08 per
+// the approved nav wireframe) — "ai_ugc" (avatar/Cinematic UGC, a person
+// leads the shot) is shown first and labelled Recommended, "product" (the
+// 5 Veo-prompt styles below, no AI presenter) shown second. This is
+// display-only: VIDEO_STYLES' own array order, findVideoStyle's fallback,
+// and the default selected style in AdVideoForm are all unchanged — same
+// routes, same pricing, just reordered on screen.
 export interface VideoStyleOption {
   id: VideoStyle;
   label: string;
   description: string;
   promptModifier: string;
+  group: "ai_ugc" | "product";
 }
 
 export const VIDEO_STYLES: VideoStyleOption[] = [
@@ -27,30 +35,35 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     label: "Product Showcase",
     description: "The product as the clear hero",
     promptModifier: "clean product showcase, the item as the clear hero, simple uncluttered background",
+    group: "product",
   },
   {
     id: "lifestyle",
     label: "Lifestyle",
     description: "In genuine everyday use",
     promptModifier: "warm lifestyle setting, the product in genuine everyday use",
+    group: "product",
   },
   {
     id: "problem_solution",
     label: "Problem → Solution",
     description: "The problem, then the fix",
     promptModifier: "shows the everyday problem first, then the product as the clear solution",
+    group: "product",
   },
   {
     id: "before_after",
     label: "Before & After",
     description: "A clear before/after contrast",
     promptModifier: "clear before-and-after contrast showing the product's real effect",
+    group: "product",
   },
   {
     id: "cinematic",
     label: "Cinematic",
     description: "Dramatic, film-like look",
     promptModifier: "cinematic lighting, dramatic composition, film-like color grading",
+    group: "product",
   },
   {
     id: "avatar",
@@ -59,6 +72,7 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     // Unused — Avatar bypasses Veo/promptModifier entirely; handleGenerate
     // special-cases videoStyle === "avatar" and calls HeyGen instead.
     promptModifier: "",
+    group: "ai_ugc",
   },
   {
     id: "cinematic_ugc",
@@ -71,6 +85,7 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     // don't reach props/held objects (confirmed via HeyGen's own docs),
     // and Veo has no reliably consistent character across a shot.
     promptModifier: "",
+    group: "ai_ugc",
   },
 ];
 

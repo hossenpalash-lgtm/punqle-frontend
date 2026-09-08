@@ -47,28 +47,45 @@ export function VideoStyleStep({
             <p className="px-1 text-left text-xs text-muted-foreground">{group.subtitle}</p>
             {VIDEO_STYLES.filter((s) => s.group === group.key).map((style) => {
               const isSelected = selected === style.id;
+              const Icon = style.icon;
               return (
                 <button
                   key={style.id}
                   onClick={() => onSelect(style.id)}
                   className={[
-                    "flex items-center justify-between rounded-2xl px-4 py-3 text-left transition-colors",
+                    "flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left transition-colors",
                     isSelected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
                   ].join(" ")}
                 >
-                  <span>
-                    <span className="flex items-center gap-1.5 text-sm font-semibold">
-                      {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
-                      {style.label}
-                    </span>
-                    <span
+                  <span className="flex min-w-0 items-center gap-3">
+                    <Icon
                       className={[
-                        "block text-xs",
-                        isSelected ? "text-primary-foreground/80" : "text-muted-foreground",
+                        "h-5 w-5 shrink-0",
+                        isSelected ? "text-primary-foreground/90" : "text-muted-foreground",
                       ].join(" ")}
-                    >
-                      {style.description}
+                    />
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1.5 text-sm font-semibold">
+                        {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
+                        {style.label}
+                      </span>
+                      <span
+                        className={[
+                          "block text-xs",
+                          isSelected ? "text-primary-foreground/80" : "text-muted-foreground",
+                        ].join(" ")}
+                      >
+                        {style.description}
+                      </span>
                     </span>
+                  </span>
+                  <span
+                    className={[
+                      "shrink-0 text-[11px] font-semibold",
+                      isSelected ? "text-primary-foreground/80" : "text-muted-foreground",
+                    ].join(" ")}
+                  >
+                    {style.creditHint}
                   </span>
                 </button>
               );

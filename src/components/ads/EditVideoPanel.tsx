@@ -9,7 +9,10 @@ import {
   type VideoAspectRatio,
 } from "@/lib/api";
 
-const VOICEOVER_CREDIT_COST = 2;
+// Mirrors main.py's VOICEOVER_CREDIT_COST — bundled free into video
+// generation as of the 2026-09-08 pre-beta pricing review (was 2
+// credits against a ~$0.003 real cost, a standout margin outlier).
+const VOICEOVER_CREDIT_COST = 0;
 
 const LOGO_POSITIONS: { value: LogoPosition; label: string }[] = [
   { value: "top-left", label: "Top left" },

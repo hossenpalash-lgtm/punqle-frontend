@@ -79,7 +79,7 @@ const AD_TYPES: {
   icon: typeof Megaphone;
 }[] = [
   { tab: "ad", label: "Image Ad", description: "Angle-labeled ad variations", icon: Megaphone },
-  { tab: "ad-video", label: "Video Ad", description: "One polished video ad", icon: Video },
+  { tab: "ad-video", label: "Video Ad", description: "AI presenter or product-in-hand UGC", icon: Video },
 ];
 
 function HomeScreen() {

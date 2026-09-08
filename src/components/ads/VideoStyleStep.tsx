@@ -38,10 +38,18 @@ export function VideoStyleStep({
       <p className="mb-6 text-sm text-muted-foreground">Pick the style that fits your video best.</p>
 
       <div className="mb-6 flex w-full flex-col gap-4">
-        {STYLE_GROUPS.map((group) => (
-          <div key={group.key} className="flex flex-col gap-2">
+        {STYLE_GROUPS.map((group) => {
+          const isAiUgc = group.key === "ai_ugc";
+          return (
+          <div
+            key={group.key}
+            className={[
+              "flex flex-col gap-2",
+              isAiUgc ? "rounded-3xl border border-accent/25 bg-accent/5 p-3" : "",
+            ].join(" ")}
+          >
             <div className="flex items-center gap-1.5 px-1 text-left">
-              {group.key === "ai_ugc" && <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent" />}
+              {isAiUgc && <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent" />}
               <span className="text-xs font-semibold uppercase tracking-wide text-foreground">{group.title}</span>
             </div>
             <p className="px-1 text-left text-xs text-muted-foreground">{group.subtitle}</p>
@@ -91,7 +99,8 @@ export function VideoStyleStep({
               );
             })}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="flex w-full gap-2">

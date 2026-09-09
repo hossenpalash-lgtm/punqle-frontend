@@ -13,7 +13,7 @@ export const GOALS: { value: AdGoal; label: string; description: string }[] = [
 // variant is freely AI-picked. Default selection, per the progressive-
 // disclosure principle already used for Idea Step's chips: don't force a
 // decision the user doesn't need to make.
-const ANGLES: { value: string | null; label: string }[] = [
+export const ANGLES: { value: string | null; label: string }[] = [
   { value: null, label: "Let Punqle choose ✨" },
   { value: "Benefit", label: "Benefit" },
   { value: "Problem → Solution", label: "Problem → Solution" },

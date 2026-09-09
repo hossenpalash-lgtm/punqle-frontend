@@ -1,4 +1,4 @@
-import { Loader2, Rocket, Settings2, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Loader2, Settings2, Sparkles, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   base64ToFile,
@@ -25,29 +25,21 @@ import {
   type CreativeText,
   type EditOptions,
 } from "@/lib/canvas-text";
-import { findVisualDirection, PLATFORM_OPTIONS, type Platform } from "@/lib/social-wizard";
-import { AdBriefStep, GOALS } from "./AdBriefStep";
+import {
+  findVisualDirection,
+  MORE_VISUAL_DIRECTIONS,
+  PLATFORM_OPTIONS,
+  VERSION_COUNTS,
+  VISUAL_DIRECTIONS,
+  type Platform,
+} from "@/lib/social-wizard";
+import { ANGLES, GOALS } from "./AdBriefStep";
 import { GenerationProgress } from "./GenerationProgress";
 import { PostKit } from "./PostKit";
 import { ProductPicker } from "./ProductPicker";
 import { ResultsGrid } from "./ResultsGrid";
-import { SetupStep } from "./SetupStep";
-import { VisualDirectionStep } from "./VisualDirectionStep";
-import { WizardProgress } from "./WizardProgress";
 
-type WizardStep = "choose" | "quick" | "brief" | "direction" | "setup" | "generating" | "results" | "result" | "receiving";
-
-const PROGRESS_STAGE: Partial<Record<WizardStep, 1 | 2 | 3 | 4>> = {
-  brief: 1,
-  direction: 2,
-  setup: 3,
-};
-
-const STAGE_STEP: Record<1 | 2 | 3, WizardStep> = {
-  1: "brief",
-  2: "direction",
-  3: "setup",
-};
+type WizardStep = "create" | "generating" | "results" | "result" | "receiving";
 
 const AD_GOAL_CTA: Record<AdGoal, string> = {
   sales: "Shop Now",
@@ -58,14 +50,27 @@ const AD_GOAL_CTA: Record<AdGoal, string> = {
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Ad Creation — Offer+Goal+Angle → Look → Setup → Generate. Maximally
-// reuses the Image Post pipeline (VisualDirectionStep, SetupStep,
-// ResultsGrid, PostKit, and the /ads/generate + /ads/generate-image-variant
-// endpoints are all used completely unchanged) — the only genuinely new
-// pieces are AdBriefStep (replaces IdeaStep's free-text idea + AI-
-// understanding round trip with structured goal/angle inputs) and
-// generateAdCaptions (angle-labeled captions instead of tone/length ones).
-// See SinglePostForm.tsx for the sibling flow this mirrors closely.
+// A pasted product link vs. a typed description share one input — this is
+// deliberately conservative (only real https:// / bare-domain-looking
+// strings match) so an ordinary offer sentence ("Handmade wallets, 20%
+// off") is never mistaken for a URL and sent to the scraper.
+const looksLikeUrl = (s: string) => /^https?:\/\//i.test(s) || /^[\w-]+(\.[a-z]{2,})+(\/\S*)?$/i.test(s);
+
+// Ad Creation — one Arcads-style screen (2026-09-10 redesign): a single
+// smart input (link or free text) + Goal, with everything else (style,
+// platform, versions, angle, your own photo) tucked behind an optional
+// "Settings" panel that's collapsed by default and pre-filled with the
+// same defaults Quick Create already silently used. Replaces the old
+// choose/quick/brief/direction/setup step chain — see adcreate_ai_project
+// memory for why (a real Arcads video review found every one of their
+// flows is "describe it, optional settings, generate," never a sequence
+// of separate mandatory screens).
+//
+// Maximally reuses the Image Post pipeline underneath — VISUAL_DIRECTIONS/
+// PLATFORM_OPTIONS/GOALS/ANGLES are the same data the old step screens
+// used, and /ads/generate + /ads/generate-image-variant are called
+// completely unchanged. Only the hosting UI changed, not the generation
+// logic.
 export function AdCreationForm({
   credits,
   setCredits,
@@ -82,23 +87,21 @@ export function AdCreationForm({
   initialGeneratedImage?: { imageBase64: string; itemDescription: string; goal: AdGoal };
   onInitialGeneratedImageConsumed?: () => void;
 }) {
-  const [step, setStep] = useState<WizardStep>(initialGeneratedImage ? "receiving" : "choose");
+  const [step, setStep] = useState<WizardStep>(initialGeneratedImage ? "receiving" : "create");
 
-  // Quick Create — paste a product URL, pick a Goal, skip straight to
-  // handleGenerate() with versions=1. Reuses fetchProductLink (the same
-  // free call SetupStep.tsx's own "More options -> Product link" uses)
-  // and the existing static "clean_premium" default style — no new AI
-  // call for either the fetch or the style choice.
-  const [quickUrl, setQuickUrl] = useState("");
-  const [quickFetching, setQuickFetching] = useState(false);
-  const [quickError, setQuickError] = useState<string | null>(null);
+  // The one main input — a pasted link or a typed description, disambiguated
+  // at submit time by looksLikeUrl().
+  const [mainInput, setMainInput] = useState("");
+  const [inputFetching, setInputFetching] = useState(false);
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [generationStage, setGenerationStage] = useState(0);
 
-  // Brief
   const [offerDescription, setOfferDescription] = useState("");
   const [goal, setGoal] = useState<AdGoal>(initialGeneratedImage?.goal ?? "sales");
   const [angle, setAngle] = useState<string | null>(null);
   const [visualDirection, setVisualDirection] = useState<VisualDirection>("clean_premium");
+  const [showMoreStyles, setShowMoreStyles] = useState(false);
 
   useEffect(() => {
     if (!initialGeneratedImage) return;
@@ -113,19 +116,23 @@ export function AdCreationForm({
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Couldn't prepare your ad.");
-        setStep("brief");
+        setStep("create");
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Visual source
+  // Visual source — null/false by default (no explicit choice yet). An
+  // explicitly-uploaded photo always wins over a scraped/AI one; see
+  // finishQuickCreate.
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [useAiImage, setUseAiImage] = useState(false);
 
-  // Platform + versions
+  // Platform + versions — versions defaults to 1 (fast, single result),
+  // matching what Quick Create already silently used; the old full wizard's
+  // default of 3 is now something you opt into via Settings, not the
+  // default for everyone.
   const [platform, setPlatform] = useState<Platform>("instagram");
-  const [versions, setVersions] = useState(3);
+  const [versions, setVersions] = useState(1);
 
   // Generation state
   const [generating, setGenerating] = useState(false);
@@ -212,39 +219,19 @@ export function AdCreationForm({
       return f ? URL.createObjectURL(f) : null;
     });
     setFile(f);
-    if (f) setUseAiImage(false);
   };
 
-  const handleUseAiImage = () => {
-    handleFileChange(null);
-    setUseAiImage(true);
-  };
-
-  const handleProgressNavigate = (stage: 1 | 2 | 3) => {
-    setStep(STAGE_STEP[stage]);
-  };
-
-  // `override` exists for Quick Create: it calls setOfferDescription/
-  // setVersions/etc. and wants to generate off those values immediately,
-  // but React state setters don't apply until the next render, so reading
-  // offerDescription/file/angle/versions from closure state here would
-  // still see the pre-update values in that same tick. The normal wizard
-  // path (SetupStep's onGenerate) doesn't hit this — by the time its
-  // Generate button is clickable, every relevant setter has already
-  // committed across earlier renders — so it keeps calling this with no
-  // override and reads current state, unchanged from before.
-  const handleGenerate = async (override?: {
-    description: string;
-    file: File | null;
-    useAiImage: boolean;
-    angle: string | null;
-    versions: number;
-  }) => {
+  // `override` exists because finishQuickCreate below sets offerDescription/
+  // file and wants to generate off those values immediately — React state
+  // setters don't apply until the next render, so reading them from closure
+  // state here would still see the pre-update values in that same tick.
+  // angle/versions/goal/visualDirection/platform don't need this: they're
+  // only ever changed by their own Settings-panel controls, well before
+  // Generate is clicked, so by the time handleGenerate runs those updates
+  // have already committed across earlier renders — reading them live is
+  // correct and simpler than threading them through override too.
+  const handleGenerate = async (override?: { description: string; file: File | null }) => {
     if (generating) return;
-    const cameFrom = step; // captured before setStep("generating") below, so a
-    // failure can return to wherever generation was actually triggered from
-    // (the full wizard's "setup" step, or Quick Create's own "quick" step)
-    // instead of always assuming the full wizard.
     setGenerating(true);
     setError(null);
     setGenerationStage(0);
@@ -255,12 +242,9 @@ export function AdCreationForm({
     const finalStyledDescription = `${finalDescription}, ${direction.promptModifier}`;
     setStyledDescription(finalStyledDescription);
     const aspectRatio: AspectRatio = PLATFORM_OPTIONS.find((p) => p.id === platform)?.aspectRatio ?? "square";
-    const effectiveUseAiImage = override ? override.useAiImage : useAiImage;
     const effectiveFile = override ? override.file : file;
-    const effectiveAngle = override ? override.angle : angle;
-    const effectiveVersions = override ? override.versions : versions;
-    const sourceFile = effectiveUseAiImage ? null : effectiveFile;
-    const requestedVersions = effectiveVersions as 1 | 3 | 5;
+    const sourceFile = effectiveFile ?? null;
+    const requestedVersions = versions as 1 | 3 | 5;
 
     try {
       await pause(300);
@@ -270,7 +254,7 @@ export function AdCreationForm({
       await pause(250);
       setGenerationStage(3);
 
-      const capResult = await generateAdCaptions(finalDescription, goal, effectiveAngle, requestedVersions);
+      const capResult = await generateAdCaptions(finalDescription, goal, angle, requestedVersions);
       setAdCaptions(capResult.captions);
       setRecommendedIndex(capResult.recommended_index);
       setRecommendedReason(capResult.recommended_reason);
@@ -285,7 +269,7 @@ export function AdCreationForm({
       setCredits(firstImage.credits_remaining);
       setGenerationStage(5);
 
-      for (let i = 1; i < effectiveVersions; i++) {
+      for (let i = 1; i < versions; i++) {
         const r = await generateAdImageVariant(finalStyledDescription, sourceFile, aspectRatio);
         setImages((prev) => [...prev, r.banner_image_base64]);
         setCredits(r.credits_remaining);
@@ -293,70 +277,62 @@ export function AdCreationForm({
 
       setSelectedCaptionIndex(0);
       setSelectedImageIndex(0);
-      setStep(effectiveVersions > 1 ? "results" : "result");
+      setStep(versions > 1 ? "results" : "result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't generate your ads.");
-      setStep(cameFrom === "quick" ? "quick" : "setup");
+      setStep("create");
     } finally {
       setGenerating(false);
     }
   };
 
-  // Shared by both Quick Create paths below — the URL path (real
-  // scraping + AI enrichment) and the catalog path (already-known data,
-  // no fetch needed at all) only differ in how description/file are
-  // obtained; everything after that is identical.
-  const finishQuickCreate = async (description: string, file: File | null) => {
+  // Shared by every real entry into generation (pasted link, typed text,
+  // catalog pick) — an explicitly-uploaded photo (via Settings) always
+  // wins over one that came from a link scrape or catalog item, since the
+  // user told Punqle directly what photo to use.
+  const finishQuickCreate = async (description: string, incomingFile: File | null) => {
+    const effectiveFile = file ?? incomingFile;
     setOfferDescription(description);
-    if (file) {
-      handleFileChange(file);
-    } else {
-      handleUseAiImage();
-    }
-    setAngle(null);
-    setVersions(1);
-    // visualDirection/platform stay at their existing defaults
-    // ("clean_premium"/"instagram") — neither is user-facing here.
-    await handleGenerate({
-      description,
-      file,
-      useAiImage: !file,
-      angle: null,
-      versions: 1,
-    });
+    if (effectiveFile && effectiveFile !== file) handleFileChange(effectiveFile);
+    await handleGenerate({ description, file: effectiveFile });
   };
 
-  const handleQuickCreate = async () => {
-    if (quickFetching || !quickUrl.trim()) return;
-    setQuickFetching(true);
-    setQuickError(null);
-    try {
-      const r = await understandProductLink(quickUrl.trim());
-      const description = r.enriched_description || [r.title, r.description].filter(Boolean).join(" — ");
-      const quickFile = r.image_base64
-        ? base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg")
-        : null;
-      await finishQuickCreate(description, quickFile);
-    } catch (err) {
-      setQuickError(err instanceof Error ? err.message : "Couldn't fetch that link.");
-    } finally {
-      setQuickFetching(false);
+  const handleMainSubmit = async () => {
+    const text = mainInput.trim();
+    if (!text || inputFetching || outOfCredits) return;
+    setInputError(null);
+    if (looksLikeUrl(text)) {
+      setInputFetching(true);
+      try {
+        const r = await understandProductLink(text);
+        const description = r.enriched_description || [r.title, r.description].filter(Boolean).join(" — ");
+        const scrapedFile = r.image_base64
+          ? base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg")
+          : null;
+        await finishQuickCreate(description, scrapedFile);
+      } catch (err) {
+        setInputError(err instanceof Error ? err.message : "Couldn't fetch that link.");
+      } finally {
+        setInputFetching(false);
+      }
+    } else {
+      await finishQuickCreate(text, null);
     }
   };
 
   // Skips fetch-product-link/understand-product-link entirely — a
   // Shopify-synced (or CSV-imported) catalog item already has a real
   // name/description/photo saved, so there's nothing to scrape.
-  const handleQuickCreateFromCatalog = async (description: string, file: File | null) => {
-    if (quickFetching) return;
-    setQuickFetching(true);
-    setQuickError(null);
+  const handleQuickCreateFromCatalog = async (description: string, catalogFile: File | null) => {
+    if (inputFetching) return;
+    setInputFetching(true);
+    setInputError(null);
     try {
-      await finishQuickCreate(description, file);
+      await finishQuickCreate(description, catalogFile);
     } catch (err) {
-      setQuickError(err instanceof Error ? err.message : "Couldn't use that product.");
+      setInputError(err instanceof Error ? err.message : "Couldn't use that product.");
     } finally {
-      setQuickFetching(false);
+      setInputFetching(false);
     }
   };
 
@@ -371,9 +347,8 @@ export function AdCreationForm({
     setGeneratingImage(true);
     setError(null);
     try {
-      const sourceFile = useAiImage ? null : file;
       const aspectRatio: AspectRatio = PLATFORM_OPTIONS.find((p) => p.id === platform)?.aspectRatio ?? "square";
-      const r = await generateAdImageVariant(styledDescription, sourceFile, aspectRatio);
+      const r = await generateAdImageVariant(styledDescription, file, aspectRatio);
       setImages((prev) => [...prev, r.banner_image_base64]);
       setSelectedImageIndex(images.length);
       setCredits(r.credits_remaining);
@@ -452,18 +427,19 @@ export function AdCreationForm({
   };
 
   const handleReset = () => {
-    setStep("choose");
-    setQuickUrl("");
-    setQuickError(null);
+    setStep("create");
+    setMainInput("");
+    setInputError(null);
+    setSettingsOpen(false);
     setGenerationStage(0);
     setOfferDescription("");
     setGoal("sales");
     setAngle(null);
     setVisualDirection("clean_premium");
+    setShowMoreStyles(false);
     handleFileChange(null);
-    setUseAiImage(false);
     setPlatform("instagram");
-    setVersions(3);
+    setVersions(1);
     setAdCaptions([]);
     setRecommendedIndex(0);
     setRecommendedReason("");
@@ -481,53 +457,24 @@ export function AdCreationForm({
     setError(null);
   };
 
+  const allDirections = [...VISUAL_DIRECTIONS, ...(showMoreStyles ? MORE_VISUAL_DIRECTIONS : [])];
+
   return (
     <>
-      {PROGRESS_STAGE[step] && (
-        <WizardProgress currentStage={PROGRESS_STAGE[step]!} onNavigate={handleProgressNavigate} />
-      )}
-
-      {step === "choose" && (
+      {step === "create" && (
         <div className="flex flex-col items-center text-center">
           <h1 className="font-display mb-2 text-xl font-extrabold text-foreground">Create an ad</h1>
-          <p className="mb-6 text-sm text-muted-foreground">Two ways to get there.</p>
-          <button
-            onClick={() => setStep("quick")}
-            className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left"
-            style={{ boxShadow: "var(--shadow-card)" }}
-          >
-            <Rocket className="h-5 w-5 shrink-0" style={{ color: "var(--color-accent)" }} />
-            <span>
-              <span className="block text-sm font-semibold text-foreground">Quick Create</span>
-              <span className="block text-xs text-muted-foreground">Paste a product link, pick a goal, get an ad.</span>
-            </span>
-          </button>
-          <button
-            onClick={() => setStep("brief")}
-            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left"
-            style={{ boxShadow: "var(--shadow-card)" }}
-          >
-            <Settings2 className="h-5 w-5 shrink-0 text-muted-foreground" />
-            <span>
-              <span className="block text-sm font-semibold text-foreground">Customize</span>
-              <span className="block text-xs text-muted-foreground">Full control — offer, angle, style, platform, versions.</span>
-            </span>
-          </button>
-        </div>
-      )}
+          <p className="mb-6 text-sm text-muted-foreground">
+            Paste a product link, or just describe what you're advertising.
+          </p>
 
-      {step === "quick" && (
-        <div className="flex flex-col items-center text-center">
-          <h1 className="font-display mb-2 text-xl font-extrabold text-foreground">Quick Create</h1>
-          <p className="mb-6 text-sm text-muted-foreground">Paste your product link — Punqle handles the rest.</p>
-
-          <input
-            type="url"
-            value={quickUrl}
-            onChange={(e) => setQuickUrl(e.target.value)}
-            placeholder="https://yourstore.com/products/..."
-            disabled={quickFetching}
-            className="mb-3 w-full rounded-full border border-input bg-background px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          <textarea
+            value={mainInput}
+            onChange={(e) => setMainInput(e.target.value)}
+            placeholder="https://yourstore.com/products/... or Handmade leather wallets, 20% off this week"
+            rows={3}
+            disabled={inputFetching}
+            className="mb-3 w-full rounded-2xl border border-input bg-background px-4 py-3.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
           <div className="mb-4 w-full text-left">
             <ProductPicker onSelect={handleQuickCreateFromCatalog} />
@@ -536,7 +483,7 @@ export function AdCreationForm({
           <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Goal
           </label>
-          <div className="mb-6 grid w-full grid-cols-2 gap-2">
+          <div className="mb-4 grid w-full grid-cols-2 gap-2">
             {GOALS.map((g) => (
               <button
                 key={g.value}
@@ -551,73 +498,138 @@ export function AdCreationForm({
             ))}
           </div>
 
-          {(quickError || error) && (
-            <p className="mb-4 text-sm font-medium text-destructive">{quickError || error}</p>
+          <button
+            onClick={() => setSettingsOpen((v) => !v)}
+            className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            Settings
+            <ChevronDown className={["h-3.5 w-3.5 transition-transform", settingsOpen ? "rotate-180" : ""].join(" ")} />
+          </button>
+
+          {settingsOpen && (
+            <div className="mb-4 w-full rounded-2xl bg-secondary/60 p-4 text-left">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Style</p>
+              <div className="mb-3 grid grid-cols-3 gap-1.5">
+                {allDirections.map((d) => {
+                  const selected = visualDirection === d.id;
+                  return (
+                    <button
+                      key={d.id}
+                      onClick={() => setVisualDirection(d.id)}
+                      className={[
+                        "rounded-xl px-2 py-2 text-left text-[11px] font-semibold leading-tight",
+                        selected ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
+                      ].join(" ")}
+                    >
+                      {selected && <Check className="mb-0.5 h-3 w-3" />}
+                      {d.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {!showMoreStyles && (
+                <button
+                  onClick={() => setShowMoreStyles(true)}
+                  className="mb-3 text-[11px] font-semibold text-muted-foreground underline"
+                >
+                  Show more styles
+                </button>
+              )}
+
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                What should the ad say?
+              </p>
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {ANGLES.map((a) => {
+                  const selected = angle === a.value;
+                  return (
+                    <button
+                      key={a.label}
+                      onClick={() => setAngle(a.value)}
+                      className={[
+                        "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium",
+                        selected ? "bg-primary text-primary-foreground" : "bg-card text-secondary-foreground",
+                      ].join(" ")}
+                    >
+                      {selected && a.value !== null && <Check className="h-3 w-3" />}
+                      {a.value === null && <Sparkles className="h-3 w-3" />}
+                      {a.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Platform</p>
+              <div className="mb-3 grid grid-cols-4 gap-1.5">
+                {PLATFORM_OPTIONS.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setPlatform(p.id)}
+                    className={[
+                      "rounded-xl px-2 py-2 text-[11px] font-semibold",
+                      platform === p.id ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
+                    ].join(" ")}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Versions</p>
+              <div className="mb-3 flex gap-1.5">
+                {VERSION_COUNTS.map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setVersions(v)}
+                    className={[
+                      "flex-1 rounded-xl px-2 py-2 text-sm font-semibold",
+                      versions === v ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
+                    ].join(" ")}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Photo</p>
+              {!file ? (
+                <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-card px-3 py-2.5 text-xs font-semibold text-foreground">
+                  <Upload className="h-3.5 w-3.5" />
+                  Upload your own (optional — AI creates one otherwise)
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+              ) : (
+                <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2.5">
+                  <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                    {previewUrl && <img src={previewUrl} alt="" className="h-6 w-6 rounded-md object-cover" />}
+                    {file.name}
+                  </span>
+                  <button onClick={() => handleFileChange(null)} aria-label="Remove photo" className="text-muted-foreground">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
-          <div className="flex w-full gap-2">
-            <button
-              onClick={() => setStep("choose")}
-              disabled={quickFetching}
-              className="rounded-full bg-secondary px-5 py-4 text-sm font-semibold text-secondary-foreground disabled:opacity-60"
-            >
-              Back
-            </button>
-            <button
-              onClick={handleQuickCreate}
-              disabled={!quickUrl.trim() || quickFetching || outOfCredits}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
-              style={{ background: "var(--gradient-primary)" }}
-            >
-              {quickFetching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-              Create My Ad
-            </button>
-          </div>
+          {(inputError || error) && <p className="mb-4 text-sm font-medium text-destructive">{inputError || error}</p>}
+
+          <button
+            onClick={handleMainSubmit}
+            disabled={!mainInput.trim() || inputFetching || outOfCredits}
+            className="flex w-full items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
+            style={{ background: "var(--gradient-primary)" }}
+          >
+            {inputFetching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+            Create My Ad
+          </button>
         </div>
-      )}
-
-      {step === "brief" && (
-        <AdBriefStep
-          offerDescription={offerDescription}
-          onOfferDescriptionChange={setOfferDescription}
-          goal={goal}
-          onGoalChange={setGoal}
-          angle={angle}
-          onAngleChange={setAngle}
-          onContinue={() => setStep("direction")}
-        />
-      )}
-
-      {step === "direction" && (
-        <VisualDirectionStep
-          visualSubject={offerDescription}
-          offer=""
-          contentType=""
-          recommended="clean_premium"
-          selected={visualDirection}
-          onSelect={setVisualDirection}
-          onContinue={() => setStep("setup")}
-          onBack={() => setStep("brief")}
-        />
-      )}
-
-      {step === "setup" && (
-        <SetupStep
-          file={file}
-          previewUrl={previewUrl}
-          useAiImage={useAiImage}
-          onFileChange={handleFileChange}
-          onUseAiImage={handleUseAiImage}
-          onDescriptionOverride={setOfferDescription}
-          platform={platform}
-          onPlatformChange={setPlatform}
-          versions={versions}
-          onVersionsChange={setVersions}
-          credits={credits}
-          onGenerate={handleGenerate}
-          onBack={() => setStep("direction")}
-          error={error}
-        />
       )}
 
       {step === "receiving" && (

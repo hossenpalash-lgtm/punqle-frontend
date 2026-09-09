@@ -838,11 +838,14 @@ export function checkTryOnStatus(id: string): Promise<ApiTryOnStatusResponse> {
 // Feeds a Try-On result image into Veo as the starting frame. Reuses
 // ApiVideoOperation/ApiVideoStatusResponse as-is — the shape is identical
 // to Ad Video's, no new types needed.
-export function startTryOnAnimation(imageBase64: string): Promise<{ operation: ApiVideoOperation }> {
+export function startTryOnAnimation(
+  imageBase64: string,
+  motionPrompt?: string,
+): Promise<{ operation: ApiVideoOperation }> {
   return apiFetch<{ operation: ApiVideoOperation }>("/tryon/animate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image_base64: imageBase64 }),
+    body: JSON.stringify({ image_base64: imageBase64, motion_prompt: motionPrompt || undefined }),
   });
 }
 

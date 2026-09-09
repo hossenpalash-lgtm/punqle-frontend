@@ -95,6 +95,10 @@ export function TryOnForm({
   const [animating, setAnimating] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoOperation, setVideoOperation] = useState<ApiVideoOperation | null>(null);
+  // Freeform motion description — optional, matches Cinematic UGC's own
+  // scene_prompt input. Falls back to the existing fixed prompt server-side
+  // when left blank, so this is purely additive.
+  const [motionPrompt, setMotionPrompt] = useState("");
 
   const [handoffTarget, setHandoffTarget] = useState<HandoffTarget>(null);
   const [handoffDescription, setHandoffDescription] = useState("");
@@ -238,7 +242,7 @@ export function TryOnForm({
     setStep("animating");
     elapsedIntervalRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
     try {
-      const r = await startTryOnAnimation(resultImageBase64);
+      const r = await startTryOnAnimation(resultImageBase64, motionPrompt);
       setVideoOperation(r.operation);
       pollTimeoutRef.current = setTimeout(() => pollAnimation(r.operation), VIDEO_POLL_INTERVAL_MS);
     } catch (err) {
@@ -283,6 +287,7 @@ export function TryOnForm({
     setResultImageBase64(null);
     setVideoUrl(null);
     setVideoOperation(null);
+    setMotionPrompt("");
     setHandoffTarget(null);
     setHandoffDescription("");
     setHandoffGoal("sales");
@@ -394,6 +399,16 @@ export function TryOnForm({
           <Download className="h-5 w-5" />
           Download
         </a>
+        <label className="mb-1.5 w-full text-left text-xs font-semibold text-muted-foreground">
+          Motion — optional
+        </label>
+        <textarea
+          value={motionPrompt}
+          onChange={(e) => setMotionPrompt(e.target.value)}
+          placeholder='e.g. "she turns slowly to show the back of the dress"'
+          rows={2}
+          className="mb-2 w-full resize-none rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        />
         <button
           onClick={handleAnimate}
           disabled={insufficientVideoCredits}
@@ -403,7 +418,7 @@ export function TryOnForm({
           Animate this look · {VIDEO_CREDIT_COST} credits
         </button>
         <p className="mb-3 mt-1.5 text-xs text-muted-foreground">
-          Turn your try-on image into a short fashion video.
+          Turn your try-on image into a short fashion video — leave the motion blank for a natural default turn.
         </p>
 
         {(onSendToSocialPost || onSendToImageAd) && (

@@ -312,7 +312,16 @@ function HomeScreen() {
 
       {(tab === "single" || tab === "home") && (
         <div className={tab === "home" ? "lg:hidden" : undefined}>
+          {/* key={tab} forces a real remount when transitioning between
+              "home" (mobile fallback) and "single" — without it, both
+              share this same render condition, so React would keep the
+              same instance mounted across that transition and silently
+              never pick up a freshly-set initialIdea (its useState
+              initializer only runs once, at the ORIGINAL mount). Found
+              live: prefilledIdea from the home prompt box/Carousel pill
+              wasn't reaching IdeaStep until this was added. */}
           <SinglePostForm
+            key={tab}
             credits={credits}
             setCredits={setCredits}
             initialIdea={prefilledIdea}

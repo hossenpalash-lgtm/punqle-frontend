@@ -6,13 +6,13 @@ import {
   ChevronDown,
   Clock,
   Download,
-  Link2,
   Loader2,
   Music,
-  Rocket,
   Settings2,
   Sparkles,
+  Upload,
   Video,
+  X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -26,7 +26,6 @@ import {
   fetchAvatarOptions,
   fetchAvatarVoices,
   fetchBusinessProfile,
-  fetchProductLink,
   generateAdCaptions,
   generateVideoScriptAngles,
   startAvatarVideoGeneration,
@@ -45,15 +44,13 @@ import {
   type VideoAspectRatio,
 } from "@/lib/api";
 import { findVideoStyle, headlineFontStyleFor, type VideoStyle } from "@/lib/video-style";
-import { AdBriefStep, GOALS } from "./AdBriefStep";
+import { ANGLES, GOALS } from "./AdBriefStep";
 import { AvatarPickerStep } from "./AvatarPickerStep";
 import { EditVideoPanel } from "./EditVideoPanel";
 import { ProductPicker } from "./ProductPicker";
 import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
-import { VideoAnglesStep } from "./VideoAnglesStep";
 import { VideoStyleStep } from "./VideoStyleStep";
-import { WizardProgress } from "./WizardProgress";
 
 const VIDEO_CREDIT_COST = 10;
 const POLL_INTERVAL_MS = 8000;
@@ -67,29 +64,11 @@ const AVATAR_STANDARD_CREDIT_COST = 4;
 // CINEMATIC_UGC_CREDIT_COST exactly.
 const CINEMATIC_UGC_CREDIT_COST: Record<AvatarTier, number> = { standard: 25, premium: 46 };
 
-type WizardStep =
-  | "choose"
-  | "quick"
-  | "brief"
-  | "angles"
-  | "style"
-  | "avatar-picker"
-  | "setup"
-  | "generating"
-  | "result"
-  | "receiving";
+type WizardStep = "create" | "generating" | "result" | "receiving";
 
-const PROGRESS_STAGE: Partial<Record<WizardStep, 1 | 2 | 3>> = {
-  brief: 1,
-  style: 2,
-  setup: 3,
-};
-
-const STAGE_STEP: Record<1 | 2 | 3, WizardStep> = {
-  1: "brief",
-  2: "style",
-  3: "setup",
-};
+// A pasted product link vs. a typed description share one input — see
+// AdCreationForm.tsx's identical helper for why this specific regex.
+const looksLikeUrl = (s: string) => /^https?:\/\//i.test(s) || /^[\w-]+(\.[a-z]{2,})+(\/\S*)?$/i.test(s);
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -100,14 +79,24 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-// Video Ad — Offer+Goal+Angle (reused AdBriefStep) → Video Style (new,
-// lightweight chips) → Setup → Generate ONE video. Deliberately no
-// "versions" concept, unlike Image Ad — video costs 10x an image credit
-// and 1-2 minutes per generation (Veo), so offering 3-5 at once would be
-// a real cost/time hazard. Mirrors VideoPostForm.tsx's generation/polling
-// mechanics almost exactly; the only new orchestration is the free
-// caption call up front and passing goal/angle through to the (now
-// goal/angle-aware) backend headline generator.
+// Video Ad — one Arcads-style screen (2026-09-10 redesign, same rationale
+// as AdCreationForm.tsx's sibling rewrite): a single smart input (link or
+// free text) + Goal, with Style/script-language/angle/aspect-ratio/photo
+// (and, when relevant, the avatar picker or Cinematic UGC scene prompt)
+// tucked behind an optional collapsed Settings panel. Replaces the old
+// choose/quick/brief/angles/style/avatar-picker/setup chain — a real
+// Arcads video review found every one of their flows is "describe it,
+// optional settings, generate," never a sequence of separate mandatory
+// screens, and Video Ad's old "Pick a script" step in particular had no
+// skip at all.
+//
+// Also fixes a real bug found while reading this file for the rewrite:
+// the old Quick Create hardcoded videoStyle: "product_showcase" in its
+// generation call regardless of what videoStyle actually was — so a user
+// picking AI Presenter/Cinematic UGC via the (then-separate) Style step
+// and using Quick Create would silently get a generic product video
+// instead. The new single submit path always reads videoStyle live, so
+// whatever's selected in Settings is what actually generates.
 export function AdVideoForm({
   credits,
   setCredits,
@@ -127,31 +116,33 @@ export function AdVideoForm({
   initialVideo?: { videoBase64: string; operation: ApiVideoOperation; itemDescription: string; goal: AdGoal };
   onInitialVideoConsumed?: () => void;
 }) {
-  const [step, setStep] = useState<WizardStep>(initialVideo ? "receiving" : "choose");
+  const [step, setStep] = useState<WizardStep>(initialVideo ? "receiving" : "create");
 
-  // Brief
+  // The one main input — a pasted link or a typed description.
+  const [mainInput, setMainInput] = useState("");
+  const [inputFetching, setInputFetching] = useState(false);
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   const [offerDescription, setOfferDescription] = useState("");
   const [goal, setGoal] = useState<AdGoal>(initialVideo?.goal ?? "sales");
   const [angle, setAngle] = useState<string | null>(null);
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("product_showcase");
-  // Only matters if AI Presenter ends up picked later (style isn't chosen
-  // until after this step) — HeyGen has real Bangla voices, so a Bangla
-  // script is what makes them actually usable, not just a cosmetic toggle.
+  // Only matters if AI Presenter ends up picked — HeyGen has real Bangla
+  // voices, so a Bangla script is what makes them actually usable, not
+  // just a cosmetic toggle.
   const [scriptLanguage, setScriptLanguage] = useState<AvatarLanguage>("english");
 
-  // Multi-angle script picker (between Brief and Style) — replaces the old
-  // blind angle-label chip in AdBriefStep with real, AI-written scripts to
-  // choose between. pickedScript is passed verbatim into generation.
-  const [scriptAngles, setScriptAngles] = useState<ApiVideoScriptAngle[]>([]);
+  // Script — resolved automatically right before generating (Veo/Avatar
+  // paths only), respecting whichever angle chip the user picked in
+  // Settings, or the AI's own recommendation if left on "Let Punqle
+  // choose". No separate mandatory review screen any more.
   const [anglesLoading, setAnglesLoading] = useState(false);
-  const [anglesError, setAnglesError] = useState<string | null>(null);
-  const [selectedAngleIndex, setSelectedAngleIndex] = useState<number | null>(null);
-  const [recommendedAngleIndex, setRecommendedAngleIndex] = useState(0);
   const [pickedScript, setPickedScript] = useState<{ headline: string; narration: string } | null>(null);
 
-  // "AI Presenter" style — a talking avatar (HeyGen) reads the already-
-  // picked script's narration, instead of Veo's b-roll-style video. Tier
-  // is picked first (any avatar works at either tier — confirmed live
+  // "AI Presenter" style — a talking avatar (HeyGen) reads the picked
+  // script's narration, instead of Veo's b-roll-style video. Tier is
+  // picked first (any avatar works at either tier — confirmed live
   // against HeyGen's real API), then an avatar from the live catalog.
   const [avatarTier, setAvatarTier] = useState<AvatarTier>("standard");
   const [avatarOptions, setAvatarOptions] = useState<ApiAvatarOption[]>([]);
@@ -163,7 +154,6 @@ export function AdVideoForm({
   const [avatarVoices, setAvatarVoices] = useState<ApiAvatarVoicesResponse | null>(null);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
   const [captionStyle, setCaptionStyle] = useState<CaptionStyle>("bold");
-  const [avatarVideoId, setAvatarVideoId] = useState<string | null>(null);
   // Set when the backend automatically fell back from Premium to
   // Standard because this specific avatar didn't support Premium —
   // shown so the user knows why they were charged less than expected,
@@ -192,24 +182,10 @@ export function AdVideoForm({
   // Cinematic UGC (Seedance 2.5) — a third video path alongside Veo and
   // HeyGen, for real human-product interaction. Tier mirrors Avatar's
   // Standard/Premium naming, split by resolution (480p/720p) instead of
-  // engine version. No avatar-grid picker step exists for this path —
-  // Seedance has no stock-character catalog (confirmed live against its
-  // real API) — so it goes straight from Style to Setup like every
-  // other non-avatar style.
+  // engine version. No avatar-grid picker for this path — Seedance has
+  // no stock-character catalog (confirmed live against its real API).
   const [cinematicUgcTier, setCinematicUgcTier] = useState<AvatarTier>("standard");
   const [cinematicUgcScenePrompt, setCinematicUgcScenePrompt] = useState("");
-
-  // Quick Create — Video option: paste a link, pick a Goal, get a
-  // finished video ad in one tap. Mirrors AdCreationForm.tsx's Image Ad
-  // Quick Create exactly (same state shape, same fetchProductLink +
-  // override pattern) — the only real difference is that instead of
-  // skipping the angle silently (Image Ad's angle=null), it fetches the
-  // same 4-script picker Video Ad's Customize path uses and auto-applies
-  // the AI's own recommended_index, so the result is still angle-aware
-  // without adding an extra required tap to a "quick" flow.
-  const [quickUrl, setQuickUrl] = useState("");
-  const [quickFetching, setQuickFetching] = useState(false);
-  const [quickError, setQuickError] = useState<string | null>(null);
 
   // Try-On's animate step always renders 9:16 (a portrait photo of a
   // standing person) — the handed-off video really is that shape,
@@ -225,11 +201,6 @@ export function AdVideoForm({
   const [caption, setCaption] = useState("");
   const [videoOperation, setVideoOperation] = useState<ApiVideoOperation | null>(null);
   const [narration, setNarration] = useState("");
-  const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
-  const [showLinkInput, setShowLinkInput] = useState(false);
-  const [productUrl, setProductUrl] = useState("");
-  const [fetchingLink, setFetchingLink] = useState(false);
-  const [linkError, setLinkError] = useState<string | null>(null);
   const [hasLogo, setHasLogo] = useState(false);
   const [hasBrandColor, setHasBrandColor] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -267,10 +238,43 @@ export function AdVideoForm({
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Couldn't prepare your ad.");
-        setStep("brief");
+        setStep("create");
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Avatar catalog + voices load as soon as AI Presenter is picked in
+  // Settings, so the grid is ready the moment the user scrolls to it —
+  // replaces the old "on Continue from Style" trigger.
+  useEffect(() => {
+    if (videoStyle !== "avatar") return;
+    if (avatarOptions.length === 0 && !avatarOptionsLoading) {
+      setAvatarOptionsLoading(true);
+      setAvatarOptionsError(null);
+      fetchAvatarOptions()
+        .then((r) => {
+          setAvatarOptions(r.avatars);
+          setAvatarOptionsLoading(false);
+        })
+        .catch((err) => {
+          setAvatarOptionsError(err instanceof Error ? err.message : "Couldn't load avatars — please try again.");
+          setAvatarOptionsLoading(false);
+        });
+    }
+    if (!avatarVoices) {
+      fetchAvatarVoices()
+        .then((r) => {
+          setAvatarVoices(r);
+          setSelectedVoiceId(r[scriptLanguage].female[0]?.voice_id ?? r[scriptLanguage].male[0]?.voice_id ?? null);
+        })
+        .catch(() => {
+          // Silently falls back to the backend's own English default —
+          // the voice picker just won't show, not worth a loud error
+          // over a free, secondary customization.
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoStyle]);
 
   const handleFileChange = (f: File | null) => {
     setPreviewUrl((prev) => {
@@ -278,84 +282,6 @@ export function AdVideoForm({
       return f ? URL.createObjectURL(f) : null;
     });
     setFile(f);
-  };
-
-  const handleProgressNavigate = (stage: 1 | 2 | 3) => {
-    setStep(STAGE_STEP[stage]);
-  };
-
-  const handleFetchProductLink = async () => {
-    if (!productUrl.trim() || fetchingLink) return;
-    setFetchingLink(true);
-    setLinkError(null);
-    try {
-      const r = await fetchProductLink(productUrl.trim());
-      setOfferDescription([r.title, r.description].filter(Boolean).join(" — "));
-      if (r.image_base64) {
-        handleFileChange(base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg"));
-      }
-      setShowLinkInput(false);
-      setProductUrl("");
-    } catch (err) {
-      setLinkError(err instanceof Error ? err.message : "Couldn't fetch that link.");
-    } finally {
-      setFetchingLink(false);
-    }
-  };
-
-  const poll = async (operation: ApiVideoOperation) => {
-    try {
-      const r = await checkVideoStatus(operation, headlineRef.current, aspectRatio, headlineFontStyleFor(videoStyle));
-      if (!r.done) {
-        pollTimeoutRef.current = setTimeout(() => poll(operation), POLL_INTERVAL_MS);
-        return;
-      }
-      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
-      setGenerating(false);
-      if (r.credits_remaining !== null) setCredits(r.credits_remaining);
-      if (r.video_base64) {
-        setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
-        setStep("result");
-      } else {
-        setError("The video didn't come back — please try again.");
-        setStep("setup");
-      }
-    } catch (err) {
-      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
-      setGenerating(false);
-      setError(err instanceof Error ? err.message : "Couldn't check the video's status.");
-    }
-  };
-
-  const fetchAngles = () => {
-    setAnglesLoading(true);
-    setAnglesError(null);
-    generateVideoScriptAngles(offerDescription.trim(), goal, scriptLanguage)
-      .then((r) => {
-        setScriptAngles(r.angles);
-        setRecommendedAngleIndex(r.recommended_index);
-        setAnglesLoading(false);
-      })
-      .catch((err) => {
-        setAnglesError(err instanceof Error ? err.message : "Couldn't write scripts — please try again.");
-        setAnglesLoading(false);
-      });
-  };
-
-  const handleBriefContinue = () => {
-    setSelectedAngleIndex(null);
-    setPickedScript(null);
-    setScriptAngles([]);
-    setStep("angles");
-    fetchAngles();
-  };
-
-  const handleContinueFromAngles = () => {
-    if (selectedAngleIndex === null) return;
-    const picked = scriptAngles[selectedAngleIndex];
-    setAngle(picked.angle);
-    setPickedScript({ headline: picked.headline, narration: picked.narration });
-    setStep("style");
   };
 
   const fetchAvatarOptionsForStep = () => {
@@ -370,31 +296,6 @@ export function AdVideoForm({
         setAvatarOptionsError(err instanceof Error ? err.message : "Couldn't load avatars — please try again.");
         setAvatarOptionsLoading(false);
       });
-  };
-
-  const handleContinueFromStyle = () => {
-    if (videoStyle === "avatar") {
-      setSelectedAvatarId(null);
-      setSelectedAvatarGender(null);
-      setStep("avatar-picker");
-      if (avatarOptions.length === 0) fetchAvatarOptionsForStep();
-      if (!avatarVoices) {
-        fetchAvatarVoices()
-          .then((r) => {
-            setAvatarVoices(r);
-            setSelectedVoiceId(r[scriptLanguage].female[0]?.voice_id ?? r[scriptLanguage].male[0]?.voice_id ?? null);
-          })
-          .catch(() => {
-            // Silently falls back to the backend's own English default —
-            // the voice picker just won't show, not worth a loud error
-            // over a free, secondary customization.
-          });
-      } else if (!selectedVoiceId) {
-        setSelectedVoiceId(avatarVoices[scriptLanguage].female[0]?.voice_id ?? avatarVoices[scriptLanguage].male[0]?.voice_id ?? null);
-      }
-    } else {
-      setStep("setup");
-    }
   };
 
   const handleSelectAvatar = (avatarId: string, gender: string | null) => {
@@ -412,37 +313,45 @@ export function AdVideoForm({
     setSelectedAvatarGender(null);
   };
 
-  // `override` exists for Quick Create's Video option: it calls
-  // setOfferDescription/setAngle/setPickedScript/etc. and wants to
-  // generate off those values immediately, but React state setters don't
-  // apply until the next render, so reading them from closure state here
-  // would still see the pre-update values in that same tick (same
-  // stale-closure issue AdCreationForm.tsx's Image Ad Quick Create hit
-  // and fixed the same way). The normal Customize path (Setup step's
-  // Generate button) doesn't hit this — every relevant setter has already
-  // committed across earlier renders by the time it's clickable — so it
-  // keeps calling this with no override and reads current state.
-  const handleGenerate = async (override?: {
+  const poll = async (operation: ApiVideoOperation) => {
+    try {
+      const r = await checkVideoStatus(operation, headlineRef.current, aspectRatio, headlineFontStyleFor(videoStyle));
+      if (!r.done) {
+        pollTimeoutRef.current = setTimeout(() => poll(operation), POLL_INTERVAL_MS);
+        return;
+      }
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setGenerating(false);
+      if (r.credits_remaining !== null) setCredits(r.credits_remaining);
+      if (r.video_base64) {
+        setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
+        setStep("result");
+      } else {
+        setError("The video didn't come back — please try again.");
+        setStep("create");
+      }
+    } catch (err) {
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setGenerating(false);
+      setError(err instanceof Error ? err.message : "Couldn't check the video's status.");
+    }
+  };
+
+  // `override` exists because finishCreate below sets offerDescription/
+  // angle/pickedScript/file and wants to generate off those values
+  // immediately — React state setters don't apply until the next render,
+  // so reading them from closure state here would still see the
+  // pre-update values in that same tick. goal/videoStyle/aspectRatio
+  // don't need this: they're only ever changed by their own Settings-
+  // panel controls, well before Generate is clicked.
+  const handleGenerate = async (override: {
     description: string;
-    goal: AdGoal;
     angle: string | null;
     script: { headline: string; narration: string } | null;
     file: File | null;
-    videoStyle: VideoStyle;
-    aspectRatio: VideoAspectRatio;
   }) => {
-    const finalDescription = (override?.description ?? offerDescription).trim();
-    const effectiveGoal = override?.goal ?? goal;
-    const effectiveAngle = override ? override.angle : angle;
-    const effectiveScript = override ? override.script : pickedScript;
-    const effectiveFile = override ? override.file : file;
-    const effectiveVideoStyle = override?.videoStyle ?? videoStyle;
-    const effectiveAspectRatio = override?.aspectRatio ?? aspectRatio;
-
+    const finalDescription = override.description.trim();
     if (!finalDescription || generating || (credits !== null && credits < VIDEO_CREDIT_COST)) return;
-    const cameFrom = step; // captured before setStep("generating") below, so a
-    // failure returns to wherever generation was actually triggered from
-    // (Customize's "setup" step, or Quick Create's own "quick" step).
     setGenerating(true);
     setError(null);
     setVideoUrl(null);
@@ -454,20 +363,20 @@ export function AdVideoForm({
       // auto-CTA already baked in by the goal-aware prompt. Not used for
       // the on-screen burned headline (wrong shape — this is 2-4 lines,
       // the headline needs to be a single <40-char hook).
-      const capResult = await generateAdCaptions(finalDescription, effectiveGoal, effectiveAngle, 1);
+      const capResult = await generateAdCaptions(finalDescription, goal, override.angle, 1);
       setCaption(capResult.captions[0]?.facebook_caption ?? "");
 
-      const style = findVideoStyle(effectiveVideoStyle);
+      const style = findVideoStyle(videoStyle);
       const styledDescription = `${finalDescription}, ${style.promptModifier}`;
-      const imageBase64 = effectiveFile ? await fileToBase64(effectiveFile) : undefined;
+      const imageBase64 = override.file ? await fileToBase64(override.file) : undefined;
       const r = await startVideoGeneration(
         styledDescription,
         imageBase64,
-        effectiveFile?.type,
-        effectiveAspectRatio,
-        effectiveGoal,
-        effectiveAngle ?? undefined,
-        effectiveScript ?? undefined,
+        override.file?.type,
+        aspectRatio,
+        goal,
+        override.angle ?? undefined,
+        override.script ?? undefined,
       );
       setHeadline(r.headline);
       headlineRef.current = r.headline;
@@ -478,7 +387,7 @@ export function AdVideoForm({
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
       setGenerating(false);
       setError(err instanceof Error ? err.message : "Couldn't start the video.");
-      setStep(cameFrom === "quick" ? "quick" : "setup");
+      setStep("create");
     }
   };
 
@@ -499,7 +408,7 @@ export function AdVideoForm({
         setStep("result");
       } else {
         setError("The avatar video didn't come back — please try again.");
-        setStep("setup");
+        setStep("create");
       }
     } catch (err) {
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
@@ -602,12 +511,13 @@ export function AdVideoForm({
   // Separate from handleGenerate — HeyGen's response shape (a bare
   // video_id, then a signed video_url) is structurally different from
   // Veo's operation-handle shape, so this doesn't share the Veo polling
-  // path. The script is already picked (same narration the Angles step
-  // or Quick Create's auto-pick already produced) — no new AI writing
-  // happens here, just handing that text to a different video engine.
-  const handleGenerateAvatarVideo = async () => {
+  // path. Overrides mirror handleGenerate's — see its comment.
+  const handleGenerateAvatarVideo = async (
+    descriptionOverride: string,
+    scriptOverride: { headline: string; narration: string },
+  ) => {
     const avatarCreditCost = avatarTier === "premium" ? VIDEO_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST;
-    if (!selectedAvatarId || !pickedScript || generating || (credits !== null && credits < avatarCreditCost)) return;
+    if (!selectedAvatarId || generating || (credits !== null && credits < avatarCreditCost)) return;
     setGenerating(true);
     setError(null);
     setVideoUrl(null);
@@ -615,26 +525,25 @@ export function AdVideoForm({
     setStep("generating");
     elapsedIntervalRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
     try {
-      const capResult = await generateAdCaptions(offerDescription.trim(), goal, angle, 1);
+      const capResult = await generateAdCaptions(descriptionOverride.trim(), goal, angle, 1);
       setCaption(capResult.captions[0]?.facebook_caption ?? "");
-      setHeadline(pickedScript.headline);
+      setHeadline(scriptOverride.headline);
 
       const r = await startAvatarVideoGeneration(
-        pickedScript.narration,
+        scriptOverride.narration,
         selectedAvatarId,
         selectedAvatarGender,
         avatarTier,
         aspectRatio,
         selectedVoiceId,
       );
-      setAvatarVideoId(r.video_id);
       setAvatarFellBack(r.fell_back);
       pollTimeoutRef.current = setTimeout(() => pollAvatarVideo(r.video_id), POLL_INTERVAL_MS);
     } catch (err) {
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
       setGenerating(false);
       setError(err instanceof Error ? err.message : "Couldn't start the avatar video.");
-      setStep("setup");
+      setStep("create");
     }
   };
 
@@ -655,7 +564,7 @@ export function AdVideoForm({
         setStep("result");
       } else {
         setError("The video didn't come back — please try again.");
-        setStep("setup");
+        setStep("create");
       }
     } catch (err) {
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
@@ -667,13 +576,15 @@ export function AdVideoForm({
   // Cinematic UGC (Seedance 2.5) — a third video path alongside Veo and
   // HeyGen. Reuses the exact same result-screen state (avatarVideoBase64/
   // isAvatarResult) the avatar path writes, since both return raw base64
-  // bytes rather than a Veo operation handle — see pollCinematicUgcVideo
-  // above and isAvatarResult's own comment. No script/narration needed
+  // bytes rather than a Veo operation handle. No script/narration needed
   // (no dialogue, no avatar) — just the product description plus a real
-  // scene direction (what the person does with the product).
-  const handleGenerateCinematicUgc = async () => {
+  // scene direction (what the person does with the product), so this
+  // path never goes through the script-fetch finishCreate does for the
+  // other two.
+  const handleGenerateCinematicUgc = async (descriptionOverride: string) => {
     const cost = CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier];
-    if (!offerDescription.trim() || !cinematicUgcScenePrompt.trim() || generating || (credits !== null && credits < cost)) return;
+    const finalDescription = descriptionOverride.trim();
+    if (!finalDescription || !cinematicUgcScenePrompt.trim() || generating || (credits !== null && credits < cost)) return;
     setGenerating(true);
     setError(null);
     setVideoUrl(null);
@@ -681,103 +592,108 @@ export function AdVideoForm({
     setStep("generating");
     elapsedIntervalRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
     try {
-      const capResult = await generateAdCaptions(offerDescription.trim(), goal, angle, 1);
+      const capResult = await generateAdCaptions(finalDescription, goal, angle, 1);
       setCaption(capResult.captions[0]?.facebook_caption ?? "");
-      setHeadline(capResult.captions[0]?.whatsapp_message ?? offerDescription.trim());
+      setHeadline(capResult.captions[0]?.whatsapp_message ?? finalDescription);
 
-      const r = await startCinematicUgcGeneration(
-        offerDescription.trim(),
-        cinematicUgcScenePrompt.trim(),
-        cinematicUgcTier,
-        aspectRatio,
-      );
+      const r = await startCinematicUgcGeneration(finalDescription, cinematicUgcScenePrompt.trim(), cinematicUgcTier, aspectRatio);
       pollTimeoutRef.current = setTimeout(() => pollCinematicUgcVideo(r.prediction_id), POLL_INTERVAL_MS);
     } catch (err) {
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
       setGenerating(false);
       setError(err instanceof Error ? err.message : "Couldn't start the cinematic video.");
-      setStep("setup");
+      setStep("create");
     }
   };
 
-  // Shared by both Quick Create paths below — the URL path (real
-  // scraping + AI enrichment) and the catalog path (already-known data,
-  // no fetch needed at all) only differ in how description/file are
-  // obtained; everything after that, including the angle auto-pick, is
-  // identical.
-  const finishQuickCreate = async (description: string, file: File | null) => {
+  // Shared by every real entry into generation (pasted link, typed text,
+  // catalog pick). Resolves a real script first (Veo/Avatar paths) —
+  // matching whichever angle chip the user picked in Settings, or the
+  // AI's own recommendation on "Let Punqle choose" — then dispatches to
+  // the right generator for the currently-selected videoStyle. Cinematic
+  // UGC skips scripting entirely (no dialogue). An explicitly-uploaded
+  // photo (via Settings) always wins over one that came from a link
+  // scrape or catalog item.
+  const finishCreate = async (description: string, incomingFile: File | null) => {
+    const effectiveFile = file ?? incomingFile;
     setOfferDescription(description);
-    if (file) handleFileChange(file);
+    if (effectiveFile && effectiveFile !== file) handleFileChange(effectiveFile);
 
-    // Still fetches the same 4-script picker Customize uses — just
-    // auto-applies the AI's own recommended_index instead of showing
-    // it, so Quick Create stays a single tap while the result is still
-    // built from a real, angle-aware script rather than a silent
-    // default.
-    const anglesResult = await generateVideoScriptAngles(description, goal);
-    const picked = anglesResult.angles[anglesResult.recommended_index] ?? anglesResult.angles[0];
-    const script = { headline: picked.headline, narration: picked.narration };
-    setAngle(picked.angle);
-    setPickedScript(script);
-    // videoStyle/aspectRatio stay at their existing defaults
-    // ("product_showcase"/"16:9") — neither is user-facing here.
-    await handleGenerate({
-      description,
-      goal,
-      angle: picked.angle,
-      script,
-      file,
-      videoStyle: "product_showcase",
-      aspectRatio: "16:9",
-    });
+    if (videoStyle === "cinematic_ugc") {
+      await handleGenerateCinematicUgc(description);
+      return;
+    }
+
+    setAnglesLoading(true);
+    setInputError(null);
+    try {
+      const anglesResult = await generateVideoScriptAngles(description, goal, scriptLanguage);
+      const chosenIdx = angle ? anglesResult.angles.findIndex((a) => a.angle === angle) : -1;
+      const picked = chosenIdx >= 0 ? anglesResult.angles[chosenIdx] : (anglesResult.angles[anglesResult.recommended_index] ?? anglesResult.angles[0]);
+      const script = { headline: picked.headline, narration: picked.narration };
+      setAngle(picked.angle);
+      setPickedScript(script);
+      setAnglesLoading(false);
+
+      if (videoStyle === "avatar") {
+        await handleGenerateAvatarVideo(description, script);
+      } else {
+        await handleGenerate({ description, angle: picked.angle, script, file: effectiveFile });
+      }
+    } catch (err) {
+      setAnglesLoading(false);
+      setInputError(err instanceof Error ? err.message : "Couldn't write a script — please try again.");
+    }
   };
 
-  const handleQuickCreate = async () => {
-    if (quickFetching || !quickUrl.trim()) return;
-    setQuickFetching(true);
-    setQuickError(null);
-    try {
-      const r = await understandProductLink(quickUrl.trim());
-      const description = r.enriched_description || [r.title, r.description].filter(Boolean).join(" — ");
-      const quickFile = r.image_base64
-        ? base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg")
-        : null;
-      await finishQuickCreate(description, quickFile);
-    } catch (err) {
-      setQuickError(err instanceof Error ? err.message : "Couldn't fetch that link.");
-    } finally {
-      setQuickFetching(false);
+  const handleMainSubmit = async () => {
+    const text = mainInput.trim();
+    if (!text || inputFetching || anglesLoading || generating) return;
+    setInputError(null);
+    if (looksLikeUrl(text)) {
+      setInputFetching(true);
+      try {
+        const r = await understandProductLink(text);
+        const description = r.enriched_description || [r.title, r.description].filter(Boolean).join(" — ");
+        const scrapedFile = r.image_base64
+          ? base64ToFile(r.image_base64, r.mime_type || "image/jpeg", "product.jpg")
+          : null;
+        await finishCreate(description, scrapedFile);
+      } catch (err) {
+        setInputError(err instanceof Error ? err.message : "Couldn't fetch that link.");
+      } finally {
+        setInputFetching(false);
+      }
+    } else {
+      await finishCreate(text, null);
     }
   };
 
   // Skips fetch-product-link/understand-product-link entirely — a
   // Shopify-synced (or CSV-imported) catalog item already has a real
   // name/description/photo saved, so there's nothing to scrape.
-  const handleQuickCreateFromCatalog = async (description: string, file: File | null) => {
-    if (quickFetching) return;
-    setQuickFetching(true);
-    setQuickError(null);
+  const handleQuickCreateFromCatalog = async (description: string, catalogFile: File | null) => {
+    if (inputFetching) return;
+    setInputFetching(true);
+    setInputError(null);
     try {
-      await finishQuickCreate(description, file);
+      await finishCreate(description, catalogFile);
     } catch (err) {
-      setQuickError(err instanceof Error ? err.message : "Couldn't use that product.");
+      setInputError(err instanceof Error ? err.message : "Couldn't use that product.");
     } finally {
-      setQuickFetching(false);
+      setInputFetching(false);
     }
   };
 
   const handleReset = () => {
-    setStep("choose");
-    setQuickUrl("");
-    setQuickError(null);
+    setStep("create");
+    setMainInput("");
+    setInputError(null);
+    setSettingsOpen(false);
     setOfferDescription("");
     setGoal("sales");
     setAngle(null);
-    setScriptAngles([]);
     setAnglesLoading(false);
-    setAnglesError(null);
-    setSelectedAngleIndex(null);
-    setRecommendedAngleIndex(0);
     setPickedScript(null);
     setScriptLanguage("english");
     setVideoStyle("product_showcase");
@@ -791,10 +707,6 @@ export function AdVideoForm({
     headlineRef.current = "";
     setVideoOperation(null);
     setNarration("");
-    setMoreOptionsOpen(false);
-    setShowLinkInput(false);
-    setProductUrl("");
-    setLinkError(null);
     setAvatarTier("standard");
     setAvatarOptions([]);
     setAvatarOptionsLoading(false);
@@ -803,7 +715,6 @@ export function AdVideoForm({
     setSelectedAvatarId(null);
     setSelectedAvatarGender(null);
     setAvatarVoices(null);
-    setAvatarVideoId(null);
     setIsAvatarResult(false);
     setAvatarFellBack(false);
     setAvatarVideoBase64(null);
@@ -1066,313 +977,121 @@ export function AdVideoForm({
     );
   }
 
+  const busy = inputFetching || anglesLoading || generating;
+  const styleNeedsMoreInput =
+    (videoStyle === "avatar" && !selectedAvatarId) || (videoStyle === "cinematic_ugc" && !cinematicUgcScenePrompt.trim());
+  const currentCost =
+    videoStyle === "avatar"
+      ? avatarTier === "premium"
+        ? VIDEO_CREDIT_COST
+        : AVATAR_STANDARD_CREDIT_COST
+      : videoStyle === "cinematic_ugc"
+        ? CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier]
+        : VIDEO_CREDIT_COST;
+  const currentInsufficientCredits =
+    videoStyle === "avatar" ? avatarInsufficientCredits : videoStyle === "cinematic_ugc" ? cinematicUgcInsufficientCredits : insufficientCredits;
+
   return (
-    <>
-      {PROGRESS_STAGE[step] && (
-        <WizardProgress currentStage={PROGRESS_STAGE[step]!} onNavigate={handleProgressNavigate} />
-      )}
+    <div className="flex flex-col items-center text-center">
+      <h1 className="font-display mb-2 text-xl font-extrabold text-foreground">Create a video ad</h1>
+      <p className="mb-6 text-sm text-muted-foreground">
+        Paste a product link, or just describe what you're advertising.
+      </p>
 
-      {step === "choose" && (
-        <div className="flex flex-col items-center text-center">
-          <h1 className="font-display mb-2 text-xl font-extrabold text-foreground">Create a video ad</h1>
-          <p className="mb-6 text-sm text-muted-foreground">Two ways to get there.</p>
+      <textarea
+        value={mainInput}
+        onChange={(e) => setMainInput(e.target.value)}
+        placeholder="https://yourstore.com/products/... or Handmade leather wallets, 20% off this week"
+        rows={3}
+        disabled={busy}
+        className="mb-3 w-full rounded-2xl border border-input bg-background px-4 py-3.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+      />
+      <div className="mb-4 w-full text-left">
+        <ProductPicker onSelect={handleQuickCreateFromCatalog} />
+      </div>
+
+      <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Goal
+      </label>
+      <div className="mb-4 grid w-full grid-cols-2 gap-2">
+        {GOALS.map((g) => (
           <button
-            onClick={() => setStep("quick")}
-            className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left"
-            style={{ boxShadow: "var(--shadow-card)" }}
+            key={g.value}
+            onClick={() => setGoal(g.value)}
+            className={[
+              "rounded-full px-3 py-2.5 text-sm font-semibold",
+              goal === g.value ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+            ].join(" ")}
           >
-            <Rocket className="h-5 w-5 shrink-0" style={{ color: "var(--color-accent)" }} />
-            <span>
-              <span className="block text-sm font-semibold text-foreground">Quick Create</span>
-              <span className="block text-xs text-muted-foreground">Paste a product link, pick a goal, get a video.</span>
-            </span>
+            {g.label}
           </button>
-          <button
-            onClick={() => setStep("brief")}
-            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left"
-            style={{ boxShadow: "var(--shadow-card)" }}
-          >
-            <Settings2 className="h-5 w-5 shrink-0 text-muted-foreground" />
-            <span>
-              <span className="block text-sm font-semibold text-foreground">Customize</span>
-              <span className="block text-xs text-muted-foreground">Full control — offer, script, style, format.</span>
-            </span>
-          </button>
-        </div>
-      )}
+        ))}
+      </div>
 
-      {step === "quick" && (
-        <div className="flex flex-col items-center text-center">
-          <h1 className="font-display mb-2 text-xl font-extrabold text-foreground">Quick Create</h1>
-          <p className="mb-6 text-sm text-muted-foreground">Paste your product link — Punqle handles the rest.</p>
+      <button
+        onClick={() => setSettingsOpen((v) => !v)}
+        className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"
+      >
+        <Settings2 className="h-3.5 w-3.5" />
+        Settings
+        <ChevronDown className={["h-3.5 w-3.5 transition-transform", settingsOpen ? "rotate-180" : ""].join(" ")} />
+      </button>
 
-          <input
-            type="url"
-            value={quickUrl}
-            onChange={(e) => setQuickUrl(e.target.value)}
-            placeholder="https://yourstore.com/products/..."
-            disabled={quickFetching}
-            className="mb-3 w-full rounded-full border border-input bg-background px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          <div className="mb-4 w-full text-left">
-            <ProductPicker onSelect={handleQuickCreateFromCatalog} />
-          </div>
-
-          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Goal
-          </label>
-          <div className="mb-6 grid w-full grid-cols-2 gap-2">
-            {GOALS.map((g) => (
+      {settingsOpen && (
+        <div className="mb-4 w-full rounded-2xl bg-secondary/60 p-4 text-left">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Script language</p>
+          <div className="mb-4 flex gap-2">
+            {(["english", "bangla"] as AvatarLanguage[]).map((lang) => (
               <button
-                key={g.value}
-                onClick={() => setGoal(g.value)}
+                key={lang}
+                onClick={() => setScriptLanguage(lang)}
                 className={[
-                  "rounded-full px-3 py-2.5 text-sm font-semibold",
-                  goal === g.value ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                  "flex-1 rounded-full px-4 py-2 text-sm font-semibold capitalize",
+                  scriptLanguage === lang ? "bg-primary text-primary-foreground" : "bg-card text-secondary-foreground",
                 ].join(" ")}
               >
-                {g.label}
+                {lang === "bangla" ? "বাংলা" : "English"}
               </button>
             ))}
           </div>
 
-          <div className="mb-5 w-full rounded-2xl border border-dashed border-border bg-secondary/60 p-3 text-center text-xs font-semibold text-foreground">
-            1 video · {VIDEO_CREDIT_COST} credits · about 1-2 min
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Style</p>
+          <div className="mb-4 rounded-2xl bg-card p-3">
+            <VideoStyleStep
+              selected={videoStyle}
+              onSelect={setVideoStyle}
+              onContinue={() => {}}
+              onBack={() => {}}
+            />
           </div>
 
-          {(quickError || error) && (
-            <p className="mb-4 text-sm font-medium text-destructive">{quickError || error}</p>
-          )}
-
-          <div className="flex w-full gap-2">
-            <button
-              onClick={() => setStep("choose")}
-              disabled={quickFetching}
-              className="rounded-full bg-secondary px-5 py-4 text-sm font-semibold text-secondary-foreground disabled:opacity-60"
-            >
-              Back
-            </button>
-            <button
-              onClick={handleQuickCreate}
-              disabled={!quickUrl.trim() || quickFetching || insufficientCredits}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
-              style={{ background: "var(--gradient-primary)" }}
-            >
-              {quickFetching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-              Create My Video
-            </button>
-          </div>
-        </div>
-      )}
-
-      {step === "brief" && (
-        <>
-          <div className="mb-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Script language
-            </p>
-            <p className="mb-2 text-xs text-muted-foreground">
-              Only matters if you pick AI Presenter later — HeyGen has real Bangla voices.
-            </p>
-            <div className="flex gap-2">
-              {(["english", "bangla"] as AvatarLanguage[]).map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => setScriptLanguage(lang)}
-                  className={[
-                    "flex-1 rounded-full px-4 py-2 text-sm font-semibold capitalize",
-                    scriptLanguage === lang ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                  ].join(" ")}
-                >
-                  {lang === "bangla" ? "বাংলা" : "English"}
-                </button>
-              ))}
-            </div>
-          </div>
-          <AdBriefStep
-            offerDescription={offerDescription}
-            onOfferDescriptionChange={setOfferDescription}
-            goal={goal}
-            onGoalChange={setGoal}
-            angle={angle}
-            onAngleChange={setAngle}
-            onContinue={handleBriefContinue}
-            showAngle={false}
-          />
-        </>
-      )}
-
-      {step === "angles" && (
-        <VideoAnglesStep
-          angles={scriptAngles}
-          loading={anglesLoading}
-          error={anglesError}
-          selectedIndex={selectedAngleIndex}
-          onSelect={setSelectedAngleIndex}
-          onContinue={handleContinueFromAngles}
-          onBack={() => setStep("brief")}
-          onRetry={fetchAngles}
-          recommendedIndex={recommendedAngleIndex}
-        />
-      )}
-
-      {step === "style" && (
-        <VideoStyleStep
-          selected={videoStyle}
-          onSelect={setVideoStyle}
-          onContinue={handleContinueFromStyle}
-          onBack={() => setStep("angles")}
-        />
-      )}
-
-      {step === "avatar-picker" && (
-        <AvatarPickerStep
-          tier={avatarTier}
-          onTierChange={handleAvatarTierChange}
-          avatars={avatarOptions}
-          loading={avatarOptionsLoading}
-          error={avatarOptionsError}
-          genderFilter={avatarGenderFilter}
-          onGenderFilterChange={setAvatarGenderFilter}
-          selectedAvatarId={selectedAvatarId}
-          onSelectAvatar={handleSelectAvatar}
-          language={scriptLanguage}
-          voices={avatarVoices}
-          selectedVoiceId={selectedVoiceId}
-          onSelectVoice={setSelectedVoiceId}
-          onContinue={() => setStep("setup")}
-          onBack={() => setStep("style")}
-          onRetry={fetchAvatarOptionsForStep}
-        />
-      )}
-
-      {step === "setup" && (
-        <>
-          {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && (
-            <div className="mb-5">
-              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Product photo (optional)
-              </label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+          {videoStyle === "avatar" && (
+            <div className="mb-4 rounded-2xl bg-card p-3">
+              <AvatarPickerStep
+                tier={avatarTier}
+                onTierChange={handleAvatarTierChange}
+                avatars={avatarOptions}
+                loading={avatarOptionsLoading}
+                error={avatarOptionsError}
+                genderFilter={avatarGenderFilter}
+                onGenderFilterChange={setAvatarGenderFilter}
+                selectedAvatarId={selectedAvatarId}
+                onSelectAvatar={handleSelectAvatar}
+                language={scriptLanguage}
+                voices={avatarVoices}
+                selectedVoiceId={selectedVoiceId}
+                onSelectVoice={setSelectedVoiceId}
+                onContinue={() => {}}
+                onBack={() => {}}
+                onRetry={fetchAvatarOptionsForStep}
               />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-card p-6 text-center transition-colors active:bg-secondary/40"
-                style={{ minHeight: previewUrl ? undefined : "8rem" }}
-              >
-                {previewUrl ? (
-                  <img src={previewUrl} alt="Product photo" className="max-h-44 rounded-xl object-contain" />
-                ) : (
-                  <>
-                    <Camera className="h-7 w-7 text-muted-foreground" />
-                    <span className="text-sm font-semibold text-muted-foreground">
-                      Add a photo to guide the video, or skip for text-only
-                    </span>
-                  </>
-                )}
-              </button>
             </div>
           )}
 
-          {/* Same "paste a product link / pick from catalog" pattern
-              SetupStep.tsx already proves out for Image Ad — reused as-is
-              (fetchProductLink is free, no new backend work), just not
-              previously wired into Video Ad. Overwrites offerDescription
-              from the "brief" step, same as Image Ad's SetupStep already
-              does via onDescriptionOverride={setOfferDescription}. Not
-              shown for Avatar/Cinematic UGC styles — neither has a
-              product photo slot to fill, and offerDescription is
-              already set from Brief. */}
-          {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && (
-            <>
-              <button
-                onClick={() => setMoreOptionsOpen((v) => !v)}
-                className="mb-3 flex items-center gap-1 text-xs font-semibold text-muted-foreground"
-              >
-                More options
-                <ChevronDown className={["h-3.5 w-3.5 transition-transform", moreOptionsOpen ? "rotate-180" : ""].join(" ")} />
-              </button>
-              {moreOptionsOpen && (
-                <div className="mb-6 flex w-full flex-col items-center gap-2">
-                  {!showLinkInput ? (
-                    <button
-                      onClick={() => setShowLinkInput(true)}
-                      className="flex items-center gap-1 text-xs font-semibold text-primary underline-offset-2 hover:underline"
-                    >
-                      <Link2 className="h-3 w-3" />
-                      Product link
-                    </button>
-                  ) : (
-                    <div className="flex w-full gap-2">
-                      <input
-                        type="url"
-                        value={productUrl}
-                        onChange={(e) => setProductUrl(e.target.value)}
-                        placeholder="https://yourstore.com/products/..."
-                        disabled={fetchingLink}
-                        className="flex-1 rounded-full border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                      />
-                      <button
-                        onClick={handleFetchProductLink}
-                        disabled={!productUrl.trim() || fetchingLink}
-                        className="flex shrink-0 items-center justify-center gap-1 rounded-full bg-secondary px-3 py-2 text-xs font-semibold text-secondary-foreground disabled:opacity-60"
-                      >
-                        {fetchingLink ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Fetch"}
-                      </button>
-                    </div>
-                  )}
-                  <ProductPicker
-                    onSelect={(desc, photoFile) => {
-                      setOfferDescription(desc);
-                      if (photoFile) handleFileChange(photoFile);
-                    }}
-                  />
-                  {linkError && <p className="text-xs font-medium text-destructive">{linkError}</p>}
-                </div>
-              )}
-            </>
-          )}
-
-          <div className="mb-6">
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Format
-            </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setAspectRatio("16:9")}
-                className={[
-                  "flex-1 rounded-full px-4 py-2.5 text-sm font-semibold",
-                  aspectRatio === "16:9" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                ].join(" ")}
-              >
-                Landscape (16:9)
-              </button>
-              <button
-                onClick={() => setAspectRatio("9:16")}
-                className={[
-                  "flex-1 rounded-full px-4 py-2.5 text-sm font-semibold",
-                  aspectRatio === "9:16" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                ].join(" ")}
-              >
-                Vertical (9:16)
-              </button>
-            </div>
-          </div>
-
-          {/* No stock-character catalog exists for Seedance the way
-              HeyGen's avatar grid does (confirmed live against its real
-              API) — tier picker plus a real scene direction (what the
-              person actually does with the product) instead of a
-              narration script. */}
           {videoStyle === "cinematic_ugc" && (
             <>
-              <div className="mb-5 grid w-full grid-cols-2 gap-2">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quality</p>
+              <div className="mb-4 grid grid-cols-2 gap-2">
                 {(["standard", "premium"] as AvatarTier[]).map((t) => {
                   const selected = cinematicUgcTier === t;
                   return (
@@ -1380,103 +1099,149 @@ export function AdVideoForm({
                       key={t}
                       onClick={() => setCinematicUgcTier(t)}
                       className={[
-                        "rounded-2xl px-3 py-2.5 text-left transition-colors capitalize",
-                        selected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                        "rounded-xl px-3 py-2.5 text-left transition-colors capitalize",
+                        selected ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
                       ].join(" ")}
                     >
                       <span className="flex items-center gap-1.5 text-sm font-semibold">
                         {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
                         {t}
-                        <span className="ml-auto text-xs font-normal opacity-80">{CINEMATIC_UGC_CREDIT_COST[t]} credits</span>
                       </span>
                       <span className={["block text-xs normal-case", selected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}>
-                        {t === "premium" ? "720p, higher detail" : "480p, great quality"}
+                        {CINEMATIC_UGC_CREDIT_COST[t]} credits · {t === "premium" ? "720p" : "480p"}
                       </span>
                     </button>
                   );
                 })}
               </div>
-
-              <div className="mb-5">
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  What happens in the shot?
-                </label>
-                <textarea
-                  value={cinematicUgcScenePrompt}
-                  onChange={(e) => setCinematicUgcScenePrompt(e.target.value)}
-                  rows={2}
-                  placeholder="e.g. she laces up the sneakers and starts jogging down a sunny park path"
-                  className="w-full rounded-2xl border border-input bg-background px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-              </div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                What happens in the shot?
+              </p>
+              <textarea
+                value={cinematicUgcScenePrompt}
+                onChange={(e) => setCinematicUgcScenePrompt(e.target.value)}
+                rows={2}
+                placeholder="e.g. she laces up the sneakers and starts jogging down a sunny park path"
+                className="mb-4 w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
             </>
           )}
 
-          {/* Explicit, unconditional cost line — shown every time, not
-              only when credits are short (unlike Social Content's
-              Video tab today) — a single click here is 10x the cost of
-              an Image Ad click, so nothing about it should be a surprise. */}
-          {videoStyle === "avatar" ? (
-            <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-center text-sm font-semibold text-foreground">
-              1 video · {avatarTier === "premium" ? VIDEO_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST} credits · usually a few
-              minutes
-            </div>
-          ) : videoStyle === "cinematic_ugc" ? (
-            <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-center text-sm font-semibold text-foreground">
-              1 video · {CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier]} credits · usually a few minutes
-            </div>
-          ) : (
-            <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-center text-sm font-semibold text-foreground">
-              1 video · {VIDEO_CREDIT_COST} credits · about 1-2 min
-            </div>
+          {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && (
+            <>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                What should the ad say?
+              </p>
+              <div className="mb-4 flex flex-wrap gap-1.5">
+                {ANGLES.map((a) => {
+                  const selected = angle === a.value;
+                  return (
+                    <button
+                      key={a.label}
+                      onClick={() => setAngle(a.value)}
+                      className={[
+                        "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium",
+                        selected ? "bg-primary text-primary-foreground" : "bg-card text-secondary-foreground",
+                      ].join(" ")}
+                    >
+                      {selected && a.value !== null && <Check className="h-3 w-3" />}
+                      {a.value === null && <Sparkles className="h-3 w-3" />}
+                      {a.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Photo (optional)
+              </p>
+              {!file ? (
+                <label className="mb-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-card px-3 py-2.5 text-xs font-semibold text-foreground">
+                  <Upload className="h-3.5 w-3.5" />
+                  Upload a product photo, or skip for text-only
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+              ) : (
+                <div className="mb-4 flex items-center justify-between rounded-xl bg-card px-3 py-2.5">
+                  <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                    {previewUrl && <img src={previewUrl} alt="" className="h-6 w-6 rounded-md object-cover" />}
+                    <Camera className="h-3.5 w-3.5" />
+                    {file.name}
+                  </span>
+                  <button onClick={() => handleFileChange(null)} aria-label="Remove photo" className="text-muted-foreground">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </>
           )}
 
-          {(videoStyle === "avatar"
-            ? avatarInsufficientCredits
-            : videoStyle === "cinematic_ugc"
-              ? cinematicUgcInsufficientCredits
-              : insufficientCredits) && (
-            <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-sm text-foreground">
-              You have {credits} credits — not enough for a video. Upgrade to keep generating.
-            </div>
-          )}
-
-          {hasLogo && videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && (
-            <p className="mb-4 text-xs text-muted-foreground">Your Brand Kit logo will be added to this video automatically.</p>
-          )}
-
-          {error && (
-            <p className="mb-4 flex items-center gap-1.5 text-sm font-medium text-destructive">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {error}
-            </p>
-          )}
-
-          <button
-            onClick={() =>
-              videoStyle === "avatar"
-                ? handleGenerateAvatarVideo()
-                : videoStyle === "cinematic_ugc"
-                  ? handleGenerateCinematicUgc()
-                  : handleGenerate()
-            }
-            disabled={
-              !offerDescription.trim() ||
-              generating ||
-              (videoStyle === "avatar"
-                ? avatarInsufficientCredits || !selectedAvatarId
-                : videoStyle === "cinematic_ugc"
-                  ? cinematicUgcInsufficientCredits || !cinematicUgcScenePrompt.trim()
-                  : insufficientCredits)
-            }
-            className="flex w-full items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
-            style={{ background: "var(--gradient-primary)" }}
-          >
-            <Video className="h-5 w-5" />
-            Generate video
-          </button>
-        </>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Format</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAspectRatio("16:9")}
+              className={[
+                "flex-1 rounded-full px-4 py-2.5 text-sm font-semibold",
+                aspectRatio === "16:9" ? "bg-primary text-primary-foreground" : "bg-card text-secondary-foreground",
+              ].join(" ")}
+            >
+              Landscape (16:9)
+            </button>
+            <button
+              onClick={() => setAspectRatio("9:16")}
+              className={[
+                "flex-1 rounded-full px-4 py-2.5 text-sm font-semibold",
+                aspectRatio === "9:16" ? "bg-primary text-primary-foreground" : "bg-card text-secondary-foreground",
+              ].join(" ")}
+            >
+              Vertical (9:16)
+            </button>
+          </div>
+        </div>
       )}
-    </>
+
+      <div className="mb-4 w-full rounded-2xl border border-dashed border-border bg-secondary/60 p-3 text-center text-xs font-semibold text-foreground">
+        1 video · {currentCost} credits ·{" "}
+        {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" ? "about 1-2 min" : "usually a few minutes"}
+      </div>
+
+      {currentInsufficientCredits && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          You have {credits} credits — not enough for this video. Upgrade to keep generating.
+        </p>
+      )}
+      {styleNeedsMoreInput && videoStyle === "avatar" && (
+        <p className="mb-4 text-xs text-muted-foreground">Open Settings and pick an AI presenter first.</p>
+      )}
+      {styleNeedsMoreInput && videoStyle === "cinematic_ugc" && (
+        <p className="mb-4 text-xs text-muted-foreground">Open Settings and describe what happens in the shot first.</p>
+      )}
+      {hasLogo && videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && (
+        <p className="mb-4 text-xs text-muted-foreground">Your Brand Kit logo will be added to this video automatically.</p>
+      )}
+
+      {(inputError || error) && (
+        <p className="mb-4 flex items-center gap-1.5 text-sm font-medium text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {inputError || error}
+        </p>
+      )}
+
+      <button
+        onClick={handleMainSubmit}
+        disabled={!mainInput.trim() || busy || currentInsufficientCredits || styleNeedsMoreInput}
+        className="flex w-full items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
+        style={{ background: "var(--gradient-primary)" }}
+      >
+        {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Video className="h-5 w-5" />}
+        Generate video
+      </button>
+    </div>
   );
 }

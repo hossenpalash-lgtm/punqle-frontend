@@ -14,10 +14,17 @@ export function IdeaStep({
   value,
   onChange,
   onContinue,
+  entryHint,
 }: {
   value: string;
   onChange: (v: string) => void;
   onContinue: (understanding: ApiUnderstandIdeaResponse) => void;
+  // Set when arriving here from the home screen's "Carousel" pill —
+  // Carousel has no generation flow of its own (CarouselBuilder only
+  // ever runs post-generation, on an already-finished image), so the
+  // pill's honest job is just nudging the copy here toward carousels;
+  // everything else about this step is unchanged.
+  entryHint?: "carousel";
 }) {
   const [chipsExpanded, setChipsExpanded] = useState(false);
   const [surprising, setSurprising] = useState(false);
@@ -126,7 +133,11 @@ export function IdeaStep({
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Tell Punqle what you want to post about..."
+        placeholder={
+          entryHint === "carousel"
+            ? "What do you want to feature in your carousel?"
+            : "Tell Punqle what you want to post about..."
+        }
         rows={4}
         autoFocus
         className="mb-3 w-full rounded-2xl border border-input bg-background px-4 py-3.5 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring"

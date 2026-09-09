@@ -2,33 +2,44 @@ import {
   Binoculars,
   Calendar,
   CalendarClock,
+  Check,
+  ChevronDown,
   Clock,
   CreditCard,
   Facebook,
   Gift,
   Image as ImageIcon,
+  Instagram,
   Layers,
   LogOut,
   Megaphone,
   Menu,
   Package,
   Palette,
+  Plus,
+  Settings as SettingsIcon,
   Shirt,
   Sparkles,
   TrendingUp,
   Video,
   Youtube,
+  Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PunqleLogo } from "@/components/PunqleLogo";
 import { TikTokIcon } from "@/components/TikTokIcon";
+import { type ApiProject, createProject, fetchProjects } from "@/lib/api";
 import { useScrolled } from "@/lib/use-scrolled";
 
-// "single"/"video" have no dedicated nav row on mobile (both are reached
-// via the content-type card grid on the home screen instead — see
-// index.tsx) but still need tab values so none of the sidebar's own rows
-// incorrectly show as active while a user is actually on one of those tabs.
+// "single"/"video"/"ad"/"ad-video"/"bulk-creative"/"tryon" have no dedicated
+// nav row in the desktop sidebar any more (2026-09-10 redesign) — every
+// Create action is reached via the "home" pill row instead (see
+// index.tsx); they still need tab values so nothing here incorrectly
+// shows "active" while the user is actually on one of those pages, and
+// mobile's own header (untouched by this redesign, see below) still
+// lists them directly.
 export type NavTab =
+  | "home"
   | "single"
   | "plan"
   | "calendar"
@@ -49,6 +60,7 @@ export type NavTab =
 // ternary, so the Sidebar silently highlighted "Image Post" no matter
 // which of those 5 pages was actually open — found live, not by review.
 export const ALL_NAV_TABS: NavTab[] = [
+  "home",
   "single",
   "plan",
   "calendar",
@@ -126,253 +138,305 @@ export function Sidebar({
 }) {
   const scrolled = useScrolled();
   const [moreOpen, setMoreOpen] = useState(false);
+
+  // Desktop sidebar redesign (2026-09-10) — real "Projects" (name + when
+  // created only, no content-linking yet — see migrations/projects.sql),
+  // and two independently collapsible groups (no accordion component
+  // existed in this codebase, so this is small new UI, not a reused
+  // pattern). Initial open state checks the current tab so landing
+  // directly on e.g. ?tab=plan doesn't hide the very row you're on.
+  const [projects, setProjects] = useState<ApiProject[]>([]);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [addingProject, setAddingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [planPublishOpen, setPlanPublishOpen] = useState(() => PLAN_PUBLISH_ITEMS.some((i) => i.tab === tab));
+  const [desktopMoreOpen, setDesktopMoreOpen] = useState(
+    () => tab === "bulk-creative" || INSIGHTS_ITEMS.some((i) => i.tab === tab) || tab === "history",
+  );
+
+  useEffect(() => {
+    fetchProjects()
+      .then((r) => setProjects(r.projects))
+      .catch((err) => setProjectsError(err instanceof Error ? err.message : "Couldn't load projects."));
+  }, []);
+
+  const handleCreateProject = async () => {
+    const name = newProjectName.trim();
+    if (!name || creatingProject) return;
+    setCreatingProject(true);
+    try {
+      const created = await createProject(name);
+      setProjects((prev) => [created, ...prev]);
+      setNewProjectName("");
+      setAddingProject(false);
+    } catch (err) {
+      setProjectsError(err instanceof Error ? err.message : "Couldn't create that project.");
+    } finally {
+      setCreatingProject(false);
+    }
+  };
+
   return (
     <>
-      {/* Dark rail as its own structural zone — desktop only, the main
-          content area stays exactly Punqle's existing light identity.
-          Refined-hybrid polish pass (2026-09): reuses this codebase's own
-          already-defined (but previously dormant) `.dark` token block for
-          every child color — text, borders, hover states, the accent —
-          so every existing component picks up correct dark-appropriate
-          colors automatically, with only --background/--card pinned to
-          the specific requested near-black (not the `.dark` block's own
-          slightly lighter default). A solid fill, not glass — the
-          light page's own glass-morphism effect (built to show light
-          content bleeding through) doesn't translate to a dark panel
-          sitting on a light page. */}
-      <aside
-        className="dark hidden shrink-0 rounded-2xl px-4 py-6 lg:sticky lg:top-4 lg:my-4 lg:ml-4 lg:flex lg:h-[calc(100vh-2rem)] lg:w-60 lg:flex-col"
-        style={{
-          background: "#0F1014",
-          boxShadow: "var(--shadow-card)",
-          "--card": "#181A20",
-        } as React.CSSProperties}
-      >
-        <div className="mb-8 flex items-center gap-2 px-2">
+      {/* Desktop sidebar redesign (2026-09-10) — flush, white/light rail,
+          Arcads-style (a direct founder reference + an attached "Sand"
+          app screenshot), replacing the earlier dark floating-card rail
+          for this screen specifically. Every Create action (Social
+          Content, Image Ad, Video Ad, Bulk Creative, Try-On) moved off
+          the sidebar entirely onto the new home screen's pill row (see
+          index.tsx) — this sidebar now only holds Projects, Plan &
+          Publish, More, and account-level items, per the approved
+          wireframe. Mobile's own header below is untouched. */}
+      <aside className="hidden shrink-0 border-r border-border bg-[oklch(0.975_0.002_260)] px-3.5 py-5 lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-60 lg:flex-col">
+        <button
+          onClick={() => onNavigate("home")}
+          className="mb-6 flex shrink-0 items-center gap-2 px-1.5"
+        >
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-primary-foreground"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-primary-foreground"
             style={{ background: "var(--gradient-primary)" }}
           >
-            <PunqleLogo className="h-4 w-4" />
+            <PunqleLogo className="h-3.5 w-3.5" />
           </div>
           <span className="font-display text-base font-extrabold text-foreground">Punqle</span>
+        </button>
+
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          <div className="mb-2 flex items-center justify-between px-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Projects</span>
+            <button
+              onClick={() => setAddingProject((v) => !v)}
+              aria-label="New project"
+              className="flex h-5 w-5 items-center justify-center rounded-md border border-border text-muted-foreground"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
+
+          <div className="mb-1 flex flex-col gap-0.5">
+            {projects.map((p) => (
+              <div key={p.id} className="rounded-lg px-1.5 py-1.5">
+                <div className="truncate text-[13px] font-semibold text-foreground">{p.name}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {new Date(p.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                </div>
+              </div>
+            ))}
+            {projects.length === 0 && !addingProject && (
+              <p className="px-1.5 py-1 text-[12px] text-muted-foreground">No projects yet.</p>
+            )}
+          </div>
+
+          {addingProject && (
+            <div className="mb-1 flex items-center gap-1 px-1.5">
+              <input
+                autoFocus
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCreateProject();
+                  if (e.key === "Escape") setAddingProject(false);
+                }}
+                placeholder="Project name"
+                disabled={creatingProject}
+                className="w-full rounded-lg border border-input bg-card px-2 py-1 text-[12px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <button
+                onClick={handleCreateProject}
+                disabled={creatingProject || !newProjectName.trim()}
+                aria-label="Create project"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground disabled:opacity-40"
+              >
+                <Check className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+          {projectsError && <p className="mb-1 px-1.5 text-[11px] text-destructive">{projectsError}</p>}
+
+          {/* Plan & Publish — collapsed by default, matching More below;
+              the FB/IG/TikTok/YouTube row stays visible regardless (status
+              at a glance + click to connect/manage), only Weekly
+              Plan/Content Calendar hide behind the toggle. Gap sizes
+              (not rule lines) do the section-separation work — tuned
+              live against real screenshots, not arbitrary. */}
+          <button
+            onClick={() => setPlanPublishOpen((v) => !v)}
+            className="mt-[58px] flex items-center justify-between rounded-xl border px-2 py-1.5"
+            style={{
+              background: "oklch(0.56 0.14 300 / 8%)",
+              borderColor: "oklch(0.56 0.14 300 / 22%)",
+            }}
+          >
+            <span className="flex items-center gap-1.5 text-[13px] font-bold text-foreground">
+              <span
+                className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md"
+                style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground)" }}
+              >
+                <Zap className="h-2.5 w-2.5" />
+              </span>
+              Plan &amp; Publish
+            </span>
+            <ChevronDown
+              className={["h-3.5 w-3.5 shrink-0 transition-transform", planPublishOpen ? "rotate-180" : ""].join(" ")}
+              style={{ color: "oklch(0.5 0.13 300)" }}
+            />
+          </button>
+          {planPublishOpen && (
+            <div className="mb-1.5 mt-1 flex flex-col gap-0.5">
+              {PLAN_PUBLISH_ITEMS.map(({ tab: t, label, icon: Icon }) => (
+                <button
+                  key={t}
+                  onClick={() => onNavigate(t)}
+                  className={[
+                    "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
+                    tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+                  ].join(" ")}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="mt-1.5 flex justify-between px-1">
+            <button
+              onClick={onOpenMetaConnect}
+              aria-label="Facebook"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-secondary-foreground"
+            >
+              <Facebook className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={onOpenMetaConnect}
+              aria-label="Instagram"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-secondary-foreground"
+            >
+              <Instagram className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={onOpenTikTokConnect}
+              aria-label="TikTok"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-secondary-foreground"
+            >
+              <TikTokIcon className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={onOpenYouTubeConnect}
+              aria-label="YouTube"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-secondary-foreground"
+            >
+              <Youtube className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* More — Bulk Creative moved here (2026-09-09 decision, doesn't
+              fit the "3 lucrative differentiators" logic the pill row
+              earns its spot with) alongside every remaining real nav
+              item — nothing invented, nothing dropped from today's nav. */}
+          <button
+            onClick={() => setDesktopMoreOpen((v) => !v)}
+            className="mt-[68px] flex items-center justify-between rounded-xl px-2 py-1.5"
+          >
+            <span className="text-[13px] font-bold text-foreground">More</span>
+            <ChevronDown
+              className={[
+                "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
+                desktopMoreOpen ? "rotate-180" : "",
+              ].join(" ")}
+            />
+          </button>
+          {desktopMoreOpen && (
+            <div className="mt-1 flex flex-col gap-0.5">
+              <button
+                onClick={() => onNavigate("bulk-creative")}
+                className={[
+                  "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
+                  tab === "bulk-creative"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-secondary",
+                ].join(" ")}
+              >
+                <Layers className="h-3.5 w-3.5" />
+                Bulk Creative
+              </button>
+              {INSIGHTS_ITEMS.map(({ tab: t, label, icon: Icon }) => (
+                <button
+                  key={t}
+                  onClick={() => onNavigate(t)}
+                  className={[
+                    "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
+                    tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+                  ].join(" ")}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              ))}
+              <button
+                onClick={onOpenBrandKit}
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-secondary"
+              >
+                <Palette className="h-3.5 w-3.5" />
+                Brand Kit
+              </button>
+              <button
+                onClick={onOpenProductCatalog}
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-secondary"
+              >
+                <Package className="h-3.5 w-3.5" />
+                Product Catalog
+              </button>
+              <button
+                onClick={() => onNavigate("history")}
+                className={[
+                  "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
+                  tab === "history" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+                ].join(" ")}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                History
+              </button>
+              <button
+                onClick={onOpenReferral}
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-secondary"
+              >
+                <Gift className="h-3.5 w-3.5" />
+                Invite &amp; Earn
+              </button>
+              <button
+                onClick={onOpenBilling}
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-secondary"
+              >
+                <CreditCard className="h-3.5 w-3.5" />
+                Plans &amp; Billing
+              </button>
+            </div>
+          )}
         </div>
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
-          <span className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Create
-          </span>
 
-          {/* Social Content — the one built, active category. Icon sits in
-              a small accent-tinted box (the app's one restrained purple
-              accent) so it visually reads as "the AI creation category,"
-              not just another list row. */}
-          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground">
-            <span
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
-              style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground)" }}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-            </span>
-            Social Content
-          </div>
-          <div className="mb-2 flex flex-col gap-0.5 pl-6">
-            {SOCIAL_CONTENT_FORMATS.map(({ tab: t, label, icon: Icon }) => (
-              <button
-                key={t}
-                onClick={() => onNavigate(t)}
-                className={[
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
-                ].join(" ")}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Ad Creation — 2nd of the 3 primary categories. Now has 2
-              formats (Image Ad shipped 2026-08-25, Video Ad shipped
-              2026-08-26) — same header+sub-items structure as Social
-              Content above, not a single row anymore. */}
-          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground">
-            <span
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
-              style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground)" }}
-            >
-              <Megaphone className="h-3.5 w-3.5" />
-            </span>
-            Ad Creation
-          </div>
-          <div className="mb-2 flex flex-col gap-0.5 pl-6">
-            {AD_CREATION_FORMATS.map(({ tab: t, label, icon: Icon }) => (
-              <button
-                key={t}
-                onClick={() => onNavigate(t)}
-                className={[
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
-                ].join(" ")}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Bulk Creative — promoted out of the old "E-commerce" wrapper
-              to a plain top-level Create row (no sub-formats of its own,
-              so it doesn't need the header+sublist treatment). */}
-          <button
-            onClick={() => onNavigate("bulk-creative")}
-            className={[
-              "mb-0.5 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-              tab === "bulk-creative" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
-            ].join(" ")}
-          >
-            <Layers className="h-4 w-4" />
-            Bulk Creative
-          </button>
-
-          {/* Try-On — also promoted out of "E-commerce," but given the
-              same accent-icon-box treatment as Social Content/Ad Creation
-              above rather than a plain row: it's a real differentiator
-              (person + product → real fit preview → animate → hand off to
-              Social/Ad), not a generic utility, and should read as
-              equally primary to the two categories above it. In the dark
-              rail specifically, it also gets a soft pink border when
-              inactive — the one deliberate spot of color breaking from
-              the otherwise-neutral rows, so it reads instantly, without
-              needing every row to compete for the same attention. */}
-          <button
-            onClick={() => onNavigate("tryon")}
-            className={[
-              "mb-2 flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors",
-              tab === "tryon"
-                ? "border-transparent bg-primary text-primary-foreground"
-                : "border-[#ff8ec7]/40 text-foreground hover:bg-secondary",
-            ].join(" ")}
-          >
-            <span
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
-              style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground)" }}
-            >
-              <Shirt className="h-3.5 w-3.5" />
-            </span>
-            Try-On
-          </button>
-
-          <span className="mb-1 mt-5 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Plan &amp; Publish
-          </span>
-          {PLAN_PUBLISH_ITEMS.map(({ tab: t, label, icon: Icon }) => (
-            <button
-              key={t}
-              onClick={() => onNavigate(t)}
-              className={[
-                "flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
-                tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
-              ].join(" ")}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
-
-          <span className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Insights
-          </span>
-          {INSIGHTS_ITEMS.map(({ tab: t, label, icon: Icon }) => (
-            <button
-              key={t}
-              onClick={() => onNavigate(t)}
-              className={[
-                "flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
-                tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
-              ].join(" ")}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
-
-          <span className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Products
-          </span>
-          <button
-            onClick={onOpenProductCatalog}
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
-          >
-            <Package className="h-3.5 w-3.5" />
-            Product Catalog
-          </button>
-
-          <span className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Brand
-          </span>
-          <button
-            onClick={onOpenBrandKit}
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
-          >
-            <Palette className="h-3.5 w-3.5" />
-            Brand Kit
-          </button>
-
-          <span className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Account
-          </span>
-          <button
-            onClick={onOpenMetaConnect}
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
-          >
-            <Facebook className="h-3.5 w-3.5" />
-            Social Accounts
-          </button>
-          <button
-            onClick={onOpenYouTubeConnect}
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
-          >
-            <Youtube className="h-3.5 w-3.5" />
-            YouTube
-          </button>
-          <button
-            onClick={onOpenTikTokConnect}
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
-          >
-            <TikTokIcon className="h-3.5 w-3.5" />
-            TikTok
-          </button>
-          <button
-            onClick={() => onNavigate("history")}
-            className={[
-              "flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
-              tab === "history" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
-            ].join(" ")}
-          >
-            <Clock className="h-3.5 w-3.5" />
-            History
-          </button>
-          <button
-            onClick={onOpenReferral}
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
-          >
-            <Gift className="h-3.5 w-3.5" />
-            Invite &amp; Earn
-          </button>
-          <button
-            onClick={onOpenBilling}
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary"
-          >
-            <CreditCard className="h-3.5 w-3.5" />
-            Plans &amp; Billing
-          </button>
-        </nav>
+        {/* Settings/Profile at the foot, per the founder's own hand
+            sketch. "Settings" has no dedicated screen of its own yet in
+            this app — Billing is the closest real match, so it opens
+            that panel; flagged here as a best-guess mapping, not a
+            literal spec. */}
+        <button
+          onClick={onOpenBilling}
+          className="flex shrink-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-[13px] font-semibold text-secondary-foreground hover:bg-secondary"
+        >
+          <SettingsIcon className="h-3.5 w-3.5" />
+          Settings
+        </button>
         <button
           onClick={onSignOut}
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-secondary-foreground hover:bg-secondary"
+          className="flex shrink-0 items-center justify-between border-t border-border pt-3 mt-1.5"
         >
-          <LogOut className="h-4 w-4" />
-          Sign out
+          <span className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-[12px] font-bold text-foreground">
+              <LogOut className="h-3.5 w-3.5" />
+            </span>
+            <span className="text-[13px] font-semibold text-foreground">Sign out</span>
+          </span>
         </button>
       </aside>
 

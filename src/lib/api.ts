@@ -55,6 +55,28 @@ export function fetchAdCredits(): Promise<ApiAdCredits> {
   return apiFetch<ApiAdCredits>("/ads/credits");
 }
 
+export interface ApiProject {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface ApiProjectsListResponse {
+  projects: ApiProject[];
+}
+
+export function fetchProjects(): Promise<ApiProjectsListResponse> {
+  return apiFetch<ApiProjectsListResponse>("/projects");
+}
+
+export function createProject(name: string): Promise<ApiProject> {
+  return apiFetch<ApiProject>("/projects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+}
+
 export interface ApiReferralStatus {
   referral_code: string;
   successful_referrals: number;

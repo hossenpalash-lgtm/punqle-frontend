@@ -66,6 +66,7 @@ export function SinglePostForm({
   onInitialIdeaConsumed,
   initialGeneratedImage,
   onInitialGeneratedImageConsumed,
+  entryHint,
 }: {
   credits: number | null;
   setCredits: (n: number) => void;
@@ -82,6 +83,9 @@ export function SinglePostForm({
   // image model as a loose reference). Only a free caption call runs.
   initialGeneratedImage?: { imageBase64: string; itemDescription: string };
   onInitialGeneratedImageConsumed?: () => void;
+  // Set when arriving from the home screen's "Carousel" pill — copy-only,
+  // passed straight through to IdeaStep. See IdeaStep's own comment.
+  entryHint?: "carousel";
 }) {
   const [step, setStep] = useState<WizardStep>(initialGeneratedImage ? "receiving" : "idea");
   const [generationStage, setGenerationStage] = useState(0);
@@ -421,7 +425,12 @@ export function SinglePostForm({
       )}
 
       {step === "idea" && (
-        <IdeaStep value={description} onChange={setDescription} onContinue={handleUnderstood} />
+        <IdeaStep
+          value={description}
+          onChange={setDescription}
+          onContinue={handleUnderstood}
+          entryHint={entryHint}
+        />
       )}
 
       {step === "direction" && understanding && (

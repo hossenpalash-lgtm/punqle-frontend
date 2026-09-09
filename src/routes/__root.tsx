@@ -172,7 +172,7 @@ function RootComponent() {
   // There's only one real route today, but this keeps root decoupled
   // from that route's specifics.
   const search = useSearch({ strict: false }) as { tab?: string };
-  const tab: NavTab = ALL_NAV_TABS.includes(search.tab as NavTab) ? (search.tab as NavTab) : "single";
+  const tab: NavTab = ALL_NAV_TABS.includes(search.tab as NavTab) ? (search.tab as NavTab) : "home";
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));

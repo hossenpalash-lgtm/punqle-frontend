@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Layers, Megaphone, Sparkles, Video } from "lucide-react";
+import { ArrowUp, Images, Layers, Megaphone, Paperclip, Shirt, Sparkles, Video } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchAdCredits } from "@/lib/api";
 import { AdCreationForm } from "@/components/ads/AdCreationForm";
@@ -19,7 +19,7 @@ import {
 import { VideoPostForm } from "@/components/ads/VideoPostForm";
 import { WeeklyPlanForm } from "@/components/ads/WeeklyPlanForm";
 
-type Tab = "single" | "plan" | "calendar" | "performance" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative" | "tryon";
+type Tab = "home" | "single" | "plan" | "calendar" | "performance" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative" | "tryon";
 
 export const Route = createFileRoute("/")({
   component: HomeScreen,
@@ -45,7 +45,9 @@ export const Route = createFileRoute("/")({
                         ? "bulk-creative"
                         : search.tab === "tryon"
                           ? "tryon"
-                          : "single",
+                          : search.tab === "single"
+                            ? "single"
+                            : "home",
   }),
 });
 
@@ -99,6 +101,13 @@ function HomeScreen() {
   const [prefilledSocialImage, setPrefilledSocialImage] = useState<TryOnSocialPostHandoff | undefined>(undefined);
   const [prefilledAdImage, setPrefilledAdImage] = useState<TryOnImageAdHandoff | undefined>(undefined);
   const [prefilledAdVideo, setPrefilledAdVideo] = useState<TryOnVideoAdHandoff | undefined>(undefined);
+  // Set only by the home screen's "Carousel" pill — copy-only hint for
+  // IdeaStep's placeholder, see SinglePostForm's own entryHint comment.
+  // Reset at every other real entry into "single" below so it can't leak
+  // into an unrelated visit (same "no stale reuse" discipline as
+  // prefilledIdea above).
+  const [entryHint, setEntryHint] = useState<"carousel" | undefined>(undefined);
+  const [homeIdea, setHomeIdea] = useState("");
 
   useEffect(() => {
     fetchAdCredits()
@@ -124,8 +133,110 @@ function HomeScreen() {
       </div>
       {creditsError && <p className="mb-4 text-sm text-destructive">{creditsError}</p>}
 
-      {(tab === "single" || tab === "video") && (
-        <>
+      {/* New Arcads-inspired front door (2026-09-10) — every pill and the
+          prompt box itself route to an existing, already-built flow below;
+          nothing here is a new generation path. Carousel specifically has
+          no pre-generation flow of its own (CarouselBuilder only ever runs
+          post-generation inside PostKit's result screen) — it lands on
+          the exact same Social Content flow the prompt box goes to, just
+          with a carousel-flavored placeholder via entryHint. */}
+      {/* Desktop only, per the approved plan — the mockups were never
+          designed for mobile, and mobile's own pill-nav header (a
+          separate, already-shipped redesign) already gives quick access
+          to every destination. Mobile lands on the fallback block just
+          below instead (same Social Content grid it's always shown). */}
+      {tab === "home" && (
+        <div className="hidden flex-1 lg:flex lg:flex-col">
+          <div className="flex flex-col items-center pt-4 text-center">
+            <h1 className="mb-2 text-3xl font-extrabold tracking-tight text-foreground">
+              What are we creating today?
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Turn your ideas into scroll-stopping content, in minutes.
+            </p>
+          </div>
+
+          <div className="flex-1" />
+
+          <div className="mb-3 flex flex-wrap justify-center gap-2">
+            <button
+              onClick={() => goTo("ad")}
+              className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground"
+            >
+              <Megaphone className="h-4 w-4" />
+              Image Ad
+            </button>
+            <button
+              onClick={() => goTo("ad-video")}
+              className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <Sparkles className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
+              AI UGC
+            </button>
+            <button
+              onClick={() => goTo("tryon")}
+              className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <Shirt className="h-4 w-4" />
+              Try-On
+            </button>
+            <button
+              onClick={() => {
+                setEntryHint("carousel");
+                goTo("single");
+              }}
+              className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <Images className="h-4 w-4" />
+              Carousel
+            </button>
+          </div>
+
+          <div
+            className="mb-6 w-full self-center rounded-3xl border border-border bg-card"
+            style={{ boxShadow: "var(--shadow-card)" }}
+          >
+            <textarea
+              value={homeIdea}
+              onChange={(e) => setHomeIdea(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" || e.shiftKey || !homeIdea.trim()) return;
+                e.preventDefault();
+                setPrefilledIdea(homeIdea.trim());
+                setEntryHint(undefined);
+                goTo("single");
+              }}
+              placeholder="Describe what you want to create…"
+              rows={2}
+              className="w-full resize-none rounded-t-3xl bg-transparent px-5 py-4 text-sm text-foreground focus:outline-none"
+            />
+            <div className="flex items-center justify-end border-t border-border px-3 py-2.5">
+              <button
+                onClick={() => {
+                  if (!homeIdea.trim()) return;
+                  setPrefilledIdea(homeIdea.trim());
+                  setEntryHint(undefined);
+                  goTo("single");
+                }}
+                disabled={!homeIdea.trim()}
+                aria-label="Create"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile's own landing for "home" reuses this exact block (unchanged
+          from before this redesign) via lg:hidden — desktop shows the new
+          hero+pill screen above instead. See the comment above that block. */}
+      {(tab === "single" || tab === "video" || tab === "home") && (
+        <div className={tab === "home" ? "lg:hidden" : undefined}>
           <h1 className="font-display mb-1 flex items-center gap-2 text-xl font-extrabold text-foreground">
             <Sparkles className="h-4 w-4 text-accent" />
             Social Content
@@ -155,7 +266,7 @@ function HomeScreen() {
               </button>
             ))}
           </div>
-        </>
+        </div>
       )}
 
       {(tab === "ad" || tab === "ad-video") && (
@@ -199,15 +310,18 @@ function HomeScreen() {
         </h1>
       )}
 
-      {tab === "single" && (
-        <SinglePostForm
-          credits={credits}
-          setCredits={setCredits}
-          initialIdea={prefilledIdea}
-          onInitialIdeaConsumed={() => setPrefilledIdea(undefined)}
-          initialGeneratedImage={prefilledSocialImage}
-          onInitialGeneratedImageConsumed={() => setPrefilledSocialImage(undefined)}
-        />
+      {(tab === "single" || tab === "home") && (
+        <div className={tab === "home" ? "lg:hidden" : undefined}>
+          <SinglePostForm
+            credits={credits}
+            setCredits={setCredits}
+            initialIdea={prefilledIdea}
+            onInitialIdeaConsumed={() => setPrefilledIdea(undefined)}
+            initialGeneratedImage={prefilledSocialImage}
+            onInitialGeneratedImageConsumed={() => setPrefilledSocialImage(undefined)}
+            entryHint={entryHint}
+          />
+        </div>
       )}
       {tab === "plan" && <WeeklyPlanForm credits={credits} setCredits={setCredits} />}
       {tab === "calendar" && <CalendarView onGoToWeeklyPlan={() => goTo("plan")} />}
@@ -218,6 +332,7 @@ function HomeScreen() {
         <CompetitorAnalysis
           onCreateAd={(idea) => {
             setPrefilledIdea(idea);
+            setEntryHint(undefined);
             goTo("single");
           }}
         />
@@ -245,6 +360,7 @@ function HomeScreen() {
           setCredits={setCredits}
           onSendToSocialPost={(payload) => {
             setPrefilledSocialImage(payload);
+            setEntryHint(undefined);
             goTo("single");
           }}
           onSendToImageAd={(payload) => {

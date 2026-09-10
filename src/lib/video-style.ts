@@ -5,6 +5,7 @@ import {
   Heart,
   Lightbulb,
   Package,
+  Sparkles,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -23,7 +24,8 @@ export type VideoStyle =
   | "before_after"
   | "cinematic"
   | "avatar"
-  | "cinematic_ugc";
+  | "cinematic_ugc"
+  | "ai_actor";
 
 // `group` drives VideoStyleStep's visual grouping (added 2026-09-08 per
 // the approved nav wireframe) — "ai_ugc" (avatar/Cinematic UGC, a person
@@ -123,6 +125,22 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     group: "ai_ugc",
     icon: Hand,
     creditHint: "25–46 credits",
+  },
+  {
+    id: "ai_actor",
+    label: "Punqle Actors",
+    description: "Your own AI actor reads your script",
+    // Unused — like Avatar, this bypasses Veo/promptModifier entirely;
+    // finishCreate special-cases videoStyle === "ai_actor" and calls
+    // OmniHuman (via Replicate) with one of Punqle's own _IMAGE_AD_ACTORS
+    // personas instead of a HeyGen stock avatar. Same "reads a script"
+    // job as Avatar, but a fully AI-synthesized, Punqle-owned actor —
+    // real-spike-tested 2026-09-10, more natural results than HeyGen's
+    // flatter stock-photo avatars.
+    promptModifier: "",
+    group: "ai_ugc",
+    icon: Sparkles,
+    creditHint: "30 credits",
   },
 ];
 

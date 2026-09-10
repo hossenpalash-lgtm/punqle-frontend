@@ -20,14 +20,17 @@ import {
   addMusicToAvatarVideo,
   concatVideos,
   base64ToFile,
+  checkAiActorVideoStatus,
   checkAvatarVideoStatus,
   checkCinematicUgcStatus,
   checkVideoStatus,
   fetchAvatarOptions,
   fetchAvatarVoices,
   fetchBusinessProfile,
+  fetchImageActors,
   generateAdCaptions,
   generateVideoScriptAngles,
+  startAiActorVideoGeneration,
   startAvatarVideoGeneration,
   startCinematicUgcGeneration,
   startVideoGeneration,
@@ -35,6 +38,7 @@ import {
   type AdGoal,
   type ApiAvatarOption,
   type ApiAvatarVoicesResponse,
+  type ApiImageActor,
   type ApiVideoOperation,
   type ApiVideoScriptAngle,
   type AvatarLanguage,
@@ -63,6 +67,10 @@ const AVATAR_STANDARD_CREDIT_COST = 4;
 // 480p, ~$0.231/s at 720p for an 8s clip) — matches main.py's
 // CINEMATIC_UGC_CREDIT_COST exactly.
 const CINEMATIC_UGC_CREDIT_COST: Record<AvatarTier, number> = { standard: 25, premium: 46 };
+// AI Actor talking video (OmniHuman) — 8s x $0.14/s = $1.12 real cost,
+// matches main.py's AI_ACTOR_VIDEO_CREDIT_COST exactly. One fixed price,
+// no tier (OmniHuman has no cheap/expensive engine split like HeyGen).
+const AI_ACTOR_VIDEO_CREDIT_COST = 30;
 
 type WizardStep = "create" | "generating" | "result" | "receiving";
 
@@ -187,6 +195,16 @@ export function AdVideoForm({
   const [cinematicUgcTier, setCinematicUgcTier] = useState<AvatarTier>("standard");
   const [cinematicUgcScenePrompt, setCinematicUgcScenePrompt] = useState("");
 
+  // "Punqle Actors" style — OmniHuman animates one of Punqle's own
+  // _IMAGE_AD_ACTORS personas (same library Image Ad's Actor picker
+  // uses) to read the picked script's narration, instead of a HeyGen
+  // stock avatar. No tier, no voice picker this round — a default TTS
+  // voice is picked server-side from the actor's own gender.
+  const [actors, setActors] = useState<ApiImageActor[]>([]);
+  const [actorsLoading, setActorsLoading] = useState(false);
+  const [actorGenderFilter, setActorGenderFilter] = useState<"all" | "female" | "male">("all");
+  const [selectedActorId, setSelectedActorId] = useState<string | null>(null);
+
   // Try-On's animate step always renders 9:16 (a portrait photo of a
   // standing person) — the handed-off video really is that shape,
   // regardless of this form's own 16:9 default.
@@ -272,6 +290,21 @@ export function AdVideoForm({
           // the voice picker just won't show, not worth a loud error
           // over a free, secondary customization.
         });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoStyle]);
+
+  // Punqle Actors' catalog is the same free, already-live GET
+  // /ads/image-actors Image Ad's own Actor picker uses — loads as soon
+  // as this style is picked, same lazy-on-select pattern as Avatar above.
+  useEffect(() => {
+    if (videoStyle !== "ai_actor") return;
+    if (actors.length === 0 && !actorsLoading) {
+      setActorsLoading(true);
+      fetchImageActors()
+        .then((r) => setActors(r.actors))
+        .catch(() => {})
+        .finally(() => setActorsLoading(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoStyle]);
@@ -417,6 +450,32 @@ export function AdVideoForm({
     }
   };
 
+  const pollAiActorVideo = async (predictionId: string) => {
+    try {
+      const r = await checkAiActorVideoStatus(predictionId);
+      if (!r.done) {
+        pollTimeoutRef.current = setTimeout(() => pollAiActorVideo(predictionId), POLL_INTERVAL_MS);
+        return;
+      }
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setGenerating(false);
+      if (r.credits_remaining !== null) setCredits(r.credits_remaining);
+      if (r.video_base64) {
+        setVideoUrl(`data:video/mp4;base64,${r.video_base64}`);
+        setAvatarVideoBase64(r.video_base64);
+        setIsAvatarResult(true);
+        setStep("result");
+      } else {
+        setError("The actor video didn't come back — please try again.");
+        setStep("create");
+      }
+    } catch (err) {
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setGenerating(false);
+      setError(err instanceof Error ? err.message : "Couldn't check the actor video's status.");
+    }
+  };
+
   // Free — mixes a real licensed track under the avatar's existing
   // dialogue (not a replacement), so re-picking a mood always starts
   // from the same original avatarVideoBase64, never re-mixing an
@@ -547,6 +606,38 @@ export function AdVideoForm({
     }
   };
 
+  // Punqle Actors (OmniHuman) — same script-then-generate shape as
+  // handleGenerateAvatarVideo, but animates one of Punqle's own personas
+  // instead of calling HeyGen. Writes into the same avatarVideoBase64/
+  // isAvatarResult state avatar/Cinematic UGC already share, so the
+  // whole existing result screen (music/scene/captions/publish) works
+  // unmodified.
+  const handleGenerateAiActorVideo = async (
+    descriptionOverride: string,
+    scriptOverride: { headline: string; narration: string },
+  ) => {
+    if (!selectedActorId || generating || (credits !== null && credits < AI_ACTOR_VIDEO_CREDIT_COST)) return;
+    setGenerating(true);
+    setError(null);
+    setVideoUrl(null);
+    setElapsedSeconds(0);
+    setStep("generating");
+    elapsedIntervalRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    try {
+      const capResult = await generateAdCaptions(descriptionOverride.trim(), goal, angle, 1);
+      setCaption(capResult.captions[0]?.facebook_caption ?? "");
+      setHeadline(scriptOverride.headline);
+
+      const r = await startAiActorVideoGeneration(selectedActorId, scriptOverride.narration, scriptLanguage);
+      pollTimeoutRef.current = setTimeout(() => pollAiActorVideo(r.prediction_id), POLL_INTERVAL_MS);
+    } catch (err) {
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      setGenerating(false);
+      setError(err instanceof Error ? err.message : "Couldn't start the actor video.");
+      setStep("create");
+    }
+  };
+
   const pollCinematicUgcVideo = async (predictionId: string) => {
     try {
       const r = await checkCinematicUgcStatus(predictionId);
@@ -637,6 +728,8 @@ export function AdVideoForm({
 
       if (videoStyle === "avatar") {
         await handleGenerateAvatarVideo(description, script);
+      } else if (videoStyle === "ai_actor") {
+        await handleGenerateAiActorVideo(description, script);
       } else {
         await handleGenerate({ description, angle: picked.angle, script, file: effectiveFile });
       }
@@ -731,6 +824,8 @@ export function AdVideoForm({
     setCaptionStyle("bold");
     setCinematicUgcTier("standard");
     setCinematicUgcScenePrompt("");
+    setActorGenderFilter("all");
+    setSelectedActorId(null);
   };
 
   const handleHeadlineChange = (value: string) => {
@@ -744,6 +839,7 @@ export function AdVideoForm({
   const avatarInsufficientCredits =
     credits !== null && credits < (avatarTier === "premium" ? VIDEO_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST);
   const cinematicUgcInsufficientCredits = credits !== null && credits < CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier];
+  const aiActorInsufficientCredits = credits !== null && credits < AI_ACTOR_VIDEO_CREDIT_COST;
 
   if (step === "result" && videoUrl) {
     return (
@@ -925,13 +1021,17 @@ export function AdVideoForm({
     );
   }
 
-  if (step === "generating" && (videoStyle === "avatar" || videoStyle === "cinematic_ugc")) {
+  if (step === "generating" && (videoStyle === "avatar" || videoStyle === "cinematic_ugc" || videoStyle === "ai_actor")) {
     return (
       <div className="rounded-2xl bg-card p-6" style={{ boxShadow: "var(--shadow-card)" }}>
         <div className="flex flex-col items-center justify-center gap-3 text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm font-semibold text-foreground">
-            {videoStyle === "avatar" ? "Generating your AI presenter video..." : "Generating your cinematic UGC video..."}
+            {videoStyle === "avatar"
+              ? "Generating your AI presenter video..."
+              : videoStyle === "ai_actor"
+                ? "Generating your actor video..."
+                : "Generating your cinematic UGC video..."}
           </p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
@@ -979,7 +1079,9 @@ export function AdVideoForm({
 
   const busy = inputFetching || anglesLoading || generating;
   const styleNeedsMoreInput =
-    (videoStyle === "avatar" && !selectedAvatarId) || (videoStyle === "cinematic_ugc" && !cinematicUgcScenePrompt.trim());
+    (videoStyle === "avatar" && !selectedAvatarId) ||
+    (videoStyle === "cinematic_ugc" && !cinematicUgcScenePrompt.trim()) ||
+    (videoStyle === "ai_actor" && !selectedActorId);
   const currentCost =
     videoStyle === "avatar"
       ? avatarTier === "premium"
@@ -987,9 +1089,17 @@ export function AdVideoForm({
         : AVATAR_STANDARD_CREDIT_COST
       : videoStyle === "cinematic_ugc"
         ? CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier]
-        : VIDEO_CREDIT_COST;
+        : videoStyle === "ai_actor"
+          ? AI_ACTOR_VIDEO_CREDIT_COST
+          : VIDEO_CREDIT_COST;
   const currentInsufficientCredits =
-    videoStyle === "avatar" ? avatarInsufficientCredits : videoStyle === "cinematic_ugc" ? cinematicUgcInsufficientCredits : insufficientCredits;
+    videoStyle === "avatar"
+      ? avatarInsufficientCredits
+      : videoStyle === "cinematic_ugc"
+        ? cinematicUgcInsufficientCredits
+        : videoStyle === "ai_actor"
+          ? aiActorInsufficientCredits
+          : insufficientCredits;
 
   return (
     <div className="flex flex-col items-center text-center">
@@ -1127,7 +1237,68 @@ export function AdVideoForm({
             </>
           )}
 
-          {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && (
+          {videoStyle === "ai_actor" && (
+            <div className="mb-4 rounded-2xl bg-card p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Choose your actor
+              </p>
+              <div className="mb-3 flex gap-2">
+                {(["all", "female", "male"] as const).map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setActorGenderFilter(g)}
+                    className={[
+                      "flex-1 rounded-full px-3 py-2 text-xs font-semibold capitalize",
+                      actorGenderFilter === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                    ].join(" ")}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+              {actorsLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {actors
+                    .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
+                    .map((a) => {
+                      const selected = selectedActorId === a.id;
+                      return (
+                        <button
+                          key={a.id}
+                          onClick={() => setSelectedActorId(a.id)}
+                          className="flex flex-col items-center gap-1"
+                        >
+                          <span
+                            className={[
+                              "relative aspect-square w-full overflow-hidden rounded-xl",
+                              selected ? "ring-2 ring-primary" : "",
+                            ].join(" ")}
+                          >
+                            <img
+                              src={`data:image/jpeg;base64,${a.preview_image_base64}`}
+                              alt={a.name}
+                              className="h-full w-full object-cover"
+                            />
+                            {selected && (
+                              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                <Check className="h-2.5 w-2.5" />
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[10px] font-medium text-foreground">{a.name}</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && (
             <>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 What should the ad say?
@@ -1208,7 +1379,7 @@ export function AdVideoForm({
 
       <div className="mb-4 w-full rounded-2xl border border-dashed border-border bg-secondary/60 p-3 text-center text-xs font-semibold text-foreground">
         1 video · {currentCost} credits ·{" "}
-        {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" ? "about 1-2 min" : "usually a few minutes"}
+        {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" ? "about 1-2 min" : "usually a few minutes"}
       </div>
 
       {currentInsufficientCredits && (
@@ -1222,7 +1393,10 @@ export function AdVideoForm({
       {styleNeedsMoreInput && videoStyle === "cinematic_ugc" && (
         <p className="mb-4 text-xs text-muted-foreground">Open Settings and describe what happens in the shot first.</p>
       )}
-      {hasLogo && videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && (
+      {styleNeedsMoreInput && videoStyle === "ai_actor" && (
+        <p className="mb-4 text-xs text-muted-foreground">Open Settings and pick an actor first.</p>
+      )}
+      {hasLogo && videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && (
         <p className="mb-4 text-xs text-muted-foreground">Your Brand Kit logo will be added to this video automatically.</p>
       )}
 

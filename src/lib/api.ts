@@ -340,6 +340,33 @@ export function checkCinematicUgcStatus(predictionId: string): Promise<ApiAvatar
   });
 }
 
+// AI Actor talking video (OmniHuman, via Replicate) — a fourth video
+// path, same "reads a script" job as Avatar but using one of Punqle's
+// own fetchImageActors() personas instead of a HeyGen stock avatar.
+export interface ApiAiActorVideoOperation {
+  prediction_id: string;
+}
+
+export function startAiActorVideoGeneration(
+  actorId: string,
+  narration: string,
+  language: "english" | "bangla" = "english",
+): Promise<ApiAiActorVideoOperation> {
+  return apiFetch<ApiAiActorVideoOperation>("/ads/generate-ai-actor-video", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ actor_id: actorId, narration, language }),
+  });
+}
+
+export function checkAiActorVideoStatus(predictionId: string): Promise<ApiAvatarVideoStatusResponse> {
+  return apiFetch<ApiAvatarVideoStatusResponse>("/ads/ai-actor-video-status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prediction_id: predictionId }),
+  });
+}
+
 export type AvatarMusicMood = "upbeat" | "calm" | "energetic" | "corporate";
 
 // Free — mixes a real licensed background track (HeyGen's own music

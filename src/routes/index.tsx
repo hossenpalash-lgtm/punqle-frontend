@@ -237,35 +237,44 @@ function HomeScreen() {
           hero+pill screen above instead. See the comment above that block. */}
       {(tab === "single" || tab === "video" || tab === "home") && (
         <div className={tab === "home" ? "lg:hidden" : undefined}>
-          <h1 className="font-display mb-1 flex items-center gap-2 text-xl font-extrabold text-foreground">
-            <Sparkles className="h-4 w-4 text-accent" />
-            Social Content
-          </h1>
-          <p className="mb-4 text-sm text-muted-foreground">Create scroll-stopping posts for your social media.</p>
-          <div className="mb-6 grid grid-cols-2 gap-2">
-            {CONTENT_TYPES.map(({ tab: t, label, description, icon: Icon }, i) => (
-              <button
-                key={i}
-                onClick={() => goTo(t)}
-                className={[
-                  "flex flex-col items-center gap-2 rounded-2xl p-3 text-center transition-colors",
-                  tab === t ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
-                ].join(" ")}
-                style={tab !== t ? { boxShadow: "var(--shadow-card)" } : undefined}
-              >
-                <Icon className="h-6 w-6" />
-                <span className="text-xs font-semibold">{label}</span>
-                <span
+          <div className="mb-1 flex items-center justify-between gap-3">
+            <h1 className="font-display flex items-center gap-2 text-xl font-extrabold text-foreground">
+              {tab === "single" && entryHint === "carousel" ? (
+                <>
+                  <Images className="h-4 w-4 text-accent" />
+                  Carousel
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 text-accent" />
+                  Social Content
+                </>
+              )}
+            </h1>
+            {/* Compact format switcher, same treatment as Ad Creation's
+                Image Ad / Video Ad toggle — quiet enough to read as
+                "switch format", not a repeated forced choice. */}
+            <div className="inline-flex shrink-0 gap-1 rounded-full bg-secondary p-1">
+              {CONTENT_TYPES.map(({ tab: t, label, icon: Icon }, i) => (
+                <button
+                  key={i}
+                  onClick={() => goTo(t)}
                   className={[
-                    "text-[10px]",
-                    tab === t ? "text-primary-foreground/80" : "text-muted-foreground",
+                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                    tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground",
                   ].join(" ")}
                 >
-                  {description}
-                </span>
-              </button>
-            ))}
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
+          <p className="mb-6 text-sm text-muted-foreground">
+            {tab === "single" && entryHint === "carousel"
+              ? "Pick a few images and we'll turn them into one swipeable post."
+              : "Create scroll-stopping posts for your social media."}
+          </p>
         </div>
       )}
 

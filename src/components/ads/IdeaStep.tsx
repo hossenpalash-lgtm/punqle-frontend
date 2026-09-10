@@ -124,10 +124,12 @@ export function IdeaStep({
   return (
     <div className="flex flex-col items-center text-center">
       <h1 className="font-display mb-2 text-2xl font-extrabold text-foreground">
-        What do you want to post?
+        {entryHint === "carousel" ? "What's in your carousel?" : "What do you want to post?"}
       </h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        Tell Punqle what you want to create — no design experience needed.
+        {entryHint === "carousel"
+          ? "Tell Punqle what to feature — we'll turn it into a swipeable set of images."
+          : "Tell Punqle what you want to create — no design experience needed."}
       </p>
 
       <textarea

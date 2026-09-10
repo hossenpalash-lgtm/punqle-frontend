@@ -225,9 +225,10 @@ export function fetchAvatarOptions(): Promise<ApiAvatarOptionsResponse> {
 
 // Image Ad's actor library — a small, fixed set of fully AI-synthesized
 // personas (never a real person's photo, see backend's _IMAGE_AD_ACTORS
-// comment for why). Only usable today when no product photo is uploaded
-// (Image Ad generates the whole scene from scratch in that case) —
-// AdCreationForm hides this picker once a file is chosen.
+// comment for why). Works both when Punqle generates the whole scene
+// from scratch and when the user uploads their own product photo (real
+// two-image Gemini compositing, validated via a live spike before it
+// shipped — see backend's _generate_banner_image_with_actor).
 export interface ApiImageActor {
   id: string;
   name: string;

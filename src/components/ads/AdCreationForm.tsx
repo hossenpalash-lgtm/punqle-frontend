@@ -128,9 +128,8 @@ export function AdCreationForm({
   // finishQuickCreate.
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  // Actor library — only usable when no product photo is uploaded (see
-  // fetchImageActors' own comment: compositing a persona onto a real
-  // uploaded photo isn't validated yet). Fetched once on mount — a fixed,
+  // Actor library — works with or without an uploaded photo (see
+  // fetchImageActors' own comment). Fetched once on mount — a fixed,
   // small (8-item) catalog, not per-generation.
   const [actors, setActors] = useState<ApiImageActor[]>([]);
   const [actorsLoading, setActorsLoading] = useState(false);
@@ -237,10 +236,6 @@ export function AdCreationForm({
       return f ? URL.createObjectURL(f) : null;
     });
     setFile(f);
-    // Actor + your-own-photo compositing isn't built yet (see api.ts's
-    // fetchImageActors comment) — clear any picked actor the moment a
-    // real photo is uploaded, rather than silently ignoring it later.
-    if (f) setActorId(undefined);
   };
 
   // `override` exists because finishQuickCreate below sets offerDescription/
@@ -285,18 +280,15 @@ export function AdCreationForm({
       // Reuses /ads/generate and /ads/generate-image-variant completely
       // unchanged — same 1-credit-per-image pricing as Image Post. Their
       // own bundled tone-based captions are discarded here, same as
-      // SinglePostForm already discards them today.
-      // actorId only makes sense (and is only sent) when there's no
-      // uploaded product photo — compositing a persona onto a real photo
-      // isn't validated yet, see fetchImageActors' comment in api.ts.
-      const effectiveActorId = sourceFile ? undefined : actorId;
-      const firstImage = await generateAd(finalStyledDescription, sourceFile, aspectRatio, effectiveActorId);
+      // SinglePostForm already discards them today. actorId works
+      // whether or not sourceFile is set — see fetchImageActors' comment.
+      const firstImage = await generateAd(finalStyledDescription, sourceFile, aspectRatio, actorId);
       setImages([firstImage.banner_image_base64]);
       setCredits(firstImage.credits_remaining);
       setGenerationStage(5);
 
       for (let i = 1; i < versions; i++) {
-        const r = await generateAdImageVariant(finalStyledDescription, sourceFile, aspectRatio, effectiveActorId);
+        const r = await generateAdImageVariant(finalStyledDescription, sourceFile, aspectRatio, actorId);
         setImages((prev) => [...prev, r.banner_image_base64]);
         setCredits(r.credits_remaining);
       }
@@ -644,17 +636,16 @@ export function AdCreationForm({
                 </div>
               )}
 
-              {/* Actor library — only when Punqle is generating the whole
-                  scene from scratch (no uploaded photo). Compositing a
-                  persona onto a real uploaded product photo isn't built
-                  yet, so this section simply doesn't appear once a photo
-                  is chosen above, rather than offering something that
-                  would silently be ignored. */}
-              {!file && (
-                <div className="mt-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Actor <span className="normal-case text-muted-foreground/70">(optional — have someone use the product)</span>
-                  </p>
+              {/* Actor library — works whether or not a photo is uploaded
+                  above: with no photo, the persona is woven into the
+                  from-scratch generation prompt; with an uploaded photo,
+                  the backend composites the persona onto that exact
+                  product photo (real two-image Gemini call, validated
+                  via a live spike before shipping). */}
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Actor <span className="normal-case text-muted-foreground/70">(optional — have someone use the product)</span>
+                </p>
                   <div className="mb-2 flex flex-wrap gap-1.5">
                     <button
                       onClick={() => setActorId(undefined)}
@@ -718,7 +709,6 @@ export function AdCreationForm({
                     </div>
                   )}
                 </div>
-              )}
             </div>
           )}
 

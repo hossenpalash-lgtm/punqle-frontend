@@ -271,35 +271,37 @@ function HomeScreen() {
 
       {(tab === "ad" || tab === "ad-video") && (
         <>
-          <h1 className="font-display mb-1 flex items-center gap-2 text-xl font-extrabold text-foreground">
-            <Megaphone className="h-4 w-4 text-accent" />
-            Ad Creation
-          </h1>
-          <p className="mb-4 text-sm text-muted-foreground">Tell Punqle what you're advertising — it does the rest.</p>
-          <div className="mb-6 grid grid-cols-2 gap-2">
-            {AD_TYPES.map(({ tab: t, label, description, icon: Icon }, i) => (
-              <button
-                key={i}
-                onClick={() => goTo(t)}
-                className={[
-                  "flex flex-col items-center gap-2 rounded-2xl p-3 text-center transition-colors",
-                  tab === t ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
-                ].join(" ")}
-                style={tab !== t ? { boxShadow: "var(--shadow-card)" } : undefined}
-              >
-                <Icon className="h-6 w-6" />
-                <span className="text-xs font-semibold">{label}</span>
-                <span
+          <div className="mb-1 flex items-center justify-between gap-3">
+            <h1 className="font-display flex items-center gap-2 text-xl font-extrabold text-foreground">
+              <Megaphone className="h-4 w-4 text-accent" />
+              Ad Creation
+            </h1>
+            {/* Compact format switcher, not a decision gate — arriving here
+                via a specific Home pill (Image Ad / AI UGC) already IS the
+                choice, so this must read as "you're on X, tap to switch"
+                rather than presenting two equal-weight options to pick
+                from again. Deliberately smaller/quieter than the create
+                screen's own primary controls (no description text, pill
+                shape, inline width) — see the two large cards this
+                replaced, flagged by the founder as re-asking a choice
+                that was already made. */}
+            <div className="inline-flex shrink-0 gap-1 rounded-full bg-secondary p-1">
+              {AD_TYPES.map(({ tab: t, label, icon: Icon }, i) => (
+                <button
+                  key={i}
+                  onClick={() => goTo(t)}
                   className={[
-                    "text-[10px]",
-                    tab === t ? "text-primary-foreground/80" : "text-muted-foreground",
+                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                    tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground",
                   ].join(" ")}
                 >
-                  {description}
-                </span>
-              </button>
-            ))}
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
+          <p className="mb-6 text-sm text-muted-foreground">Tell Punqle what you're advertising — it does the rest.</p>
         </>
       )}
 

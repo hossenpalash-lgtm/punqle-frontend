@@ -367,6 +367,40 @@ export function checkAiActorVideoStatus(predictionId: string): Promise<ApiAvatar
   });
 }
 
+// Punqle Actors v2 — a pre-baked Veo base clip per actor (generated once,
+// offline) redubbed with a fresh per-user narration track via Sync Labs,
+// replacing the OmniHuman pipeline above. voiceEngine is a real,
+// user-facing choice (see the "Voice" dropdown in AdVideoForm.tsx) — the
+// founder's own call after a live A/B/C listening test found the real
+// cost difference between the three negligible, matching how real
+// competitors already expose "which model" as a simple dropdown rather
+// than picking one winner.
+export type ActorVoiceEngine = "openai_natural" | "openai_standard" | "elevenlabs";
+
+export interface ApiActorVideoV2Operation {
+  prediction_id: string;
+}
+
+export function startActorVideoV2(
+  actorId: string,
+  narration: string,
+  voiceEngine: ActorVoiceEngine,
+): Promise<ApiActorVideoV2Operation> {
+  return apiFetch<ApiActorVideoV2Operation>("/ads/generate-actor-video-v2", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ actor_id: actorId, narration, voice_engine: voiceEngine }),
+  });
+}
+
+export function checkActorVideoV2Status(predictionId: string): Promise<ApiAvatarVideoStatusResponse> {
+  return apiFetch<ApiAvatarVideoStatusResponse>("/ads/actor-video-v2-status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prediction_id: predictionId }),
+  });
+}
+
 export type AvatarMusicMood = "upbeat" | "calm" | "energetic" | "corporate";
 
 // Free — mixes a real licensed background track (HeyGen's own music

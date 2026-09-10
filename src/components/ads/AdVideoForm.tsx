@@ -20,7 +20,7 @@ import {
   addMusicToAvatarVideo,
   concatVideos,
   base64ToFile,
-  checkAiActorVideoStatus,
+  checkActorVideoV2Status,
   checkAvatarVideoStatus,
   checkCinematicUgcStatus,
   checkVideoStatus,
@@ -30,11 +30,12 @@ import {
   fetchImageActors,
   generateAdCaptions,
   generateVideoScriptAngles,
-  startAiActorVideoGeneration,
+  startActorVideoV2,
   startAvatarVideoGeneration,
   startCinematicUgcGeneration,
   startVideoGeneration,
   understandProductLink,
+  type ActorVoiceEngine,
   type AdGoal,
   type ApiAvatarOption,
   type ApiAvatarVoicesResponse,
@@ -195,15 +196,20 @@ export function AdVideoForm({
   const [cinematicUgcTier, setCinematicUgcTier] = useState<AvatarTier>("standard");
   const [cinematicUgcScenePrompt, setCinematicUgcScenePrompt] = useState("");
 
-  // "Punqle Actors" style — OmniHuman animates one of Punqle's own
-  // _IMAGE_AD_ACTORS personas (same library Image Ad's Actor picker
-  // uses) to read the picked script's narration, instead of a HeyGen
-  // stock avatar. No tier, no voice picker this round — a default TTS
-  // voice is picked server-side from the actor's own gender.
+  // "Punqle Actors" style (v2) — a pre-baked Veo base clip per one of
+  // Punqle's own _IMAGE_AD_ACTORS personas (same library Image Ad's
+  // Actor picker uses), redubbed with a fresh per-user narration track
+  // via Sync Labs. voiceEngine is a real dropdown, not a hidden default
+  // — a live, founder-judged A/B/C listening test found the real cost
+  // difference between the three negligible, and a real competitor's own
+  // simple model-picker precedent settled on keeping all three rather
+  // than hardcoding one winner. "openai_natural" wins that listening
+  // test and is also the cheapest, hence the default.
   const [actors, setActors] = useState<ApiImageActor[]>([]);
   const [actorsLoading, setActorsLoading] = useState(false);
   const [actorGenderFilter, setActorGenderFilter] = useState<"all" | "female" | "male">("all");
   const [selectedActorId, setSelectedActorId] = useState<string | null>(null);
+  const [actorVoiceEngine, setActorVoiceEngine] = useState<ActorVoiceEngine>("openai_natural");
 
   // Try-On's animate step always renders 9:16 (a portrait photo of a
   // standing person) — the handed-off video really is that shape,
@@ -452,7 +458,7 @@ export function AdVideoForm({
 
   const pollAiActorVideo = async (predictionId: string) => {
     try {
-      const r = await checkAiActorVideoStatus(predictionId);
+      const r = await checkActorVideoV2Status(predictionId);
       if (!r.done) {
         pollTimeoutRef.current = setTimeout(() => pollAiActorVideo(predictionId), POLL_INTERVAL_MS);
         return;
@@ -606,12 +612,12 @@ export function AdVideoForm({
     }
   };
 
-  // Punqle Actors (OmniHuman) — same script-then-generate shape as
-  // handleGenerateAvatarVideo, but animates one of Punqle's own personas
-  // instead of calling HeyGen. Writes into the same avatarVideoBase64/
-  // isAvatarResult state avatar/Cinematic UGC already share, so the
-  // whole existing result screen (music/scene/captions/publish) works
-  // unmodified.
+  // Punqle Actors v2 — same script-then-generate shape as
+  // handleGenerateAvatarVideo, but redubs a pre-baked Veo clip of one of
+  // Punqle's own personas instead of calling HeyGen. Writes into the same
+  // avatarVideoBase64/isAvatarResult state avatar/Cinematic UGC already
+  // share, so the whole existing result screen (music/scene/captions/
+  // publish) works unmodified.
   const handleGenerateAiActorVideo = async (
     descriptionOverride: string,
     scriptOverride: { headline: string; narration: string },
@@ -628,7 +634,7 @@ export function AdVideoForm({
       setCaption(capResult.captions[0]?.facebook_caption ?? "");
       setHeadline(scriptOverride.headline);
 
-      const r = await startAiActorVideoGeneration(selectedActorId, scriptOverride.narration, scriptLanguage);
+      const r = await startActorVideoV2(selectedActorId, scriptOverride.narration, actorVoiceEngine);
       pollTimeoutRef.current = setTimeout(() => pollAiActorVideo(r.prediction_id), POLL_INTERVAL_MS);
     } catch (err) {
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
@@ -826,6 +832,7 @@ export function AdVideoForm({
     setCinematicUgcScenePrompt("");
     setActorGenderFilter("all");
     setSelectedActorId(null);
+    setActorVoiceEngine("openai_natural");
   };
 
   const handleHeadlineChange = (value: string) => {
@@ -1295,6 +1302,18 @@ export function AdVideoForm({
                     })}
                 </div>
               )}
+              <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Voice
+              </p>
+              <select
+                value={actorVoiceEngine}
+                onChange={(e) => setActorVoiceEngine(e.target.value as ActorVoiceEngine)}
+                className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="openai_natural">OpenAI (Natural) — Recommended</option>
+                <option value="openai_standard">OpenAI (Standard)</option>
+                <option value="elevenlabs">ElevenLabs</option>
+              </select>
             </div>
           )}
 

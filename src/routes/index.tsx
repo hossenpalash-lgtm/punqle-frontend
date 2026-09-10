@@ -253,22 +253,30 @@ function HomeScreen() {
             </h1>
             {/* Compact format switcher, same treatment as Ad Creation's
                 Image Ad / Video Ad toggle — quiet enough to read as
-                "switch format", not a repeated forced choice. */}
-            <div className="inline-flex shrink-0 gap-1 rounded-full bg-secondary p-1">
-              {CONTENT_TYPES.map(({ tab: t, label, icon: Icon }, i) => (
-                <button
-                  key={i}
-                  onClick={() => goTo(t)}
-                  className={[
-                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                    tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground",
-                  ].join(" ")}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {label}
-                </button>
-              ))}
-            </div>
+                "switch format", not a repeated forced choice. Hidden for
+                Carousel specifically: CarouselBuilder only ever combines
+                already-generated IMAGES (no video equivalent exists), so
+                "Video" isn't a real option here — showing it would let a
+                tap silently abandon the carousel and land in an unrelated
+                single-video flow with no warning. Carousel is implicitly
+                Image Post format; nothing to switch between. */}
+            {!(tab === "single" && entryHint === "carousel") && (
+              <div className="inline-flex shrink-0 gap-1 rounded-full bg-secondary p-1">
+                {CONTENT_TYPES.map(({ tab: t, label, icon: Icon }, i) => (
+                  <button
+                    key={i}
+                    onClick={() => goTo(t)}
+                    className={[
+                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                      tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground",
+                    ].join(" ")}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <p className="mb-6 text-sm text-muted-foreground">
             {tab === "single" && entryHint === "carousel"

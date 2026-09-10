@@ -190,6 +190,25 @@ export function AvatarPickerStep({
               <button
                 key={a.avatar_id}
                 onClick={() => onSelectAvatar(a.avatar_id, a.gender)}
+                // Hover plays HeyGen's own real preview clip (every avatar
+                // has one, confirmed live) over the static photo — the
+                // static-only grid was flagged as looking flat/like stills
+                // next to Arcads' own actor library, which shows moving
+                // footage. preload="none" keeps the grid's initial load
+                // light (no bandwidth spent until someone actually
+                // hovers); touch devices simply keep seeing the photo,
+                // same as before this change.
+                onMouseEnter={(e) => {
+                  const video = e.currentTarget.querySelector("video");
+                  video?.play().catch(() => {});
+                }}
+                onMouseLeave={(e) => {
+                  const video = e.currentTarget.querySelector("video");
+                  if (video) {
+                    video.pause();
+                    video.currentTime = 0;
+                  }
+                }}
                 className={[
                   // aspect-[3/4] lives on the button (the grid item) itself,
                   // not just the img inside it — a grid item's own auto-height
@@ -220,6 +239,16 @@ export function AvatarPickerStep({
                   />
                 ) : (
                   <div className="absolute inset-0 h-full w-full bg-secondary" />
+                )}
+                {a.preview_video_url && (
+                  <video
+                    src={a.preview_video_url}
+                    muted
+                    loop
+                    playsInline
+                    preload="none"
+                    className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-200 hover:opacity-100"
+                  />
                 )}
                 {isSelected && (
                   <span

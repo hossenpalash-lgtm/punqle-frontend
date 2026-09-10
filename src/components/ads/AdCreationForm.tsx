@@ -4,6 +4,7 @@ import {
   base64ToFile,
   enhanceImage,
   fetchBusinessProfile,
+  fetchImageActors,
   generateAd,
   generateAdCaptions,
   generateAdImageVariant,
@@ -11,6 +12,7 @@ import {
   translateCaptions,
   understandProductLink,
   type ApiAdCaptionVariantWithAngle,
+  type ApiImageActor,
   type AdGoal,
   type AspectRatio,
   type CaptionLength,
@@ -126,6 +128,14 @@ export function AdCreationForm({
   // finishQuickCreate.
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // Actor library — only usable when no product photo is uploaded (see
+  // fetchImageActors' own comment: compositing a persona onto a real
+  // uploaded photo isn't validated yet). Fetched once on mount — a fixed,
+  // small (8-item) catalog, not per-generation.
+  const [actors, setActors] = useState<ApiImageActor[]>([]);
+  const [actorsLoading, setActorsLoading] = useState(false);
+  const [actorGenderFilter, setActorGenderFilter] = useState<"all" | "female" | "male">("all");
+  const [actorId, setActorId] = useState<string | undefined>(undefined);
 
   // Platform + versions — versions defaults to 1 (fast, single result),
   // matching what Quick Create already silently used; the old full wizard's
@@ -185,6 +195,14 @@ export function AdCreationForm({
   }, [selectedCaptionIndex, adCaptions]);
 
   useEffect(() => {
+    setActorsLoading(true);
+    fetchImageActors()
+      .then((r) => setActors(r.actors))
+      .catch(() => {})
+      .finally(() => setActorsLoading(false));
+  }, []);
+
+  useEffect(() => {
     if (step !== "result" || images.length === 0) return;
     const variant = adCaptions[selectedCaptionIndex];
     if (!variant) return;
@@ -219,6 +237,10 @@ export function AdCreationForm({
       return f ? URL.createObjectURL(f) : null;
     });
     setFile(f);
+    // Actor + your-own-photo compositing isn't built yet (see api.ts's
+    // fetchImageActors comment) — clear any picked actor the moment a
+    // real photo is uploaded, rather than silently ignoring it later.
+    if (f) setActorId(undefined);
   };
 
   // `override` exists because finishQuickCreate below sets offerDescription/
@@ -264,13 +286,17 @@ export function AdCreationForm({
       // unchanged — same 1-credit-per-image pricing as Image Post. Their
       // own bundled tone-based captions are discarded here, same as
       // SinglePostForm already discards them today.
-      const firstImage = await generateAd(finalStyledDescription, sourceFile, aspectRatio);
+      // actorId only makes sense (and is only sent) when there's no
+      // uploaded product photo — compositing a persona onto a real photo
+      // isn't validated yet, see fetchImageActors' comment in api.ts.
+      const effectiveActorId = sourceFile ? undefined : actorId;
+      const firstImage = await generateAd(finalStyledDescription, sourceFile, aspectRatio, effectiveActorId);
       setImages([firstImage.banner_image_base64]);
       setCredits(firstImage.credits_remaining);
       setGenerationStage(5);
 
       for (let i = 1; i < versions; i++) {
-        const r = await generateAdImageVariant(finalStyledDescription, sourceFile, aspectRatio);
+        const r = await generateAdImageVariant(finalStyledDescription, sourceFile, aspectRatio, effectiveActorId);
         setImages((prev) => [...prev, r.banner_image_base64]);
         setCredits(r.credits_remaining);
       }
@@ -438,6 +464,8 @@ export function AdCreationForm({
     setVisualDirection("clean_premium");
     setShowMoreStyles(false);
     handleFileChange(null);
+    setActorId(undefined);
+    setActorGenderFilter("all");
     setPlatform("instagram");
     setVersions(1);
     setAdCaptions([]);
@@ -613,6 +641,82 @@ export function AdCreationForm({
                   <button onClick={() => handleFileChange(null)} aria-label="Remove photo" className="text-muted-foreground">
                     <X className="h-3.5 w-3.5" />
                   </button>
+                </div>
+              )}
+
+              {/* Actor library — only when Punqle is generating the whole
+                  scene from scratch (no uploaded photo). Compositing a
+                  persona onto a real uploaded product photo isn't built
+                  yet, so this section simply doesn't appear once a photo
+                  is chosen above, rather than offering something that
+                  would silently be ignored. */}
+              {!file && (
+                <div className="mt-4">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Actor <span className="normal-case text-muted-foreground/70">(optional — have someone use the product)</span>
+                  </p>
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => setActorId(undefined)}
+                      className={[
+                        "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                        !actorId ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                      ].join(" ")}
+                    >
+                      None
+                    </button>
+                    {(["all", "female", "male"] as const).map((g) => (
+                      <button
+                        key={g}
+                        onClick={() => setActorGenderFilter(g)}
+                        className={[
+                          "rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors",
+                          actorGenderFilter === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                        ].join(" ")}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                  {actorsLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-2">
+                      {actors
+                        .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
+                        .map((a) => {
+                          const selected = actorId === a.id;
+                          return (
+                            <button
+                              key={a.id}
+                              onClick={() => setActorId(selected ? undefined : a.id)}
+                              className="flex flex-col items-center gap-1"
+                            >
+                              <span
+                                className={[
+                                  "relative aspect-square w-full overflow-hidden rounded-xl",
+                                  selected ? "ring-2 ring-primary" : "",
+                                ].join(" ")}
+                              >
+                                <img
+                                  src={`data:image/jpeg;base64,${a.preview_image_base64}`}
+                                  alt={a.name}
+                                  className="h-full w-full object-cover"
+                                />
+                                {selected && (
+                                  <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                    <Check className="h-2.5 w-2.5" />
+                                  </span>
+                                )}
+                              </span>
+                              <span className="text-[10px] font-medium text-foreground">{a.name}</span>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

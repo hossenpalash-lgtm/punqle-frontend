@@ -223,6 +223,27 @@ export function fetchAvatarOptions(): Promise<ApiAvatarOptionsResponse> {
   return apiFetch<ApiAvatarOptionsResponse>("/ads/avatar-options");
 }
 
+// Image Ad's actor library — a small, fixed set of fully AI-synthesized
+// personas (never a real person's photo, see backend's _IMAGE_AD_ACTORS
+// comment for why). Only usable today when no product photo is uploaded
+// (Image Ad generates the whole scene from scratch in that case) —
+// AdCreationForm hides this picker once a file is chosen.
+export interface ApiImageActor {
+  id: string;
+  name: string;
+  gender: string;
+  style: string;
+  preview_image_base64: string;
+}
+
+export interface ApiImageActorsResponse {
+  actors: ApiImageActor[];
+}
+
+export function fetchImageActors(): Promise<ApiImageActorsResponse> {
+  return apiFetch<ApiImageActorsResponse>("/ads/image-actors");
+}
+
 export interface ApiAvatarVoice {
   voice_id: string;
   name: string;
@@ -439,10 +460,12 @@ export function generateAd(
   itemDescription: string,
   file: File | null,
   aspectRatio: AspectRatio = "square",
+  actorId?: string,
 ): Promise<ApiAdGenerateResponse> {
   const formData = new FormData();
   if (file) formData.append("file", file);
   const params = new URLSearchParams({ item_description: itemDescription, aspect_ratio: aspectRatio });
+  if (actorId) params.set("actor_id", actorId);
   return apiFetch<ApiAdGenerateResponse>(`/ads/generate?${params}`, {
     method: "POST",
     body: formData,
@@ -453,10 +476,12 @@ export function generateAdImageVariant(
   itemDescription: string,
   file: File | null,
   aspectRatio: AspectRatio = "square",
+  actorId?: string,
 ): Promise<ApiAdImageVariantResponse> {
   const formData = new FormData();
   if (file) formData.append("file", file);
   const params = new URLSearchParams({ item_description: itemDescription, aspect_ratio: aspectRatio });
+  if (actorId) params.set("actor_id", actorId);
   return apiFetch<ApiAdImageVariantResponse>(`/ads/generate-image-variant?${params}`, {
     method: "POST",
     body: formData,

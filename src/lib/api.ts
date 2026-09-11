@@ -262,6 +262,25 @@ export function fetchActorSituations(): Promise<ApiActorSituationsResponse> {
   return apiFetch<ApiActorSituationsResponse>("/ads/actor-situations");
 }
 
+// Real "hover to preview" video for one actor's pre-baked clip — mirrors
+// AvatarPickerStep's HeyGen preview_video_url pattern (play on hover,
+// preload="none" so nothing loads until someone actually hovers), but
+// Punqle's own clips aren't at a public CDN URL, so this fetches the raw
+// bytes (with the real session's auth header, since apiFetch's plain
+// .json() parsing doesn't fit a video response) and hands back a blob
+// URL a <video src> can use directly. Caller is responsible for
+// revoking it (URL.revokeObjectURL) once no longer needed.
+export async function fetchActorPreviewVideoUrl(actorId: string): Promise<string> {
+  const token = await getAccessToken();
+  if (!token) throw new Error("Your session has expired. Please log in again.");
+  const res = await fetch(`${API_BASE}/ads/actor-preview-video?actor_id=${encodeURIComponent(actorId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`Server error ${res.status}`);
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
 export interface ApiAvatarVoice {
   voice_id: string;
   name: string;

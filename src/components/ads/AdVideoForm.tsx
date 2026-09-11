@@ -24,6 +24,7 @@ import {
   checkAvatarVideoStatus,
   checkCinematicUgcStatus,
   checkVideoStatus,
+  fetchActorPreviewVideoUrl,
   fetchActorSituations,
   fetchAvatarOptions,
   fetchAvatarVoices,
@@ -216,6 +217,8 @@ export function AdVideoForm({
   // from this map isn't broken, just not yet populated (real library
   // still growing, see scripts/populate_actor_video_clips.py).
   const [actorSituations, setActorSituations] = useState<Record<string, string>>({});
+  // actor_id -> blob URL, populated lazily on first hover (fetchActorPreviewVideoUrl)
+  const [actorPreviewVideos, setActorPreviewVideos] = useState<Record<string, string>>({});
 
   // Real "Audio Settings" review step (added 2026-09-11, matching a real
   // competitor's own script/emotion-tag editor the founder pointed to) —
@@ -343,6 +346,15 @@ export function AdVideoForm({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoStyle]);
+
+  // Releases cached actor-preview blob URLs on unmount — each one holds
+  // real memory until revoked.
+  useEffect(() => {
+    return () => {
+      Object.values(actorPreviewVideos).forEach((url) => URL.revokeObjectURL(url));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleFileChange = (f: File | null) => {
     setPreviewUrl((prev) => {
@@ -1438,11 +1450,34 @@ export function AdVideoForm({
                       const situationLabel = situationId
                         ? situationId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
                         : "Coming soon";
+                      const previewUrl = actorPreviewVideos[a.id];
                       return (
                         <button
                           key={a.id}
                           onClick={() => ready && setSelectedActorId(a.id)}
                           disabled={!ready}
+                          // Hover plays this actor's real pre-baked situation
+                          // clip, same "load only on hover" principle as the
+                          // HeyGen avatar picker's own preview — fetched once
+                          // per actor then cached (see actorPreviewVideos).
+                          onMouseEnter={(e) => {
+                            if (!ready) return;
+                            if (!actorPreviewVideos[a.id]) {
+                              fetchActorPreviewVideoUrl(a.id)
+                                .then((url) => setActorPreviewVideos((prev) => ({ ...prev, [a.id]: url })))
+                                .catch(() => {});
+                              return;
+                            }
+                            const video = e.currentTarget.querySelector("video");
+                            video?.play().catch(() => {});
+                          }}
+                          onMouseLeave={(e) => {
+                            const video = e.currentTarget.querySelector("video");
+                            if (video) {
+                              video.pause();
+                              video.currentTime = 0;
+                            }
+                          }}
                           className={["flex flex-col items-center gap-1", ready ? "" : "cursor-not-allowed opacity-40"].join(" ")}
                         >
                           <span
@@ -1456,6 +1491,16 @@ export function AdVideoForm({
                               alt={a.name}
                               className="h-full w-full object-cover"
                             />
+                            {previewUrl && (
+                              <video
+                                src={previewUrl}
+                                muted
+                                loop
+                                playsInline
+                                autoPlay
+                                className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-200 hover:opacity-100"
+                              />
+                            )}
                             {selected && (
                               <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
                                 <Check className="h-2.5 w-2.5" />

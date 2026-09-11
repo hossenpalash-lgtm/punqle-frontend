@@ -211,7 +211,12 @@ export function AdVideoForm({
   const [actorsLoading, setActorsLoading] = useState(false);
   const [actorGenderFilter, setActorGenderFilter] = useState<"all" | "female" | "male">("all");
   const [selectedActorId, setSelectedActorId] = useState<string | null>(null);
-  const [actorVoiceEngine, setActorVoiceEngine] = useState<ActorVoiceEngine>("openai_natural");
+  // Default is "openai_standard", not "openai_natural" — a real,
+  // founder-judged listening test against a saved reference clip found
+  // Standard's brisker pace more natural than Natural's "unhurried"
+  // instructed pacing (2026-09-11), overriding the earlier listening
+  // test that had picked Natural.
+  const [actorVoiceEngine, setActorVoiceEngine] = useState<ActorVoiceEngine>("openai_standard");
   // actor_id -> situation_id (e.g. "coffee_shop") for whichever actors
   // actually have a pre-baked clip ready right now — an actor missing
   // from this map isn't broken, just not yet populated (real library
@@ -912,7 +917,7 @@ export function AdVideoForm({
     setCinematicUgcScenePrompt("");
     setActorGenderFilter("all");
     setSelectedActorId(null);
-    setActorVoiceEngine("openai_natural");
+    setActorVoiceEngine("openai_standard");
     setActorNarrationDraft("");
     setElevenlabsStability(0.5);
     setElevenlabsSimilarity(0.75);
@@ -1522,8 +1527,8 @@ export function AdVideoForm({
                 onChange={(e) => setActorVoiceEngine(e.target.value as ActorVoiceEngine)}
                 className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <option value="openai_natural">OpenAI (Natural) — Recommended</option>
-                <option value="openai_standard">OpenAI (Standard)</option>
+                <option value="openai_natural">OpenAI (Natural)</option>
+                <option value="openai_standard">OpenAI (Standard) — Recommended</option>
                 <option value="elevenlabs">ElevenLabs</option>
               </select>
             </div>

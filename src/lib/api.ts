@@ -245,6 +245,23 @@ export function fetchImageActors(): Promise<ApiImageActorsResponse> {
   return apiFetch<ApiImageActorsResponse>("/ads/image-actors");
 }
 
+// Punqle Actors v2's real situation library — each actor has exactly one
+// pre-baked situation (e.g. "Maya — Coffee Shop"). Also doubles as the
+// real generation-readiness signal: an actor with no entry here has no
+// clip yet (library still being populated), not broken.
+export interface ApiActorSituation {
+  actor_id: string;
+  situation_id: string;
+}
+
+export interface ApiActorSituationsResponse {
+  situations: ApiActorSituation[];
+}
+
+export function fetchActorSituations(): Promise<ApiActorSituationsResponse> {
+  return apiFetch<ApiActorSituationsResponse>("/ads/actor-situations");
+}
+
 export interface ApiAvatarVoice {
   voice_id: string;
   name: string;
@@ -381,15 +398,33 @@ export interface ApiActorVideoV2Operation {
   prediction_id: string;
 }
 
+// A real, user-facing "Audio Settings" panel (added 2026-09-11, matching
+// Arcads' own real UI) -- only meaningful when voiceEngine is
+// "elevenlabs" (OpenAI's engines have no equivalent, confirmed live).
+// Any field left undefined falls back to the backend's own tested
+// defaults (Stability 0.5 / Similarity 0.75 / Style 0.5 / Speed 1.0).
+export interface ElevenLabsVoiceSettings {
+  stability?: number;
+  similarity_boost?: number;
+  style?: number;
+  speed?: number;
+}
+
 export function startActorVideoV2(
   actorId: string,
   narration: string,
   voiceEngine: ActorVoiceEngine,
+  elevenlabsSettings?: ElevenLabsVoiceSettings,
 ): Promise<ApiActorVideoV2Operation> {
   return apiFetch<ApiActorVideoV2Operation>("/ads/generate-actor-video-v2", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ actor_id: actorId, narration, voice_engine: voiceEngine }),
+    body: JSON.stringify({
+      actor_id: actorId,
+      narration,
+      voice_engine: voiceEngine,
+      elevenlabs_settings: voiceEngine === "elevenlabs" ? elevenlabsSettings : undefined,
+    }),
   });
 }
 

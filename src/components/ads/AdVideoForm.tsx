@@ -24,6 +24,7 @@ import {
   checkAvatarVideoStatus,
   checkCinematicUgcStatus,
   checkVideoStatus,
+  fetchActorSituations,
   fetchAvatarOptions,
   fetchAvatarVoices,
   fetchBusinessProfile,
@@ -73,7 +74,7 @@ const CINEMATIC_UGC_CREDIT_COST: Record<AvatarTier, number> = { standard: 25, pr
 // no tier (OmniHuman has no cheap/expensive engine split like HeyGen).
 const AI_ACTOR_VIDEO_CREDIT_COST = 30;
 
-type WizardStep = "create" | "generating" | "result" | "receiving";
+type WizardStep = "create" | "review-script" | "generating" | "result" | "receiving";
 
 // A pasted product link vs. a typed description share one input — see
 // AdCreationForm.tsx's identical helper for why this specific regex.
@@ -210,6 +211,25 @@ export function AdVideoForm({
   const [actorGenderFilter, setActorGenderFilter] = useState<"all" | "female" | "male">("all");
   const [selectedActorId, setSelectedActorId] = useState<string | null>(null);
   const [actorVoiceEngine, setActorVoiceEngine] = useState<ActorVoiceEngine>("openai_natural");
+  // actor_id -> situation_id (e.g. "coffee_shop") for whichever actors
+  // actually have a pre-baked clip ready right now — an actor missing
+  // from this map isn't broken, just not yet populated (real library
+  // still growing, see scripts/populate_actor_video_clips.py).
+  const [actorSituations, setActorSituations] = useState<Record<string, string>>({});
+
+  // Real "Audio Settings" review step (added 2026-09-11, matching a real
+  // competitor's own script/emotion-tag editor the founder pointed to) —
+  // shown after the AI writes a script and before generating, so the
+  // narration can be edited and (ElevenLabs only) emotion tags/voice
+  // sliders applied. Defaults match this session's own validated,
+  // Arcads-sourced values — leaving them untouched reproduces the exact
+  // behavior that already shipped.
+  const [actorNarrationDraft, setActorNarrationDraft] = useState("");
+  const [elevenlabsStability, setElevenlabsStability] = useState(0.5);
+  const [elevenlabsSimilarity, setElevenlabsSimilarity] = useState(0.75);
+  const [elevenlabsStyle, setElevenlabsStyle] = useState(0.5);
+  const [elevenlabsSpeed, setElevenlabsSpeed] = useState(1.0);
+  const actorNarrationTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Try-On's animate step always renders 9:16 (a portrait photo of a
   // standing person) — the handed-off video really is that shape,
@@ -311,6 +331,15 @@ export function AdVideoForm({
         .then((r) => setActors(r.actors))
         .catch(() => {})
         .finally(() => setActorsLoading(false));
+    }
+    if (Object.keys(actorSituations).length === 0) {
+      fetchActorSituations()
+        .then((r) => {
+          const map: Record<string, string> = {};
+          for (const s of r.situations) map[s.actor_id] = s.situation_id;
+          setActorSituations(map);
+        })
+        .catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoStyle]);
@@ -634,7 +663,11 @@ export function AdVideoForm({
       setCaption(capResult.captions[0]?.facebook_caption ?? "");
       setHeadline(scriptOverride.headline);
 
-      const r = await startActorVideoV2(selectedActorId, scriptOverride.narration, actorVoiceEngine);
+      const elevenlabsSettings =
+        actorVoiceEngine === "elevenlabs"
+          ? { stability: elevenlabsStability, similarity_boost: elevenlabsSimilarity, style: elevenlabsStyle, speed: elevenlabsSpeed }
+          : undefined;
+      const r = await startActorVideoV2(selectedActorId, scriptOverride.narration, actorVoiceEngine, elevenlabsSettings);
       pollTimeoutRef.current = setTimeout(() => pollAiActorVideo(r.prediction_id), POLL_INTERVAL_MS);
     } catch (err) {
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
@@ -642,6 +675,36 @@ export function AdVideoForm({
       setError(err instanceof Error ? err.message : "Couldn't start the actor video.");
       setStep("create");
     }
+  };
+
+  // Confirms the review-script screen and actually kicks off generation
+  // — the (possibly edited) narration and (ElevenLabs only) voice
+  // settings state are read here, not passed as params, since the user
+  // may have changed them after finishCreate first wrote the AI's draft.
+  const handleConfirmActorScript = async () => {
+    if (!pickedScript) return;
+    await handleGenerateAiActorVideo(offerDescription, { headline: pickedScript.headline, narration: actorNarrationDraft });
+  };
+
+  // Inserts `[tag] ` at the narration textarea's current cursor position
+  // — the same real ElevenLabs bracket syntax already validated working
+  // this session (interpreted as delivery direction, never spoken).
+  const insertEmotionTag = (tag: string) => {
+    const el = actorNarrationTextareaRef.current;
+    const insertion = `[${tag}] `;
+    if (!el) {
+      setActorNarrationDraft((prev) => prev + insertion);
+      return;
+    }
+    const start = el.selectionStart ?? actorNarrationDraft.length;
+    const end = el.selectionEnd ?? actorNarrationDraft.length;
+    const next = actorNarrationDraft.slice(0, start) + insertion + actorNarrationDraft.slice(end);
+    setActorNarrationDraft(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const cursor = start + insertion.length;
+      el.setSelectionRange(cursor, cursor);
+    });
   };
 
   const pollCinematicUgcVideo = async (predictionId: string) => {
@@ -735,7 +798,12 @@ export function AdVideoForm({
       if (videoStyle === "avatar") {
         await handleGenerateAvatarVideo(description, script);
       } else if (videoStyle === "ai_actor") {
-        await handleGenerateAiActorVideo(description, script);
+        // Pauses here instead of generating immediately — the review
+        // screen (narration edit + ElevenLabs emotion tags/sliders) is
+        // where handleGenerateAiActorVideo actually gets called, once
+        // the user confirms.
+        setActorNarrationDraft(script.narration);
+        setStep("review-script");
       } else {
         await handleGenerate({ description, angle: picked.angle, script, file: effectiveFile });
       }
@@ -833,6 +901,11 @@ export function AdVideoForm({
     setActorGenderFilter("all");
     setSelectedActorId(null);
     setActorVoiceEngine("openai_natural");
+    setActorNarrationDraft("");
+    setElevenlabsStability(0.5);
+    setElevenlabsSimilarity(0.75);
+    setElevenlabsStyle(0.5);
+    setElevenlabsSpeed(1.0);
   };
 
   const handleHeadlineChange = (value: string) => {
@@ -1050,6 +1123,93 @@ export function AdVideoForm({
               {AVATAR_STANDARD_CREDIT_COST} credits.
             </p>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "review-script") {
+    const showElevenLabsControls = actorVoiceEngine === "elevenlabs";
+    return (
+      <div className="rounded-2xl bg-card p-6" style={{ boxShadow: "var(--shadow-card)" }}>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Review your script
+        </p>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Edit what your actor says before generating.
+        </p>
+        <textarea
+          ref={actorNarrationTextareaRef}
+          value={actorNarrationDraft}
+          onChange={(e) => setActorNarrationDraft(e.target.value)}
+          rows={5}
+          className="mb-4 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+
+        {showElevenLabsControls && (
+          <>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Add emotion
+            </p>
+            <div className="mb-5 flex flex-wrap gap-1.5">
+              {["warmly", "excited", "curious", "thoughtful", "mischievously", "whispering"].map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => insertEmotionTag(tag)}
+                  className="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium capitalize text-secondary-foreground hover:bg-secondary/70"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Audio settings
+            </p>
+            <div className="mb-5 space-y-4 rounded-xl bg-secondary/40 p-4">
+              {[
+                { label: "Speed", value: elevenlabsSpeed, set: setElevenlabsSpeed, min: 0.5, max: 1.5 },
+                { label: "Stability", value: elevenlabsStability, set: setElevenlabsStability, min: 0, max: 1 },
+                { label: "Similarity", value: elevenlabsSimilarity, set: setElevenlabsSimilarity, min: 0, max: 1 },
+                { label: "Style exaggeration", value: elevenlabsStyle, set: setElevenlabsStyle, min: 0, max: 1 },
+              ].map(({ label, value, set, min, max }) => (
+                <div key={label}>
+                  <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{label}</span>
+                    <span className="font-mono">{value.toFixed(2)}X</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={min}
+                    max={max}
+                    step={0.05}
+                    value={value}
+                    onChange={(e) => set(parseFloat(e.target.value))}
+                    className="w-full accent-primary"
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setStep("create")}
+            className="rounded-full bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground"
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirmActorScript}
+            disabled={!actorNarrationDraft.trim() || generating}
+            className="flex-1 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+          >
+            Generate video
+          </button>
         </div>
       </div>
     );
@@ -1273,11 +1433,17 @@ export function AdVideoForm({
                     .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
                     .map((a) => {
                       const selected = selectedActorId === a.id;
+                      const situationId = actorSituations[a.id];
+                      const ready = Boolean(situationId);
+                      const situationLabel = situationId
+                        ? situationId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+                        : "Coming soon";
                       return (
                         <button
                           key={a.id}
-                          onClick={() => setSelectedActorId(a.id)}
-                          className="flex flex-col items-center gap-1"
+                          onClick={() => ready && setSelectedActorId(a.id)}
+                          disabled={!ready}
+                          className={["flex flex-col items-center gap-1", ready ? "" : "cursor-not-allowed opacity-40"].join(" ")}
                         >
                           <span
                             className={[
@@ -1297,6 +1463,7 @@ export function AdVideoForm({
                             )}
                           </span>
                           <span className="text-[10px] font-medium text-foreground">{a.name}</span>
+                          <span className="text-[9px] text-muted-foreground">{situationLabel}</span>
                         </button>
                       );
                     })}

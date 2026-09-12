@@ -250,8 +250,14 @@ function HomeScreen() {
   };
 
   const handleOpenVideoComposer = () => {
-    if (!homeGeneratedImage) return;
-    setVideoRefImage({ base64: homeGeneratedImage, mimeType: "image/png" });
+    // videoRefImage already holds the right image if the user uploaded
+    // their own (handleUploadOwnImageForVideo) or is reopening after a
+    // finished video — only fall back to the AI-generated one here.
+    if (!videoRefImage && homeGeneratedImage) {
+      setVideoRefImage({ base64: homeGeneratedImage, mimeType: "image/png" });
+    } else if (!videoRefImage) {
+      return;
+    }
     setVideoPrompt("");
     setVideoModel("kling_3_pro");
     setVideoAspectRatio("1:1");
@@ -261,11 +267,11 @@ function HomeScreen() {
   };
 
   const handleClickAiUgc = () => {
-    if (homeGeneratedImage) {
-      // Already have an image on screen -- AI UGC's whole point is
-      // getting to video, so jump straight into the composer instead of
-      // silently doing nothing (its own "Video" action button is small
-      // and easy to miss).
+    if (homeGeneratedImage || videoRefImage) {
+      // Already have an image on screen (generated or uploaded) -- AI
+      // UGC's whole point is getting to video, so jump straight into the
+      // composer instead of silently doing nothing (its own "Video"
+      // action button is small and easy to miss).
       if (videoPanel === "closed") handleOpenVideoComposer();
       return;
     }
@@ -288,6 +294,29 @@ function HomeScreen() {
       const match = result.match(/^data:(.*?);base64,(.*)$/);
       if (!match) return;
       setVideoRefImage({ mimeType: match[1], base64: match[2] });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Skips AI image generation entirely — pick your own photo from your
+  // computer and go straight to the Video composer with it as the
+  // reference. No credits spent until an actual video is generated.
+  const handleUploadOwnImageForVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const match = result.match(/^data:(.*?);base64,(.*)$/);
+      if (!match) return;
+      setVideoRefImage({ mimeType: match[1], base64: match[2] });
+      setVideoPrompt("");
+      setVideoModel("kling_3_pro");
+      setVideoAspectRatio("1:1");
+      setVideoDuration(5);
+      setVideoError(null);
+      setVideoPanel("composer");
     };
     reader.readAsDataURL(file);
   };
@@ -421,7 +450,7 @@ function HomeScreen() {
             <p className="mb-2 self-center text-xs font-medium text-destructive">{homeImageError}</p>
           )}
 
-          {homeGeneratedImage ? (
+          {homeGeneratedImage || videoRefImage ? (
             <div
               className="mb-6 w-full self-center overflow-hidden rounded-3xl border border-border bg-card"
               style={{ boxShadow: "var(--shadow-card)" }}
@@ -437,14 +466,24 @@ function HomeScreen() {
                 />
               ) : (
                 <img
-                  src={`data:image/png;base64,${homeGeneratedImage}`}
+                  src={
+                    homeGeneratedImage
+                      ? `data:image/png;base64,${homeGeneratedImage}`
+                      : videoRefImage
+                        ? `data:${videoRefImage.mimeType};base64,${videoRefImage.base64}`
+                        : undefined
+                  }
                   alt="Generated"
                   className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
                 />
               )}
               <div className="flex items-center justify-between gap-2 px-4 py-3">
                 <span className="text-xs text-muted-foreground">
-                  {videoPanel === "result" ? IMAGE_VIDEO_MODEL_LABELS[videoModel] : IMAGE_MODEL_LABELS[homeImageModel]}
+                  {videoPanel === "result"
+                    ? IMAGE_VIDEO_MODEL_LABELS[videoModel]
+                    : homeGeneratedImage
+                      ? IMAGE_MODEL_LABELS[homeImageModel]
+                      : "Your photo"}
                 </span>
                 <button
                   onClick={handleResetHome}
@@ -658,16 +697,28 @@ function HomeScreen() {
               </div>
             )}
             <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
-              <button
-                onClick={() => setHomeImageSettingsOpen((v) => !v)}
-                aria-label="Image settings"
-                className={[
-                  "flex h-9 w-9 items-center justify-center rounded-full",
-                  homeImageSettingsOpen ? "bg-secondary text-foreground" : "text-muted-foreground",
-                ].join(" ")}
-              >
-                <Settings2 className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setHomeImageSettingsOpen((v) => !v)}
+                  aria-label="Image settings"
+                  className={[
+                    "flex h-9 w-9 items-center justify-center rounded-full",
+                    homeImageSettingsOpen ? "bg-secondary text-foreground" : "text-muted-foreground",
+                  ].join(" ")}
+                >
+                  <Settings2 className="h-4 w-4" />
+                </button>
+                {/* Skip AI image generation entirely -- pick a photo from
+                    your computer and go straight to the Video composer
+                    with it as the reference. */}
+                <label
+                  title="Use your own photo instead"
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground"
+                >
+                  <Paperclip className="h-4 w-4" />
+                  <input type="file" accept="image/*" className="hidden" onChange={handleUploadOwnImageForVideo} />
+                </label>
+              </div>
               <button
                 onClick={handleHomeGenerateImage}
                 disabled={!homeIdea.trim() || homeImageGenerating}

@@ -6,6 +6,7 @@ import {
   Layers,
   Loader2,
   Megaphone,
+  Package,
   Paperclip,
   Pencil,
   Settings2,
@@ -20,6 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   type ApiVideoOperation,
   checkImageVideoStatus,
+  combineActorAndProduct,
   fetchAdCredits,
   generateImageDirect,
   generateImageVideo,
@@ -202,6 +204,15 @@ function HomeScreen() {
   const [videoError, setVideoError] = useState<string | null>(null);
   const [homeGeneratedVideo, setHomeGeneratedVideo] = useState<string | null>(null);
   const videoPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The "Product" action — attach a separate product photo to the
+  // current actor image, describe the interaction, and combine both
+  // into one new image (matches a real competitor's own "actor + product
+  // photo -> one combined image" tool). Success replaces homeGeneratedImage
+  // outright, so the result can immediately go through Video too.
+  const [productPanel, setProductPanel] = useState<"closed" | "composer" | "generating">("closed");
+  const [productPrompt, setProductPrompt] = useState("");
+  const [productFile, setProductFile] = useState<File | null>(null);
+  const [productError, setProductError] = useState<string | null>(null);
   // The prompt textarea has focus:outline-none (no visible focus ring by
   // design), so a bare .focus() call from the AI UGC pill was invisible —
   // this drives a brief highlight so the click reads as having done
@@ -247,6 +258,10 @@ function HomeScreen() {
     setVideoPrompt("");
     setVideoRefImage(null);
     setVideoError(null);
+    setProductPanel("closed");
+    setProductPrompt("");
+    setProductFile(null);
+    setProductError(null);
   };
 
   const handleOpenVideoComposer = () => {
@@ -325,6 +340,38 @@ function HomeScreen() {
     setVideoModel(m);
     const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === m);
     if (opt) setVideoDuration((d) => Math.min(opt.max, Math.max(opt.min, d)));
+  };
+
+  const handleOpenProductComposer = () => {
+    setProductPrompt("");
+    setProductFile(null);
+    setProductError(null);
+    setProductPanel("composer");
+  };
+
+  const handleProductFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setProductFile(e.target.files?.[0] || null);
+  };
+
+  const handleGenerateProduct = async () => {
+    const actorBase64 = homeGeneratedImage || videoRefImage?.base64;
+    if (!actorBase64 || !productFile || !productPrompt.trim()) return;
+    const actorMimeType = homeGeneratedImage ? "image/png" : videoRefImage?.mimeType || "image/png";
+    setProductError(null);
+    setProductPanel("generating");
+    try {
+      const r = await combineActorAndProduct(actorBase64, productFile, productPrompt.trim(), "square", actorMimeType);
+      // The underlying image just changed, so any reference the Video
+      // composer was holding is now stale — clear it so re-opening Video
+      // picks up this new combined image fresh.
+      setHomeGeneratedImage(r.banner_image_base64);
+      setVideoRefImage(null);
+      setCredits(r.credits_remaining);
+      setProductPanel("closed");
+    } catch (err) {
+      setProductError(err instanceof Error ? err.message : "Couldn't combine those images.");
+      setProductPanel("composer");
+    }
   };
 
   const pollImageVideo = async (jobId: string, operation: ApiVideoOperation | null) => {
@@ -493,8 +540,8 @@ function HomeScreen() {
                 </button>
               </div>
 
-              {videoPanel === "closed" && (
-                <div className="grid grid-cols-4 gap-2 border-t border-border px-4 py-3">
+              {videoPanel === "closed" && productPanel === "closed" && (
+                <div className="grid grid-cols-5 gap-2 border-t border-border px-4 py-3">
                   <button
                     disabled
                     title="Coming soon"
@@ -512,6 +559,13 @@ function HomeScreen() {
                     Remix
                   </button>
                   <button
+                    onClick={handleOpenProductComposer}
+                    className="flex flex-col items-center gap-1 rounded-xl bg-secondary py-2 text-[11px] font-semibold text-secondary-foreground"
+                  >
+                    <Package className="h-4 w-4" />
+                    Product
+                  </button>
+                  <button
                     onClick={handleOpenVideoComposer}
                     className="flex flex-col items-center gap-1 rounded-xl bg-secondary py-2 text-[11px] font-semibold text-secondary-foreground"
                   >
@@ -526,6 +580,49 @@ function HomeScreen() {
                     <UserRound className="h-4 w-4" />
                     Actor
                   </button>
+                </div>
+              )}
+
+              {productPanel === "composer" && (
+                <div className="space-y-3 border-t border-border px-4 py-3">
+                  {productError && <p className="text-xs font-medium text-destructive">{productError}</p>}
+
+                  <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+                    <Upload className="h-3.5 w-3.5" />
+                    {productFile ? productFile.name : "Upload a product photo"}
+                    <input type="file" accept="image/*" className="hidden" onChange={handleProductFileChange} />
+                  </label>
+
+                  <textarea
+                    value={productPrompt}
+                    onChange={(e) => setProductPrompt(e.target.value)}
+                    placeholder="Describe how they're using it… (e.g. she is holding it in her right hand, indoors in her kitchen, close up shot, looking forward with a smile)"
+                    rows={2}
+                    className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
+                  />
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <button
+                      onClick={() => setProductPanel("closed")}
+                      className="rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleGenerateProduct}
+                      disabled={!productFile || !productPrompt.trim()}
+                      className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                    >
+                      Generate
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {productPanel === "generating" && (
+                <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-6">
+                  <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                  <p className="text-xs text-muted-foreground">Combining your images…</p>
                 </div>
               )}
 

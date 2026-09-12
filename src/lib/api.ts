@@ -673,6 +673,29 @@ export function checkImageVideoStatus(
   });
 }
 
+// Combines an actor image (already-generated or uploaded, held as base64
+// in state) with a separately-uploaded product photo into one new image
+// — the home page's "Product" action, matching a real competitor's own
+// "attach your actor + your product photo, describe the interaction"
+// tool. actorImageMimeType defaults to png since that's what every other
+// image already in state on the home page came back as.
+export function combineActorAndProduct(
+  actorImageBase64: string,
+  productFile: File,
+  prompt: string,
+  aspectRatio: AspectRatio = "square",
+  actorImageMimeType: string = "image/png",
+): Promise<ApiAdImageVariantResponse> {
+  const formData = new FormData();
+  formData.append("actor_file", base64ToBlob(actorImageBase64, actorImageMimeType), "actor.png");
+  formData.append("product_file", productFile);
+  const params = new URLSearchParams({ prompt, aspect_ratio: aspectRatio });
+  return apiFetch<ApiAdImageVariantResponse>(`/ads/combine-actor-product?${params}`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 // The generated banner images live in state as raw base64 PNG strings
 // (that's what the backend returns) — these two tools re-upload that same
 // image to a fresh Gemini edit call, so it needs converting back to a

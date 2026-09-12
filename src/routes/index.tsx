@@ -202,6 +202,13 @@ function HomeScreen() {
   const [videoError, setVideoError] = useState<string | null>(null);
   const [homeGeneratedVideo, setHomeGeneratedVideo] = useState<string | null>(null);
   const videoPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The prompt textarea has focus:outline-none (no visible focus ring by
+  // design), so a bare .focus() call from the AI UGC pill was invisible —
+  // this drives a brief highlight so the click reads as having done
+  // something. Also covers the real gap where homePromptRef is null once
+  // an image already exists (the textarea unmounts): in that case AI UGC
+  // jumps straight into the Video composer instead of doing nothing.
+  const [homeUgcPulse, setHomeUgcPulse] = useState(false);
 
   useEffect(() => {
     fetchAdCredits()
@@ -251,6 +258,24 @@ function HomeScreen() {
     setVideoDuration(5);
     setVideoError(null);
     setVideoPanel("composer");
+  };
+
+  const handleClickAiUgc = () => {
+    if (homeGeneratedImage) {
+      // Already have an image on screen -- AI UGC's whole point is
+      // getting to video, so jump straight into the composer instead of
+      // silently doing nothing (its own "Video" action button is small
+      // and easy to miss).
+      if (videoPanel === "closed") handleOpenVideoComposer();
+      return;
+    }
+    homePromptRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    homePromptRef.current?.focus();
+    // The textarea deliberately has no visible focus ring, so .focus()
+    // alone gave no feedback that the click did anything — this drives a
+    // brief highlight on the box instead.
+    setHomeUgcPulse(true);
+    setTimeout(() => setHomeUgcPulse(false), 1200);
   };
 
   const handleReplaceVideoImage = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -364,14 +389,7 @@ function HomeScreen() {
               Image Ad
             </button>
             <button
-              onClick={() => {
-                // AI UGC stays on this same page/flow — prompt -> image ->
-                // Video action -> video, all in this one card — rather
-                // than routing into the separate, deeper Video Ad wizard
-                // the way it used to.
-                homePromptRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                homePromptRef.current?.focus();
-              }}
+              onClick={handleClickAiUgc}
               className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
@@ -600,7 +618,10 @@ function HomeScreen() {
             </div>
           ) : (
           <div
-            className="mb-6 w-full self-center rounded-3xl border border-border bg-card"
+            className={[
+              "mb-6 w-full self-center rounded-3xl border bg-card transition-shadow",
+              homeUgcPulse ? "border-accent ring-2 ring-accent" : "border-border",
+            ].join(" ")}
             style={{ boxShadow: "var(--shadow-card)" }}
           >
             <textarea

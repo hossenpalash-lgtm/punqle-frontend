@@ -1,7 +1,31 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowUp, Check, Images, Layers, Loader2, Megaphone, Paperclip, Settings2, Shirt, Sparkles, Video } from "lucide-react";
-import { useEffect, useState } from "react";
-import { fetchAdCredits, generateImageDirect, type ImageGenModel } from "@/lib/api";
+import {
+  ArrowUp,
+  Check,
+  Images,
+  Layers,
+  Loader2,
+  Megaphone,
+  Paperclip,
+  Pencil,
+  Settings2,
+  Shirt,
+  Shuffle,
+  Sparkles,
+  Upload,
+  UserRound,
+  Video,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  type ApiVideoOperation,
+  checkImageVideoStatus,
+  fetchAdCredits,
+  generateImageDirect,
+  generateImageVideo,
+  type ImageGenModel,
+  type ImageVideoModel,
+} from "@/lib/api";
 import { AdCreationForm } from "@/components/ads/AdCreationForm";
 import { AdVideoForm } from "@/components/ads/AdVideoForm";
 import { BulkCreativeForm } from "@/components/ads/BulkCreativeForm";
@@ -97,6 +121,34 @@ const IMAGE_MODEL_LABELS: Record<ImageGenModel, string> = {
   gpt_image: "GPT Image",
 };
 
+// The "Video" action on a generated image — turn it into a short clip.
+// Only 3 models are offered: the ones Punqle can actually call today
+// (Veo 3.1, already integrated; Kling 3.0 Pro / Seedance 2.5, both via
+// Replicate, live-checked 2026-09-13). Sora 2/Sora 2 Pro, Kling 2.6 Pro,
+// Seedance 1.5, and Grok Video all appear in the real competitor's own
+// picker but are deliberately left out here — no working API for them
+// yet, and the ask was for a simple picker, not an exhaustive one. min/
+// max mirror the backend's own per-model duration clamp exactly (Veo's
+// real 4-8s hard cap vs. Kling/Seedance's 3-15s).
+const IMAGE_VIDEO_MODEL_OPTIONS: { id: ImageVideoModel; label: string; min: number; max: number }[] = [
+  { id: "kling_3_pro", label: "Kling 3.0 Pro", min: 3, max: 15 },
+  { id: "seedance_2_5", label: "Seedance 2.5", min: 3, max: 15 },
+  { id: "veo_3_1", label: "Veo 3.1", min: 4, max: 8 },
+];
+const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
+  kling_3_pro: "Kling 3.0 Pro",
+  seedance_2_5: "Seedance 2.5",
+  veo_3_1: "Veo 3.1",
+};
+// Display-only estimate, mirrors the backend's own provisional per-
+// second credit rates — the backend always computes the real charge
+// itself, this is just so the Generate button can show a cost upfront.
+const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
+  veo_3_1: 1.25,
+  seedance_2_5: 6,
+  kling_3_pro: 8,
+};
+
 function HomeScreen() {
   const { tab } = Route.useSearch();
   const navigate = useNavigate();
@@ -132,11 +184,34 @@ function HomeScreen() {
   const [homeImageGenerating, setHomeImageGenerating] = useState(false);
   const [homeImageError, setHomeImageError] = useState<string | null>(null);
   const [homeGeneratedImage, setHomeGeneratedImage] = useState<string | null>(null);
+  const homePromptRef = useRef<HTMLTextAreaElement>(null);
+
+  // The "Video" action on a generated image — a real competitor's own
+  // Actions row (Edit/Remix/Video/Actor), only Video wired for now. One
+  // small state machine instead of several booleans: closed (showing the
+  // Actions row) -> composer (prompt + model + length) -> generating ->
+  // result (the video itself, replacing the image in the same card).
+  const [videoPanel, setVideoPanel] = useState<"closed" | "composer" | "generating" | "result">("closed");
+  const [videoPrompt, setVideoPrompt] = useState("");
+  const [videoModel, setVideoModel] = useState<ImageVideoModel>("kling_3_pro");
+  const [videoDuration, setVideoDuration] = useState(5);
+  // Defaults to the just-generated image, but the user can swap in their
+  // own photo instead via the small "Replace" upload control.
+  const [videoRefImage, setVideoRefImage] = useState<{ base64: string; mimeType: string } | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [homeGeneratedVideo, setHomeGeneratedVideo] = useState<string | null>(null);
+  const videoPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchAdCredits()
       .then((c) => setCredits(c.credits))
       .catch((err) => setCreditsError(err instanceof Error ? err.message : "Couldn't load your credits."));
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (videoPollRef.current) clearTimeout(videoPollRef.current);
+    };
   }, []);
 
   const goTo = (t: Tab) => navigate({ to: "/", search: { tab: t } });
@@ -153,6 +228,87 @@ function HomeScreen() {
       setHomeImageError(err instanceof Error ? err.message : "Couldn't generate that image.");
     } finally {
       setHomeImageGenerating(false);
+    }
+  };
+
+  const handleResetHome = () => {
+    setHomeGeneratedImage(null);
+    setHomeIdea("");
+    setVideoPanel("closed");
+    setHomeGeneratedVideo(null);
+    setVideoPrompt("");
+    setVideoRefImage(null);
+    setVideoError(null);
+  };
+
+  const handleOpenVideoComposer = () => {
+    if (!homeGeneratedImage) return;
+    setVideoRefImage({ base64: homeGeneratedImage, mimeType: "image/png" });
+    setVideoPrompt("");
+    setVideoModel("kling_3_pro");
+    setVideoDuration(5);
+    setVideoError(null);
+    setVideoPanel("composer");
+  };
+
+  const handleReplaceVideoImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const match = result.match(/^data:(.*?);base64,(.*)$/);
+      if (!match) return;
+      setVideoRefImage({ mimeType: match[1], base64: match[2] });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleVideoModelChange = (m: ImageVideoModel) => {
+    setVideoModel(m);
+    const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === m);
+    if (opt) setVideoDuration((d) => Math.min(opt.max, Math.max(opt.min, d)));
+  };
+
+  const pollImageVideo = async (jobId: string, operation: ApiVideoOperation | null) => {
+    try {
+      const r = await checkImageVideoStatus(jobId, operation);
+      if (!r.done) {
+        videoPollRef.current = setTimeout(() => pollImageVideo(jobId, operation), 8000);
+        return;
+      }
+      if (r.credits_remaining !== null) setCredits(r.credits_remaining);
+      if (r.video_base64) {
+        setHomeGeneratedVideo(r.video_base64);
+        setVideoPanel("result");
+      } else {
+        setVideoError("The video didn't come back — please try again.");
+        setVideoPanel("composer");
+      }
+    } catch (err) {
+      setVideoError(err instanceof Error ? err.message : "Couldn't check the video's status.");
+      setVideoPanel("composer");
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!videoRefImage || !videoPrompt.trim()) return;
+    setVideoError(null);
+    setVideoPanel("generating");
+    try {
+      const r = await generateImageVideo(
+        videoRefImage.base64,
+        videoRefImage.mimeType,
+        videoPrompt.trim(),
+        videoModel,
+        videoDuration,
+        "1:1",
+      );
+      videoPollRef.current = setTimeout(() => pollImageVideo(r.job_id, r.operation), 8000);
+    } catch (err) {
+      setVideoError(err instanceof Error ? err.message : "Couldn't start the video.");
+      setVideoPanel("composer");
     }
   };
 
@@ -206,7 +362,14 @@ function HomeScreen() {
               Image Ad
             </button>
             <button
-              onClick={() => goTo("ad-video")}
+              onClick={() => {
+                // AI UGC stays on this same page/flow — prompt -> image ->
+                // Video action -> video, all in this one card — rather
+                // than routing into the separate, deeper Video Ad wizard
+                // the way it used to.
+                homePromptRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                homePromptRef.current?.focus();
+              }}
               className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
@@ -243,23 +406,177 @@ function HomeScreen() {
               className="mb-6 w-full self-center overflow-hidden rounded-3xl border border-border bg-card"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
-              <img
-                src={`data:image/png;base64,${homeGeneratedImage}`}
-                alt="Generated"
-                className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
-              />
+              {videoPanel === "result" && homeGeneratedVideo ? (
+                // eslint-disable-next-line jsx-a11y/media-has-caption
+                <video
+                  controls
+                  autoPlay
+                  loop
+                  className="max-h-[420px] w-full bg-[#1E1F24]"
+                  src={`data:video/mp4;base64,${homeGeneratedVideo}`}
+                />
+              ) : (
+                <img
+                  src={`data:image/png;base64,${homeGeneratedImage}`}
+                  alt="Generated"
+                  className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
+                />
+              )}
               <div className="flex items-center justify-between gap-2 px-4 py-3">
-                <span className="text-xs text-muted-foreground">{IMAGE_MODEL_LABELS[homeImageModel]}</span>
+                <span className="text-xs text-muted-foreground">
+                  {videoPanel === "result" ? IMAGE_VIDEO_MODEL_LABELS[videoModel] : IMAGE_MODEL_LABELS[homeImageModel]}
+                </span>
                 <button
-                  onClick={() => {
-                    setHomeGeneratedImage(null);
-                    setHomeIdea("");
-                  }}
+                  onClick={handleResetHome}
                   className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
                 >
                   Create another
                 </button>
               </div>
+
+              {videoPanel === "closed" && (
+                <div className="grid grid-cols-4 gap-2 border-t border-border px-4 py-3">
+                  <button
+                    disabled
+                    title="Coming soon"
+                    className="flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-semibold text-muted-foreground opacity-40"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </button>
+                  <button
+                    disabled
+                    title="Coming soon"
+                    className="flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-semibold text-muted-foreground opacity-40"
+                  >
+                    <Shuffle className="h-4 w-4" />
+                    Remix
+                  </button>
+                  <button
+                    onClick={handleOpenVideoComposer}
+                    className="flex flex-col items-center gap-1 rounded-xl bg-secondary py-2 text-[11px] font-semibold text-secondary-foreground"
+                  >
+                    <Video className="h-4 w-4" />
+                    Video
+                  </button>
+                  <button
+                    disabled
+                    title="Coming soon"
+                    className="flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-semibold text-muted-foreground opacity-40"
+                  >
+                    <UserRound className="h-4 w-4" />
+                    Actor
+                  </button>
+                </div>
+              )}
+
+              {videoPanel === "composer" && (
+                <div className="space-y-3 border-t border-border px-4 py-3">
+                  {videoError && <p className="text-xs font-medium text-destructive">{videoError}</p>}
+
+                  <div className="flex items-center gap-2">
+                    {videoRefImage && (
+                      <img
+                        src={`data:${videoRefImage.mimeType};base64,${videoRefImage.base64}`}
+                        alt="Reference"
+                        className="h-10 w-10 shrink-0 rounded-lg object-cover"
+                      />
+                    )}
+                    <span className="flex-1 text-xs text-muted-foreground">Reference image</span>
+                    <label className="flex cursor-pointer items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground">
+                      <Upload className="h-3 w-3" />
+                      Replace
+                      <input type="file" accept="image/*" className="hidden" onChange={handleReplaceVideoImage} />
+                    </label>
+                  </div>
+
+                  <textarea
+                    value={videoPrompt}
+                    onChange={(e) => setVideoPrompt(e.target.value)}
+                    placeholder="Describe the motion… (e.g. she walks towards the camera, notices near the end, and does a pose)"
+                    rows={2}
+                    className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
+                  />
+
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Model</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {IMAGE_VIDEO_MODEL_OPTIONS.map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => handleVideoModelChange(m.id)}
+                          className={[
+                            "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
+                            videoModel === m.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                          ].join(" ")}
+                        >
+                          {videoModel === m.id && <Check className="h-3 w-3" />}
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-muted-foreground">Length</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === videoModel)!;
+                          setVideoDuration((d) => Math.max(opt.min, d - 1));
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
+                      >
+                        −
+                      </button>
+                      <span className="w-10 text-center text-sm font-semibold text-foreground">{videoDuration}s</span>
+                      <button
+                        onClick={() => {
+                          const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === videoModel)!;
+                          setVideoDuration((d) => Math.min(opt.max, d + 1));
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <button
+                      onClick={() => setVideoPanel("closed")}
+                      className="rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleGenerateVideo}
+                      disabled={!videoPrompt.trim() || !videoRefImage}
+                      className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                    >
+                      Generate ({Math.ceil(videoDuration * IMAGE_VIDEO_CREDIT_PER_SECOND[videoModel])} credits)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {videoPanel === "generating" && (
+                <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-6">
+                  <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                  <p className="text-xs text-muted-foreground">Generating your video… this can take a minute or two.</p>
+                </div>
+              )}
+
+              {videoPanel === "result" && (
+                <div className="flex items-center justify-center border-t border-border px-4 py-3">
+                  <button
+                    onClick={() => setVideoPanel("closed")}
+                    className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                  >
+                    Back to image
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
           <div
@@ -267,6 +584,7 @@ function HomeScreen() {
             style={{ boxShadow: "var(--shadow-card)" }}
           >
             <textarea
+              ref={homePromptRef}
               value={homeIdea}
               onChange={(e) => setHomeIdea(e.target.value)}
               onKeyDown={(e) => {

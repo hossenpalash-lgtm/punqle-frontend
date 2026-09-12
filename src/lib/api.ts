@@ -112,7 +112,7 @@ export interface ApiVideoOperationResponse {
   narration: string;
 }
 
-export type VideoAspectRatio = "16:9" | "9:16";
+export type VideoAspectRatio = "16:9" | "9:16" | "1:1";
 
 // goal/angle are only ever set by Ad Creation's Video Ad flow — Social
 // Content's Video tab omits both, leaving the backend's behavior for it
@@ -625,6 +625,51 @@ export function generateImageDirect(
   const params = new URLSearchParams({ prompt, aspect_ratio: aspectRatio, model });
   return apiFetch<ApiAdImageVariantResponse>(`/ads/generate-image?${params}`, {
     method: "POST",
+  });
+}
+
+// Turns an already-generated image into a short video — the home page's
+// own "Video" action on a generated image (prompt + the image itself as
+// reference + pick a model + pick a length + generate), matching a real
+// competitor's own simplest tool. Only 3 real, working models are
+// offered — see ImageVideoModel.
+export type ImageVideoModel = "veo_3_1" | "kling_3_pro" | "seedance_2_5";
+
+export interface ApiImageVideoStartResponse {
+  job_id: string;
+  operation: ApiVideoOperation | null;
+}
+
+export function generateImageVideo(
+  imageBase64: string,
+  imageMimeType: string,
+  prompt: string,
+  model: ImageVideoModel,
+  durationSeconds: number,
+  aspectRatio: VideoAspectRatio = "9:16",
+): Promise<ApiImageVideoStartResponse> {
+  return apiFetch<ApiImageVideoStartResponse>("/ads/generate-image-video", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      image_base64: imageBase64,
+      image_mime_type: imageMimeType,
+      prompt,
+      model,
+      duration_seconds: durationSeconds,
+      aspect_ratio: aspectRatio,
+    }),
+  });
+}
+
+export function checkImageVideoStatus(
+  jobId: string,
+  operation: ApiVideoOperation | null,
+): Promise<ApiVideoStatusResponse> {
+  return apiFetch<ApiVideoStatusResponse>("/ads/image-video-status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ job_id: jobId, operation }),
   });
 }
 

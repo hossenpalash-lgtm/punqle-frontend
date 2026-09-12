@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowUp, Images, Layers, Megaphone, Paperclip, Shirt, Sparkles, Video } from "lucide-react";
+import { ArrowUp, Check, Images, Layers, Loader2, Megaphone, Paperclip, Settings2, Shirt, Sparkles, Video } from "lucide-react";
 import { useEffect, useState } from "react";
-import { fetchAdCredits } from "@/lib/api";
+import { fetchAdCredits, generateImageDirect, type ImageGenModel } from "@/lib/api";
 import { AdCreationForm } from "@/components/ads/AdCreationForm";
 import { AdVideoForm } from "@/components/ads/AdVideoForm";
 import { BulkCreativeForm } from "@/components/ads/BulkCreativeForm";
@@ -84,6 +84,19 @@ const AD_TYPES: {
   { tab: "ad-video", label: "Video Ad", description: "AI presenter or product-in-hand UGC", icon: Video },
 ];
 
+// Same small, curated model list as Ad Creation's own "Image Model"
+// picker — only the vendors Punqle already has API access to.
+const IMAGE_MODEL_OPTIONS: { id: ImageGenModel; label: string }[] = [
+  { id: "nano_banana_pro", label: "Nano Banana Pro" },
+  { id: "nano_banana_2", label: "Nano Banana 2" },
+  { id: "gpt_image", label: "GPT Image" },
+];
+const IMAGE_MODEL_LABELS: Record<ImageGenModel, string> = {
+  nano_banana_pro: "Nano Banana Pro",
+  nano_banana_2: "Nano Banana 2",
+  gpt_image: "GPT Image",
+};
+
 function HomeScreen() {
   const { tab } = Route.useSearch();
   const navigate = useNavigate();
@@ -108,6 +121,17 @@ function HomeScreen() {
   // prefilledIdea above).
   const [entryHint, setEntryHint] = useState<"carousel" | undefined>(undefined);
   const [homeIdea, setHomeIdea] = useState("");
+  // Standalone quick-image tool living right in the home prompt box —
+  // matches a real competitor's own "type a prompt, pick a model,
+  // generate" simplicity exactly (their "Image" tool, not their fuller
+  // ad-creation flow). Deliberately separate from homeIdea's existing
+  // "start a Social Content post" behavior below — this one never
+  // navigates away, the image just appears in this same card.
+  const [homeImageSettingsOpen, setHomeImageSettingsOpen] = useState(false);
+  const [homeImageModel, setHomeImageModel] = useState<ImageGenModel>("nano_banana_pro");
+  const [homeImageGenerating, setHomeImageGenerating] = useState(false);
+  const [homeImageError, setHomeImageError] = useState<string | null>(null);
+  const [homeGeneratedImage, setHomeGeneratedImage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAdCredits()
@@ -116,6 +140,21 @@ function HomeScreen() {
   }, []);
 
   const goTo = (t: Tab) => navigate({ to: "/", search: { tab: t } });
+
+  const handleHomeGenerateImage = async () => {
+    if (!homeIdea.trim() || homeImageGenerating) return;
+    setHomeImageGenerating(true);
+    setHomeImageError(null);
+    try {
+      const r = await generateImageDirect(homeIdea.trim(), "square", homeImageModel);
+      setHomeGeneratedImage(r.banner_image_base64);
+      setCredits(r.credits_remaining);
+    } catch (err) {
+      setHomeImageError(err instanceof Error ? err.message : "Couldn't generate that image.");
+    } finally {
+      setHomeImageGenerating(false);
+    }
+  };
 
   return (
     <main className="flex flex-1 flex-col px-6 py-6">
@@ -195,6 +234,34 @@ function HomeScreen() {
             </button>
           </div>
 
+          {homeImageError && (
+            <p className="mb-2 self-center text-xs font-medium text-destructive">{homeImageError}</p>
+          )}
+
+          {homeGeneratedImage ? (
+            <div
+              className="mb-6 w-full self-center overflow-hidden rounded-3xl border border-border bg-card"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <img
+                src={`data:image/png;base64,${homeGeneratedImage}`}
+                alt="Generated"
+                className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
+              />
+              <div className="flex items-center justify-between gap-2 px-4 py-3">
+                <span className="text-xs text-muted-foreground">{IMAGE_MODEL_LABELS[homeImageModel]}</span>
+                <button
+                  onClick={() => {
+                    setHomeGeneratedImage(null);
+                    setHomeIdea("");
+                  }}
+                  className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                >
+                  Create another
+                </button>
+              </div>
+            </div>
+          ) : (
           <div
             className="mb-6 w-full self-center rounded-3xl border border-border bg-card"
             style={{ boxShadow: "var(--shadow-card)" }}
@@ -205,30 +272,54 @@ function HomeScreen() {
               onKeyDown={(e) => {
                 if (e.key !== "Enter" || e.shiftKey || !homeIdea.trim()) return;
                 e.preventDefault();
-                setPrefilledIdea(homeIdea.trim());
-                setEntryHint(undefined);
-                goTo("single");
+                handleHomeGenerateImage();
               }}
-              placeholder="Describe what you want to create…"
+              placeholder="Describe what you want to create… (e.g. a Gen Z girl holding our product)"
               rows={2}
               className="w-full resize-none rounded-t-3xl bg-transparent px-5 py-4 text-sm text-foreground focus:outline-none"
             />
-            <div className="flex items-center justify-end border-t border-border px-3 py-2.5">
+            {homeImageSettingsOpen && (
+              <div className="border-t border-border px-4 py-3">
+                <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Model</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {IMAGE_MODEL_OPTIONS.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setHomeImageModel(m.id)}
+                      className={[
+                        "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
+                        homeImageModel === m.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                      ].join(" ")}
+                    >
+                      {homeImageModel === m.id && <Check className="h-3 w-3" />}
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
               <button
-                onClick={() => {
-                  if (!homeIdea.trim()) return;
-                  setPrefilledIdea(homeIdea.trim());
-                  setEntryHint(undefined);
-                  goTo("single");
-                }}
-                disabled={!homeIdea.trim()}
+                onClick={() => setHomeImageSettingsOpen((v) => !v)}
+                aria-label="Image settings"
+                className={[
+                  "flex h-9 w-9 items-center justify-center rounded-full",
+                  homeImageSettingsOpen ? "bg-secondary text-foreground" : "text-muted-foreground",
+                ].join(" ")}
+              >
+                <Settings2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={handleHomeGenerateImage}
+                disabled={!homeIdea.trim() || homeImageGenerating}
                 aria-label="Create"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
               >
-                <ArrowUp className="h-4 w-4" />
+                {homeImageGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
               </button>
             </div>
           </div>
+          )}
         </div>
       )}
 

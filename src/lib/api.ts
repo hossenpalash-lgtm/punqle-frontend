@@ -571,16 +571,24 @@ export function editVideo(
 }
 
 export type AspectRatio = "square" | "feed" | "story";
+// Only meaningfully affects Image Ad's no-photo-uploaded ("AI generates
+// everything") path — the photo-edit/compositing paths always use
+// nano_banana_pro regardless, since GPT Image can't do the "keep the
+// product exactly as-is" edit those need. Matches a real competitor's own
+// lightweight image-model dropdown (same precedent already used for the
+// actor voice-engine picker).
+export type ImageGenModel = "nano_banana_pro" | "nano_banana_2" | "gpt_image";
 
 export function generateAd(
   itemDescription: string,
   file: File | null,
   aspectRatio: AspectRatio = "square",
   actorId?: string,
+  model: ImageGenModel = "nano_banana_pro",
 ): Promise<ApiAdGenerateResponse> {
   const formData = new FormData();
   if (file) formData.append("file", file);
-  const params = new URLSearchParams({ item_description: itemDescription, aspect_ratio: aspectRatio });
+  const params = new URLSearchParams({ item_description: itemDescription, aspect_ratio: aspectRatio, model });
   if (actorId) params.set("actor_id", actorId);
   return apiFetch<ApiAdGenerateResponse>(`/ads/generate?${params}`, {
     method: "POST",
@@ -593,14 +601,30 @@ export function generateAdImageVariant(
   file: File | null,
   aspectRatio: AspectRatio = "square",
   actorId?: string,
+  model: ImageGenModel = "nano_banana_pro",
 ): Promise<ApiAdImageVariantResponse> {
   const formData = new FormData();
   if (file) formData.append("file", file);
-  const params = new URLSearchParams({ item_description: itemDescription, aspect_ratio: aspectRatio });
+  const params = new URLSearchParams({ item_description: itemDescription, aspect_ratio: aspectRatio, model });
   if (actorId) params.set("actor_id", actorId);
   return apiFetch<ApiAdImageVariantResponse>(`/ads/generate-image-variant?${params}`, {
     method: "POST",
     body: formData,
+  });
+}
+
+// Standalone, no-frills text-to-image tool — the home page's prompt box +
+// Settings (model picker), matching a real competitor's own simple "type a
+// prompt, pick a model, generate" tool. No caption/goal/platform framing —
+// just a prompt and a picture, unlike generateAd above.
+export function generateImageDirect(
+  prompt: string,
+  aspectRatio: AspectRatio = "square",
+  model: ImageGenModel = "nano_banana_pro",
+): Promise<ApiAdImageVariantResponse> {
+  const params = new URLSearchParams({ prompt, aspect_ratio: aspectRatio, model });
+  return apiFetch<ApiAdImageVariantResponse>(`/ads/generate-image?${params}`, {
+    method: "POST",
   });
 }
 

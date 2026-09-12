@@ -17,6 +17,7 @@ import {
   type AspectRatio,
   type CaptionLength,
   type CaptionTone,
+  type ImageGenModel,
   type VisualDirection,
 } from "@/lib/api";
 import {
@@ -57,6 +58,17 @@ const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // strings match) so an ordinary offer sentence ("Handmade wallets, 20%
 // off") is never mistaken for a URL and sent to the scraper.
 const looksLikeUrl = (s: string) => /^https?:\/\//i.test(s) || /^[\w-]+(\.[a-z]{2,})+(\/\S*)?$/i.test(s);
+
+// A small, curated model-dropdown — same "lightweight choice, not a heavy
+// decision step" precedent as the actor voice-engine picker, matching a
+// real competitor's own simple model dropdown. Only these three (not the
+// competitor's full list) since these are the only vendors Punqle already
+// has API access to.
+const IMAGE_MODEL_OPTIONS: { id: ImageGenModel; label: string }[] = [
+  { id: "nano_banana_pro", label: "Nano Banana Pro" },
+  { id: "nano_banana_2", label: "Nano Banana 2" },
+  { id: "gpt_image", label: "GPT Image" },
+];
 
 // Ad Creation — one Arcads-style screen (2026-09-10 redesign): a single
 // smart input (link or free text) + Goal, with everything else (style,
@@ -142,6 +154,11 @@ export function AdCreationForm({
   // default for everyone.
   const [platform, setPlatform] = useState<Platform>("instagram");
   const [versions, setVersions] = useState(1);
+  // Only meaningfully affects generation when Punqle imagines the whole
+  // scene (no photo uploaded) — the backend keeps photo-edit/compositing
+  // on nano_banana_pro regardless, since a from-scratch generator like
+  // GPT Image can't do "keep the product pixel-for-pixel unchanged."
+  const [imageGenModel, setImageGenModel] = useState<ImageGenModel>("nano_banana_pro");
 
   // Generation state
   const [generating, setGenerating] = useState(false);
@@ -282,13 +299,13 @@ export function AdCreationForm({
       // own bundled tone-based captions are discarded here, same as
       // SinglePostForm already discards them today. actorId works
       // whether or not sourceFile is set — see fetchImageActors' comment.
-      const firstImage = await generateAd(finalStyledDescription, sourceFile, aspectRatio, actorId);
+      const firstImage = await generateAd(finalStyledDescription, sourceFile, aspectRatio, actorId, imageGenModel);
       setImages([firstImage.banner_image_base64]);
       setCredits(firstImage.credits_remaining);
       setGenerationStage(5);
 
       for (let i = 1; i < versions; i++) {
-        const r = await generateAdImageVariant(finalStyledDescription, sourceFile, aspectRatio, actorId);
+        const r = await generateAdImageVariant(finalStyledDescription, sourceFile, aspectRatio, actorId, imageGenModel);
         setImages((prev) => [...prev, r.banner_image_base64]);
         setCredits(r.credits_remaining);
       }
@@ -366,7 +383,7 @@ export function AdCreationForm({
     setError(null);
     try {
       const aspectRatio: AspectRatio = PLATFORM_OPTIONS.find((p) => p.id === platform)?.aspectRatio ?? "square";
-      const r = await generateAdImageVariant(styledDescription, file, aspectRatio);
+      const r = await generateAdImageVariant(styledDescription, file, aspectRatio, undefined, imageGenModel);
       setImages((prev) => [...prev, r.banner_image_base64]);
       setSelectedImageIndex(images.length);
       setCredits(r.credits_remaining);
@@ -460,6 +477,7 @@ export function AdCreationForm({
     setActorGenderFilter("all");
     setPlatform("instagram");
     setVersions(1);
+    setImageGenModel("nano_banana_pro");
     setAdCaptions([]);
     setRecommendedIndex(0);
     setRecommendedReason("");
@@ -592,6 +610,22 @@ export function AdCreationForm({
                     ].join(" ")}
                   >
                     {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Image Model</p>
+              <div className="mb-3 grid grid-cols-3 gap-1.5">
+                {IMAGE_MODEL_OPTIONS.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setImageGenModel(m.id)}
+                    className={[
+                      "rounded-xl px-2 py-2 text-[11px] font-semibold",
+                      imageGenModel === m.id ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
+                    ].join(" ")}
+                  >
+                    {m.label}
                   </button>
                 ))}
               </div>

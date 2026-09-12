@@ -194,6 +194,7 @@ function HomeScreen() {
   const [videoPanel, setVideoPanel] = useState<"closed" | "composer" | "generating" | "result">("closed");
   const [videoPrompt, setVideoPrompt] = useState("");
   const [videoModel, setVideoModel] = useState<ImageVideoModel>("kling_3_pro");
+  const [videoAspectRatio, setVideoAspectRatio] = useState<"9:16" | "1:1">("1:1");
   const [videoDuration, setVideoDuration] = useState(5);
   // Defaults to the just-generated image, but the user can swap in their
   // own photo instead via the small "Replace" upload control.
@@ -246,6 +247,7 @@ function HomeScreen() {
     setVideoRefImage({ base64: homeGeneratedImage, mimeType: "image/png" });
     setVideoPrompt("");
     setVideoModel("kling_3_pro");
+    setVideoAspectRatio("1:1");
     setVideoDuration(5);
     setVideoError(null);
     setVideoPanel("composer");
@@ -303,7 +305,7 @@ function HomeScreen() {
         videoPrompt.trim(),
         videoModel,
         videoDuration,
-        "1:1",
+        videoAspectRatio,
       );
       videoPollRef.current = setTimeout(() => pollImageVideo(r.job_id, r.operation), 8000);
     } catch (err) {
@@ -512,6 +514,24 @@ function HomeScreen() {
                         >
                           {videoModel === m.id && <Check className="h-3 w-3" />}
                           {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-muted-foreground">Aspect ratio</p>
+                    <div className="flex gap-1.5">
+                      {(["1:1", "9:16"] as const).map((r) => (
+                        <button
+                          key={r}
+                          onClick={() => setVideoAspectRatio(r)}
+                          className={[
+                            "rounded-full px-3 py-1.5 text-xs font-semibold",
+                            videoAspectRatio === r ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                          ].join(" ")}
+                        >
+                          {r}
                         </button>
                       ))}
                     </div>

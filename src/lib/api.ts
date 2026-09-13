@@ -673,6 +673,60 @@ export function checkImageVideoStatus(
   });
 }
 
+// The Video composer's optional "Add spoken narration" path — animates
+// the image exactly like generateImageVideo, then Sync Labs-redubs real
+// TTS narration onto it. Two Replicate/Gemini jobs chained behind one
+// job id; checkTalkingVideoStatus's response carries which stage it's
+// in so the caller can show an accurate loading message.
+export type VoiceGender = "female" | "male";
+
+export interface ApiTalkingVideoStartResponse {
+  job_id: string;
+  operation: ApiVideoOperation | null;
+}
+
+export interface ApiTalkingVideoStatusResponse {
+  done: boolean;
+  stage: "animating" | "redubbing";
+  video_base64: string | null;
+  credits_remaining: number | null;
+}
+
+export function generateTalkingVideo(
+  imageBase64: string,
+  imageMimeType: string,
+  narration: string,
+  voiceGender: VoiceGender,
+  model: ImageVideoModel,
+  durationSeconds: number,
+  aspectRatio: VideoAspectRatio = "9:16",
+): Promise<ApiTalkingVideoStartResponse> {
+  return apiFetch<ApiTalkingVideoStartResponse>("/ads/generate-talking-video", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      image_base64: imageBase64,
+      image_mime_type: imageMimeType,
+      narration,
+      voice_gender: voiceGender,
+      model,
+      duration_seconds: durationSeconds,
+      aspect_ratio: aspectRatio,
+    }),
+  });
+}
+
+export function checkTalkingVideoStatus(
+  jobId: string,
+  operation: ApiVideoOperation | null,
+): Promise<ApiTalkingVideoStatusResponse> {
+  return apiFetch<ApiTalkingVideoStatusResponse>("/ads/talking-video-status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ job_id: jobId, operation }),
+  });
+}
+
 // Combines an actor image (already-generated or uploaded, held as base64
 // in state) with a separately-uploaded product photo into one new image
 // — the home page's "Product" action, matching a real competitor's own

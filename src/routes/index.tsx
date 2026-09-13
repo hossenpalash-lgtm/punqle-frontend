@@ -21,12 +21,15 @@ import { useEffect, useRef, useState } from "react";
 import {
   type ApiVideoOperation,
   checkImageVideoStatus,
+  checkTalkingVideoStatus,
   combineActorAndProduct,
   fetchAdCredits,
   generateImageDirect,
   generateImageVideo,
+  generateTalkingVideo,
   type ImageGenModel,
   type ImageVideoModel,
+  type VoiceGender,
 } from "@/lib/api";
 import { AdCreationForm } from "@/components/ads/AdCreationForm";
 import { AdVideoForm } from "@/components/ads/AdVideoForm";
@@ -150,6 +153,8 @@ const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
   seedance_2_5: 6,
   kling_3_pro: 8,
 };
+// Mirrors the backend's own TALKING_VIDEO_REDUB_SURCHARGE — display only.
+const TALKING_VIDEO_REDUB_SURCHARGE = 10;
 
 function HomeScreen() {
   const { tab } = Route.useSearch();
@@ -204,6 +209,13 @@ function HomeScreen() {
   const [videoError, setVideoError] = useState<string | null>(null);
   const [homeGeneratedVideo, setHomeGeneratedVideo] = useState<string | null>(null);
   const videoPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Optional "Add spoken narration" path within the same composer —
+  // animates the image, then Sync Labs-redubs real TTS narration onto
+  // it (reuses Punqle Actors v2's own proven pre-bake+redub mechanics).
+  const [videoNarrationEnabled, setVideoNarrationEnabled] = useState(false);
+  const [videoNarration, setVideoNarration] = useState("");
+  const [videoVoiceGender, setVideoVoiceGender] = useState<VoiceGender>("female");
+  const [videoStage, setVideoStage] = useState<"animating" | "redubbing">("animating");
   // The "Product" action — attach a separate product photo to the
   // current actor image, describe the interaction, and combine both
   // into one new image (matches a real competitor's own "actor + product
@@ -258,6 +270,9 @@ function HomeScreen() {
     setVideoPrompt("");
     setVideoRefImage(null);
     setVideoError(null);
+    setVideoNarrationEnabled(false);
+    setVideoNarration("");
+    setVideoVoiceGender("female");
     setProductPanel("closed");
     setProductPrompt("");
     setProductFile(null);
@@ -278,6 +293,9 @@ function HomeScreen() {
     setVideoAspectRatio("1:1");
     setVideoDuration(5);
     setVideoError(null);
+    setVideoNarrationEnabled(false);
+    setVideoNarration("");
+    setVideoVoiceGender("female");
     setVideoPanel("composer");
   };
 
@@ -353,24 +371,67 @@ function HomeScreen() {
     setProductFile(e.target.files?.[0] || null);
   };
 
+  const handleUploadProductActor = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const match = result.match(/^data:(.*?);base64,(.*)$/);
+      if (!match) return;
+      setVideoRefImage({ mimeType: match[1], base64: match[2] });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleGenerateProduct = async () => {
-    const actorBase64 = homeGeneratedImage || videoRefImage?.base64;
+    const actorBase64 = videoRefImage?.base64 || homeGeneratedImage;
     if (!actorBase64 || !productFile || !productPrompt.trim()) return;
-    const actorMimeType = homeGeneratedImage ? "image/png" : videoRefImage?.mimeType || "image/png";
+    const actorMimeType = videoRefImage?.mimeType || "image/png";
+    const narration = productPrompt.trim();
     setProductError(null);
     setProductPanel("generating");
     try {
-      const r = await combineActorAndProduct(actorBase64, productFile, productPrompt.trim(), "square", actorMimeType);
-      // The underlying image just changed, so any reference the Video
-      // composer was holding is now stale — clear it so re-opening Video
-      // picks up this new combined image fresh.
-      setHomeGeneratedImage(r.banner_image_base64);
-      setVideoRefImage(null);
-      setCredits(r.credits_remaining);
+      const combined = await combineActorAndProduct(actorBase64, productFile, narration, "square", actorMimeType);
+      setHomeGeneratedImage(combined.banner_image_base64);
+      setCredits(combined.credits_remaining);
       setProductPanel("closed");
+
+      // Straight into a finished talking video — matches Arcads' own
+      // real "Product" tab exactly: photo + description + Generate =
+      // one finished talking demo video, no separate review step (the
+      // description typed here doubles as the spoken narration, same
+      // as their own real example: "Strong, durable bottle that can be
+      // used everyday." became the actor's actual spoken line).
+      setVideoRefImage({ base64: combined.banner_image_base64, mimeType: "image/png" });
+      setVideoNarrationEnabled(true);
+      setVideoNarration(narration);
+      setVideoVoiceGender("female");
+      setVideoModel("kling_3_pro");
+      setVideoAspectRatio("1:1");
+      setVideoDuration(5);
+      setVideoError(null);
+      setVideoStage("animating");
+      setVideoPanel("generating");
+      const started = await generateTalkingVideo(
+        combined.banner_image_base64,
+        "image/png",
+        narration,
+        "female",
+        "kling_3_pro",
+        5,
+        "1:1",
+      );
+      videoPollRef.current = setTimeout(() => pollTalkingVideo(started.job_id, started.operation), 8000);
     } catch (err) {
-      setProductError(err instanceof Error ? err.message : "Couldn't combine those images.");
+      // The failure could happen before or after setVideoPanel("generating")
+      // was called (combine succeeds, then the talking-video call itself
+      // fails) — always clear it too, or the composer and a stuck
+      // "Animating your video…" panel would show at the same time.
+      setProductError(err instanceof Error ? err.message : "Couldn't create that video.");
       setProductPanel("composer");
+      setVideoPanel("closed");
     }
   };
 
@@ -395,11 +456,48 @@ function HomeScreen() {
     }
   };
 
+  const pollTalkingVideo = async (jobId: string, operation: ApiVideoOperation | null) => {
+    try {
+      const r = await checkTalkingVideoStatus(jobId, operation);
+      setVideoStage(r.stage);
+      if (!r.done) {
+        videoPollRef.current = setTimeout(() => pollTalkingVideo(jobId, operation), 8000);
+        return;
+      }
+      if (r.credits_remaining !== null) setCredits(r.credits_remaining);
+      if (r.video_base64) {
+        setHomeGeneratedVideo(r.video_base64);
+        setVideoPanel("result");
+      } else {
+        setVideoError("The video didn't come back — please try again.");
+        setVideoPanel("composer");
+      }
+    } catch (err) {
+      setVideoError(err instanceof Error ? err.message : "Couldn't check the video's status.");
+      setVideoPanel("composer");
+    }
+  };
+
   const handleGenerateVideo = async () => {
-    if (!videoRefImage || !videoPrompt.trim()) return;
+    if (!videoRefImage) return;
+    if (videoNarrationEnabled ? !videoNarration.trim() : !videoPrompt.trim()) return;
     setVideoError(null);
     setVideoPanel("generating");
     try {
+      if (videoNarrationEnabled) {
+        setVideoStage("animating");
+        const r = await generateTalkingVideo(
+          videoRefImage.base64,
+          videoRefImage.mimeType,
+          videoNarration.trim(),
+          videoVoiceGender,
+          videoModel,
+          videoDuration,
+          videoAspectRatio,
+        );
+        videoPollRef.current = setTimeout(() => pollTalkingVideo(r.job_id, r.operation), 8000);
+        return;
+      }
       const r = await generateImageVideo(
         videoRefImage.base64,
         videoRefImage.mimeType,
@@ -473,6 +571,14 @@ function HomeScreen() {
               AI UGC
             </button>
             <button
+              onClick={handleOpenProductComposer}
+              className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <Package className="h-4 w-4" />
+              Product
+            </button>
+            <button
               onClick={() => goTo("tryon")}
               className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
               style={{ boxShadow: "var(--shadow-card)" }}
@@ -497,7 +603,7 @@ function HomeScreen() {
             <p className="mb-2 self-center text-xs font-medium text-destructive">{homeImageError}</p>
           )}
 
-          {homeGeneratedImage || videoRefImage ? (
+          {homeGeneratedImage || videoRefImage || productPanel !== "closed" ? (
             <div
               className="mb-6 w-full self-center overflow-hidden rounded-3xl border border-border bg-card"
               style={{ boxShadow: "var(--shadow-card)" }}
@@ -511,7 +617,7 @@ function HomeScreen() {
                   className="max-h-[420px] w-full bg-[#1E1F24]"
                   src={`data:video/mp4;base64,${homeGeneratedVideo}`}
                 />
-              ) : (
+              ) : homeGeneratedImage || videoRefImage ? (
                 <img
                   src={
                     homeGeneratedImage
@@ -523,24 +629,26 @@ function HomeScreen() {
                   alt="Generated"
                   className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
                 />
+              ) : null}
+              {(homeGeneratedImage || videoRefImage) && (
+                <div className="flex items-center justify-between gap-2 px-4 py-3">
+                  <span className="text-xs text-muted-foreground">
+                    {videoPanel === "result"
+                      ? IMAGE_VIDEO_MODEL_LABELS[videoModel]
+                      : homeGeneratedImage
+                        ? IMAGE_MODEL_LABELS[homeImageModel]
+                        : "Your photo"}
+                  </span>
+                  <button
+                    onClick={handleResetHome}
+                    className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                  >
+                    Create another
+                  </button>
+                </div>
               )}
-              <div className="flex items-center justify-between gap-2 px-4 py-3">
-                <span className="text-xs text-muted-foreground">
-                  {videoPanel === "result"
-                    ? IMAGE_VIDEO_MODEL_LABELS[videoModel]
-                    : homeGeneratedImage
-                      ? IMAGE_MODEL_LABELS[homeImageModel]
-                      : "Your photo"}
-                </span>
-                <button
-                  onClick={handleResetHome}
-                  className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                >
-                  Create another
-                </button>
-              </div>
 
-              {videoPanel === "closed" && productPanel === "closed" && (
+              {videoPanel === "closed" && productPanel === "closed" && (homeGeneratedImage || videoRefImage) && (
                 <div className="grid grid-cols-5 gap-2 border-t border-border px-4 py-3">
                   <button
                     disabled
@@ -587,16 +695,35 @@ function HomeScreen() {
                 <div className="space-y-3 border-t border-border px-4 py-3">
                   {productError && <p className="text-xs font-medium text-destructive">{productError}</p>}
 
-                  <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
-                    <Upload className="h-3.5 w-3.5" />
-                    {productFile ? productFile.name : "Upload a product photo"}
-                    <input type="file" accept="image/*" className="hidden" onChange={handleProductFileChange} />
-                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
+                      {videoRefImage ? (
+                        <img
+                          src={`data:${videoRefImage.mimeType};base64,${videoRefImage.base64}`}
+                          alt="Actor"
+                          className="h-10 w-10 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <Upload className="h-3.5 w-3.5" />
+                      )}
+                      {videoRefImage ? "Replace actor photo" : "Upload actor / model photo"}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleUploadProductActor} />
+                    </label>
+                    <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
+                      {productFile ? (
+                        <Package className="h-5 w-5" />
+                      ) : (
+                        <Upload className="h-3.5 w-3.5" />
+                      )}
+                      {productFile ? productFile.name : "Upload a product photo"}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleProductFileChange} />
+                    </label>
+                  </div>
 
                   <textarea
                     value={productPrompt}
                     onChange={(e) => setProductPrompt(e.target.value)}
-                    placeholder="Describe how they're using it… (e.g. she is holding it in her right hand, indoors in her kitchen, close up shot, looking forward with a smile)"
+                    placeholder="Describe the product and how it's used… (e.g. Strong, durable bottle that can be used every day.)"
                     rows={2}
                     className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
                   />
@@ -610,7 +737,7 @@ function HomeScreen() {
                     </button>
                     <button
                       onClick={handleGenerateProduct}
-                      disabled={!productFile || !productPrompt.trim()}
+                      disabled={!videoRefImage || !productFile || !productPrompt.trim()}
                       className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                     >
                       Generate
@@ -622,7 +749,7 @@ function HomeScreen() {
               {productPanel === "generating" && (
                 <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-6">
                   <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                  <p className="text-xs text-muted-foreground">Combining your images…</p>
+                  <p className="text-xs text-muted-foreground">Creating your image…</p>
                 </div>
               )}
 
@@ -646,13 +773,15 @@ function HomeScreen() {
                     </label>
                   </div>
 
-                  <textarea
-                    value={videoPrompt}
-                    onChange={(e) => setVideoPrompt(e.target.value)}
-                    placeholder="Describe the motion… (e.g. she walks towards the camera, notices near the end, and does a pose)"
-                    rows={2}
-                    className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
-                  />
+                  {!videoNarrationEnabled && (
+                    <textarea
+                      value={videoPrompt}
+                      onChange={(e) => setVideoPrompt(e.target.value)}
+                      placeholder="Describe the motion… (e.g. she walks towards the camera, notices near the end, and does a pose)"
+                      rows={2}
+                      className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
+                    />
+                  )}
 
                   <div>
                     <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Model</p>
@@ -716,6 +845,47 @@ function HomeScreen() {
                     </div>
                   </div>
 
+                  <div className="flex items-center justify-between border-t border-border pt-3">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={videoNarrationEnabled}
+                        onChange={(e) => setVideoNarrationEnabled(e.target.checked)}
+                        className="h-4 w-4"
+                      />
+                      Add spoken narration
+                    </label>
+                  </div>
+
+                  {videoNarrationEnabled && (
+                    <div className="space-y-2 rounded-xl bg-secondary/50 p-3">
+                      <textarea
+                        value={videoNarration}
+                        onChange={(e) => setVideoNarration(e.target.value)}
+                        placeholder="What should they say?… (e.g. This bottle is very durable and keeps your drink cold all day.)"
+                        rows={2}
+                        className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none"
+                      />
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-muted-foreground">Voice</p>
+                        <div className="flex gap-1.5">
+                          {(["female", "male"] as const).map((g) => (
+                            <button
+                              key={g}
+                              onClick={() => setVideoVoiceGender(g)}
+                              className={[
+                                "rounded-full px-3 py-1.5 text-xs font-semibold capitalize",
+                                videoVoiceGender === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                              ].join(" ")}
+                            >
+                              {g}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between gap-2 pt-1">
                     <button
                       onClick={() => setVideoPanel("closed")}
@@ -725,10 +895,13 @@ function HomeScreen() {
                     </button>
                     <button
                       onClick={handleGenerateVideo}
-                      disabled={!videoPrompt.trim() || !videoRefImage}
+                      disabled={
+                        !videoRefImage ||
+                        (videoNarrationEnabled ? !videoNarration.trim() : !videoPrompt.trim())
+                      }
                       className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                     >
-                      Generate ({Math.ceil(videoDuration * IMAGE_VIDEO_CREDIT_PER_SECOND[videoModel])} credits)
+                      Generate ({Math.ceil(videoDuration * IMAGE_VIDEO_CREDIT_PER_SECOND[videoModel]) + (videoNarrationEnabled ? TALKING_VIDEO_REDUB_SURCHARGE : 0)} credits)
                     </button>
                   </div>
                 </div>
@@ -737,7 +910,13 @@ function HomeScreen() {
               {videoPanel === "generating" && (
                 <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-6">
                   <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                  <p className="text-xs text-muted-foreground">Generating your video… this can take a minute or two.</p>
+                  <p className="text-xs text-muted-foreground">
+                    {videoNarrationEnabled
+                      ? videoStage === "animating"
+                        ? "Animating your video…"
+                        : "Adding the voice…"
+                      : "Generating your video… this can take a minute or two."}
+                  </p>
                 </div>
               )}
 

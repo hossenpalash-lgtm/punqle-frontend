@@ -1742,6 +1742,7 @@ function HomeScreen() {
                         <button
                           onClick={() => setHomeImageSettingsOpen((v) => !v)}
                           aria-label="Image settings"
+                          title="Model & aspect ratio"
                           className={[
                             "flex h-9 w-9 items-center justify-center rounded-full",
                             homeImageSettingsOpen ? "bg-secondary text-foreground" : "text-muted-foreground",

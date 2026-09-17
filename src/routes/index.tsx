@@ -1879,21 +1879,52 @@ function HomeScreen() {
                                 />
                               </button>
                             ))}
-                            {actors.map((a) => (
-                              <button
-                                key={a.id}
-                                type="button"
-                                title={a.name}
-                                onClick={() => handlePickProductActor(a.preview_image_base64, "image/jpeg")}
-                                className="h-12 w-12 shrink-0 overflow-hidden rounded-lg ring-1 ring-border"
-                              >
-                                <img
-                                  src={`data:image/jpeg;base64,${a.preview_image_base64}`}
-                                  alt={a.name}
-                                  className="h-full w-full object-cover"
-                                />
-                              </button>
-                            ))}
+                            {actors.map((a) => {
+                              const previewUrl = actorPreviewVideos[a.id];
+                              return (
+                                <button
+                                  key={a.id}
+                                  type="button"
+                                  title={a.name}
+                                  onClick={() => handlePickProductActor(a.preview_image_base64, "image/jpeg")}
+                                  onMouseEnter={(e) => {
+                                    if (!actorPreviewVideos[a.id]) {
+                                      fetchActorPreviewVideoUrl(a.id)
+                                        .then((url) => setActorPreviewVideos((prev) => ({ ...prev, [a.id]: url })))
+                                        .catch(() => {});
+                                      return;
+                                    }
+                                    const video = e.currentTarget.querySelector("video");
+                                    video?.play().catch(() => {});
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    const video = e.currentTarget.querySelector("video");
+                                    if (video) {
+                                      video.pause();
+                                      video.currentTime = 0;
+                                    }
+                                  }}
+                                  className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg ring-1 ring-border"
+                                >
+                                  <img
+                                    src={`data:image/jpeg;base64,${a.preview_image_base64}`}
+                                    alt={a.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                  {previewUrl && (
+                                    // eslint-disable-next-line jsx-a11y/media-has-caption
+                                    <video
+                                      src={previewUrl}
+                                      muted
+                                      loop
+                                      playsInline
+                                      autoPlay
+                                      className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-200 hover:opacity-100"
+                                    />
+                                  )}
+                                </button>
+                              );
+                            })}
                           </>
                         )}
                       </div>

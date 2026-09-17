@@ -23,6 +23,7 @@ import {
   type ActorVoiceEngine,
   type ApiImageActor,
   type ApiVideoOperation,
+  type AspectRatio,
   checkActorVideoV2Status,
   checkImageVideoStatus,
   checkTalkingVideoStatus,
@@ -37,6 +38,7 @@ import {
   type ImageGenModel,
   type ImageVideoModel,
   startActorVideoV2,
+  type VideoAspectRatio,
   type VoiceGender,
 } from "@/lib/api";
 import { AdCreationForm } from "@/components/ads/AdCreationForm";
@@ -210,6 +212,7 @@ function HomeScreen() {
   // navigates away, the image just appears in this same card.
   const [homeImageSettingsOpen, setHomeImageSettingsOpen] = useState(false);
   const [homeImageModel, setHomeImageModel] = useState<ImageGenModel>("nano_banana_pro");
+  const [homeImageAspectRatio, setHomeImageAspectRatio] = useState<AspectRatio>("square");
   const [homeImageGenerating, setHomeImageGenerating] = useState(false);
   const [homeImageError, setHomeImageError] = useState<string | null>(null);
   const [homeGeneratedImage, setHomeGeneratedImage] = useState<string | null>(null);
@@ -223,7 +226,7 @@ function HomeScreen() {
   const [videoPanel, setVideoPanel] = useState<"closed" | "composer" | "generating" | "result">("closed");
   const [videoPrompt, setVideoPrompt] = useState("");
   const [videoModel, setVideoModel] = useState<ImageVideoModel>("kling_3_pro");
-  const [videoAspectRatio, setVideoAspectRatio] = useState<"9:16" | "1:1">("1:1");
+  const [videoAspectRatio, setVideoAspectRatio] = useState<VideoAspectRatio>("1:1");
   const [videoDuration, setVideoDuration] = useState(5);
   // Defaults to the just-generated image, but the user can swap in their
   // own photo instead via the small "Replace" upload control.
@@ -322,7 +325,7 @@ function HomeScreen() {
     setHomeImageGenerating(true);
     setHomeImageError(null);
     try {
-      const r = await generateImageDirect(homeIdea.trim(), "square", homeImageModel);
+      const r = await generateImageDirect(homeIdea.trim(), homeImageAspectRatio, homeImageModel);
       setHomeGeneratedImage(r.banner_image_base64);
       setCredits(r.credits_remaining);
     } catch (err) {
@@ -335,6 +338,7 @@ function HomeScreen() {
   const handleResetHome = () => {
     setHomeGeneratedImage(null);
     setHomeIdea("");
+    setHomeImageAspectRatio("square");
     setVideoPanel("closed");
     setHomeGeneratedVideo(null);
     setVideoPrompt("");
@@ -464,7 +468,7 @@ function HomeScreen() {
     setProductError(null);
     setProductPanel("generating");
     try {
-      const combined = await combineActorAndProduct(actorBase64, productFile, narration, "square", actorMimeType);
+      const combined = await combineActorAndProduct(actorBase64, productFile, narration, homeImageAspectRatio, actorMimeType);
       setHomeGeneratedImage(combined.banner_image_base64);
       setCredits(combined.credits_remaining);
       setProductPanel("closed");
@@ -474,13 +478,17 @@ function HomeScreen() {
       // one finished talking demo video, no separate review step (the
       // description typed here doubles as the spoken narration, same
       // as their own real example: "Strong, durable bottle that can be
-      // used everyday." became the actor's actual spoken line).
+      // used everyday." became the actor's actual spoken line). The
+      // video step only has 16:9/9:16/1:1 to pick from (no 4:5 "feed"
+      // equivalent) — square stays square, feed/story both map to the
+      // closer tall 9:16 shape.
+      const productVideoAspectRatio = homeImageAspectRatio === "square" ? "1:1" : "9:16";
       setVideoRefImage({ base64: combined.banner_image_base64, mimeType: "image/png" });
       setVideoNarrationEnabled(true);
       setVideoNarration(narration);
       setVideoVoiceGender("female");
       setVideoModel("kling_3_pro");
-      setVideoAspectRatio("1:1");
+      setVideoAspectRatio(productVideoAspectRatio);
       setVideoDuration(5);
       setVideoError(null);
       setVideoStage("animating");
@@ -492,7 +500,7 @@ function HomeScreen() {
         "female",
         "kling_3_pro",
         5,
-        "1:1",
+        productVideoAspectRatio,
       );
       videoPollRef.current = setTimeout(() => pollTalkingVideo(started.job_id, started.operation), 8000);
     } catch (err) {
@@ -1089,7 +1097,7 @@ function HomeScreen() {
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-semibold text-muted-foreground">Aspect ratio</p>
                       <div className="flex gap-1.5">
-                        {(["1:1", "9:16"] as const).map((r) => (
+                        {(["16:9", "9:16", "1:1"] as const).map((r) => (
                           <button
                             key={r}
                             onClick={() => setVideoAspectRatio(r)}
@@ -1352,21 +1360,49 @@ function HomeScreen() {
                     />
                     {homeImageSettingsOpen && (
                       <div className="border-t border-border px-4 py-3">
-                        <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Model</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {IMAGE_MODEL_OPTIONS.map((m) => (
-                            <button
-                              key={m.id}
-                              onClick={() => setHomeImageModel(m.id)}
-                              className={[
-                                "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
-                                homeImageModel === m.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                              ].join(" ")}
-                            >
-                              {homeImageModel === m.id && <Check className="h-3 w-3" />}
-                              {m.label}
-                            </button>
-                          ))}
+                        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+                          <div>
+                            <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Model</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {IMAGE_MODEL_OPTIONS.map((m) => (
+                                <button
+                                  key={m.id}
+                                  onClick={() => setHomeImageModel(m.id)}
+                                  className={[
+                                    "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
+                                    homeImageModel === m.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                                  ].join(" ")}
+                                >
+                                  {homeImageModel === m.id && <Check className="h-3 w-3" />}
+                                  {m.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Aspect ratio</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(
+                                [
+                                  { id: "square" as const, label: "Square" },
+                                  { id: "feed" as const, label: "Feed" },
+                                  { id: "story" as const, label: "Story" },
+                                ]
+                              ).map((r) => (
+                                <button
+                                  key={r.id}
+                                  onClick={() => setHomeImageAspectRatio(r.id)}
+                                  className={[
+                                    "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
+                                    homeImageAspectRatio === r.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                                  ].join(" ")}
+                                >
+                                  {homeImageAspectRatio === r.id && <Check className="h-3 w-3" />}
+                                  {r.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}

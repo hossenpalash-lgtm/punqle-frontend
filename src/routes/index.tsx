@@ -9,6 +9,7 @@ import {
   Megaphone,
   MoreHorizontal,
   Package,
+  Pencil,
   Plus,
   Settings2,
   Shirt,
@@ -16,6 +17,7 @@ import {
   Upload,
   UserRound,
   Video,
+  X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -31,6 +33,7 @@ import {
   checkTalkingVideoStatus,
   combineActorAndProduct,
   createCustomActor,
+  deleteCustomActor,
   fetchActorPreviewVideoUrl,
   fetchActorSituations,
   fetchAdCredits,
@@ -41,6 +44,7 @@ import {
   generateTalkingVideo,
   type ImageGenModel,
   type ImageVideoModel,
+  renameCustomActor,
   startActorVideoV2,
   startAiActorVideoGeneration,
   type VideoAspectRatio,
@@ -291,6 +295,8 @@ function HomeScreen() {
   const [createActorGenerating, setCreateActorGenerating] = useState(false);
   const [createActorSaving, setCreateActorSaving] = useState(false);
   const [createActorError, setCreateActorError] = useState<string | null>(null);
+  const [editingCustomActorId, setEditingCustomActorId] = useState<string | null>(null);
+  const [editingCustomActorName, setEditingCustomActorName] = useState("");
   // ElevenLabs-only controls (no OpenAI equivalent) — same defaults as
   // AdVideoForm.tsx's own sliders (Arcads-sourced, already validated).
   // "Add emotions" runs a small AI pass on narration right before
@@ -410,6 +416,40 @@ function HomeScreen() {
       setCreateActorError(err instanceof Error ? err.message : "Couldn't save that actor.");
     } finally {
       setCreateActorSaving(false);
+    }
+  };
+
+  const handleStartRenameCustomActor = (a: ApiCustomActor) => {
+    setEditingCustomActorId(a.id);
+    setEditingCustomActorName(a.name);
+  };
+
+  const handleSaveRenameCustomActor = async () => {
+    const id = editingCustomActorId;
+    const name = editingCustomActorName.trim();
+    if (!id || !name) {
+      setEditingCustomActorId(null);
+      return;
+    }
+    try {
+      const updated = await renameCustomActor(id, name);
+      setCustomActors((prev) => prev.map((a) => (a.id === id ? updated : a)));
+    } catch {
+      // Silently keeps the old name displayed — not worth a whole error
+      // banner for a rename hiccup, the user can just try again.
+    } finally {
+      setEditingCustomActorId(null);
+    }
+  };
+
+  const handleDeleteCustomActor = async (id: string) => {
+    if (!window.confirm("Delete this actor? This can't be undone.")) return;
+    try {
+      await deleteCustomActor(id);
+      setCustomActors((prev) => prev.filter((a) => a.id !== id));
+      if (selectedCustomActorId === id) setSelectedCustomActorId(null);
+    } catch {
+      // Leaves the actor in place on failure — nothing to reconcile.
     }
   };
 
@@ -1134,35 +1174,62 @@ function HomeScreen() {
                           .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
                           .map((a) => {
                             const selected = selectedCustomActorId === a.id;
+                            const editing = editingCustomActorId === a.id;
                             return (
-                              <button
-                                key={a.id}
-                                onClick={() => {
-                                  setSelectedCustomActorId(a.id);
-                                  setSelectedActorId(null);
-                                }}
-                                className="flex flex-col items-center gap-1"
-                              >
-                                <span
-                                  className={[
-                                    "relative aspect-square w-full overflow-hidden rounded-xl",
-                                    selected ? "ring-2 ring-primary" : "",
-                                  ].join(" ")}
-                                >
-                                  <img
-                                    src={`data:${a.photo_mime_type};base64,${a.photo_base64}`}
-                                    alt={a.name}
-                                    className="h-full w-full object-cover"
+                              <div key={a.id} className="flex flex-col items-center gap-1">
+                                <div className="relative aspect-square w-full overflow-hidden rounded-xl">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedCustomActorId(a.id);
+                                      setSelectedActorId(null);
+                                    }}
+                                    className={[
+                                      "absolute inset-0",
+                                      selected ? "ring-2 ring-primary" : "",
+                                    ].join(" ")}
+                                  >
+                                    <img
+                                      src={`data:${a.photo_mime_type};base64,${a.photo_base64}`}
+                                      alt={a.name}
+                                      className="h-full w-full object-cover"
+                                    />
+                                    {selected && (
+                                      <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                        <Check className="h-2.5 w-2.5" />
+                                      </span>
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCustomActor(a.id)}
+                                    title="Delete actor"
+                                    className="absolute left-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/50 text-white"
+                                  >
+                                    <X className="h-2.5 w-2.5" />
+                                  </button>
+                                </div>
+                                {editing ? (
+                                  <input
+                                    autoFocus
+                                    value={editingCustomActorName}
+                                    onChange={(e) => setEditingCustomActorName(e.target.value)}
+                                    onBlur={handleSaveRenameCustomActor}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") handleSaveRenameCustomActor();
+                                      if (e.key === "Escape") setEditingCustomActorId(null);
+                                    }}
+                                    className="w-full rounded border border-border bg-card px-1 text-center text-[10px] text-foreground focus:outline-none"
                                   />
-                                  {selected && (
-                                    <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                      <Check className="h-2.5 w-2.5" />
-                                    </span>
-                                  )}
-                                </span>
-                                <span className="text-[10px] font-medium text-foreground">{a.name}</span>
+                                ) : (
+                                  <button
+                                    onClick={() => handleStartRenameCustomActor(a)}
+                                    className="flex items-center gap-0.5 text-[10px] font-medium text-foreground"
+                                  >
+                                    {a.name}
+                                    <Pencil className="h-2 w-2 text-muted-foreground" />
+                                  </button>
+                                )}
                                 <span className="text-[9px] text-muted-foreground">Your actor</span>
-                              </button>
+                              </div>
                             );
                           })}
                         <button

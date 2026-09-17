@@ -443,6 +443,18 @@ export function fetchMyCustomActors(): Promise<{ actors: ApiCustomActor[] }> {
   return apiFetch<{ actors: ApiCustomActor[] }>("/ads/my-custom-actors");
 }
 
+export function renameCustomActor(actorId: string, name: string): Promise<ApiCustomActor> {
+  return apiFetch<ApiCustomActor>(`/ads/custom-actors/${actorId}/rename`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function deleteCustomActor(actorId: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(`/ads/custom-actors/${actorId}`, { method: "DELETE" });
+}
+
 // Punqle Actors v2 — a pre-baked Veo base clip per actor (generated once,
 // offline) redubbed with a fresh per-user narration track via Sync Labs,
 // replacing the OmniHuman pipeline above. voiceEngine is a real,

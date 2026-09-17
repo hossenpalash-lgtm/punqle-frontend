@@ -260,6 +260,7 @@ function HomeScreen() {
   const [productPrompt, setProductPrompt] = useState("");
   const [productFile, setProductFile] = useState<File | null>(null);
   const [productError, setProductError] = useState<string | null>(null);
+  const [showProductActorPicker, setShowProductActorPicker] = useState(false);
 
   // Talking Actors mode — reuses Punqle Actors v2 wholesale: same catalog,
   // same readiness gating, same generate/poll endpoints AdVideoForm.tsx's
@@ -331,9 +332,11 @@ function HomeScreen() {
   // Same free, already-live GET /ads/image-actors + /ads/actor-situations
   // AdVideoForm.tsx's own picker already calls — loads once, on first
   // visit to Talking Actors mode (this is the default mode, so in
-  // practice on page load).
+  // practice on page load). Also loads on first visit to Product mode,
+  // which reuses this same actor catalog as a "pick an actor" option
+  // (matches Arcads' own "Presets" picker on their Product tab).
   useEffect(() => {
-    if (homeMode !== "talking_actors") return;
+    if (homeMode !== "talking_actors" && homeMode !== "product") return;
     if (actors.length === 0 && !actorsLoading) {
       setActorsLoading(true);
       fetchImageActors()
@@ -530,6 +533,7 @@ function HomeScreen() {
     setProductPrompt("");
     setProductFile(null);
     setProductError(null);
+    setShowProductActorPicker(false);
     setSelectedActorId(null);
     setSelectedCustomActorId(null);
     handleResetCreateActor();
@@ -632,6 +636,16 @@ function HomeScreen() {
       setVideoRefImage({ mimeType: match[1], base64: match[2] });
     };
     reader.readAsDataURL(file);
+  };
+
+  // Matches Arcads' own "Presets" picker on their Product tab (a stock
+  // actor gallery you pick a model photo from, confirmed frame-by-frame
+  // from a real recording) -- reuses the exact same actor catalog
+  // Talking Actors mode already fetches, built-in actors' photos are
+  // always JPEG (see assets/actors/*.jpg).
+  const handlePickProductActor = (base64: string, mimeType: string) => {
+    setVideoRefImage({ base64, mimeType });
+    setShowProductActorPicker(false);
   };
 
   const handleGenerateProduct = async () => {
@@ -1835,6 +1849,55 @@ function HomeScreen() {
                         <input type="file" accept="image/*" className="hidden" onChange={handleProductFileChange} />
                       </label>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowProductActorPicker((v) => !v)}
+                      className="text-xs font-semibold text-accent"
+                    >
+                      {showProductActorPicker ? "Hide actors" : "Or choose an actor"}
+                    </button>
+
+                    {showProductActorPicker && (
+                      <div className="flex flex-wrap gap-2 rounded-xl border border-border p-2">
+                        {(actorsLoading || customActorsLoading) && actors.length === 0 && customActors.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">Loading actors…</p>
+                        ) : (
+                          <>
+                            {customActors.map((a) => (
+                              <button
+                                key={a.id}
+                                type="button"
+                                title={a.name}
+                                onClick={() => handlePickProductActor(a.photo_base64, a.photo_mime_type)}
+                                className="h-12 w-12 shrink-0 overflow-hidden rounded-lg ring-1 ring-border"
+                              >
+                                <img
+                                  src={`data:${a.photo_mime_type};base64,${a.photo_base64}`}
+                                  alt={a.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              </button>
+                            ))}
+                            {actors.map((a) => (
+                              <button
+                                key={a.id}
+                                type="button"
+                                title={a.name}
+                                onClick={() => handlePickProductActor(a.preview_image_base64, "image/jpeg")}
+                                className="h-12 w-12 shrink-0 overflow-hidden rounded-lg ring-1 ring-border"
+                              >
+                                <img
+                                  src={`data:image/jpeg;base64,${a.preview_image_base64}`}
+                                  alt={a.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              </button>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    )}
 
                     <textarea
                       value={productPrompt}

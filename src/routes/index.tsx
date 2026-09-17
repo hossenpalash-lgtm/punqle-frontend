@@ -269,6 +269,11 @@ function HomeScreen() {
   const [actorsLoading, setActorsLoading] = useState(false);
   const [actorSituations, setActorSituations] = useState<Record<string, string>>({});
   const [actorGenderFilter, setActorGenderFilter] = useState<"all" | "female" | "male">("all");
+  // Collapsed by default (first 4 + a "More" tile) so the compose area
+  // (narration/voice/Generate) is visible without scrolling — matches
+  // Arcads' own compact bar. Resets whenever the gender filter changes
+  // so every filter starts compact.
+  const [showAllActors, setShowAllActors] = useState(false);
   const [actorPreviewVideos, setActorPreviewVideos] = useState<Record<string, string>>({});
   const [selectedActorId, setSelectedActorId] = useState<string | null>(null);
   const [actorNarration, setActorNarration] = useState("");
@@ -1082,7 +1087,10 @@ function HomeScreen() {
                       {(["all", "female", "male"] as const).map((g) => (
                         <button
                           key={g}
-                          onClick={() => setActorGenderFilter(g)}
+                          onClick={() => {
+                            setActorGenderFilter(g);
+                            setShowAllActors(false);
+                          }}
                           className={[
                             "flex-1 rounded-full px-3 py-2 text-xs font-semibold capitalize",
                             actorGenderFilter === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
@@ -1096,10 +1104,23 @@ function HomeScreen() {
                       <div className="flex items-center justify-center py-6">
                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                       </div>
-                    ) : (
+                    ) : (() => {
+                      // Collapsed to one row (first 4 + "More") by default
+                      // — 16+ faces all at once read as overwhelming and
+                      // pushed the compose box below the fold. "More"
+                      // reveals the rest in place; switching the gender
+                      // filter re-collapses (see setActorGenderFilter above).
+                      const filteredActors = actors.filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter);
+                      const filteredCustomActors = customActors.filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter);
+                      const totalCount = filteredActors.length + filteredCustomActors.length;
+                      const visibleActors = showAllActors ? filteredActors : filteredActors.slice(0, 4);
+                      const visibleCustomActors = showAllActors
+                        ? filteredCustomActors
+                        : filteredCustomActors.slice(0, Math.max(0, 4 - filteredActors.length));
+                      const hasMore = totalCount > 4;
+                      return (
                       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-                        {actors
-                          .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
+                        {visibleActors
                           .map((a) => {
                             const selected = selectedActorId === a.id;
                             const situationId = actorSituations[a.id];
@@ -1170,8 +1191,7 @@ function HomeScreen() {
                               </button>
                             );
                           })}
-                        {customActors
-                          .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
+                        {visibleCustomActors
                           .map((a) => {
                             const selected = selectedCustomActorId === a.id;
                             const editing = editingCustomActorId === a.id;
@@ -1232,6 +1252,19 @@ function HomeScreen() {
                               </div>
                             );
                           })}
+                        {hasMore && (
+                          <button
+                            onClick={() => setShowAllActors((v) => !v)}
+                            className="flex flex-col items-center gap-1"
+                          >
+                            <span className="flex aspect-square w-full items-center justify-center rounded-xl border border-dashed border-border">
+                              <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+                            </span>
+                            <span className="text-[10px] font-medium text-foreground">
+                              {showAllActors ? "Show less" : "More"}
+                            </span>
+                          </button>
+                        )}
                         <button
                           onClick={() => setShowCreateActor(true)}
                           className="flex flex-col items-center gap-1"
@@ -1242,7 +1275,8 @@ function HomeScreen() {
                           <span className="text-[10px] font-medium text-foreground">Create your own</span>
                         </button>
                       </div>
-                    )}
+                      );
+                    })()}
 
                     {!selectedActorId && !selectedCustomActorId && (
                       <p className="mt-4 text-xs text-muted-foreground">Pick an actor above to set voice options.</p>

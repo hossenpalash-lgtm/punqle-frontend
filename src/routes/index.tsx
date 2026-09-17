@@ -226,6 +226,7 @@ function HomeScreen() {
   const [homeImageError, setHomeImageError] = useState<string | null>(null);
   const [homeGeneratedImage, setHomeGeneratedImage] = useState<string | null>(null);
   const homePromptRef = useRef<HTMLTextAreaElement>(null);
+  const videoResultRef = useRef<HTMLVideoElement>(null);
 
   // The "Video" action on a generated image — a real competitor's own
   // Actions row (Edit/Remix/Video/Actor), only Video wired for now. One
@@ -434,6 +435,32 @@ function HomeScreen() {
     if (!homeGeneratedImage) return;
     setCreateActorPhoto({ base64: homeGeneratedImage, mimeType: "image/png" });
     setCreateActorSource("generate");
+    setShowCreateActor(true);
+    setHomeMode("talking_actors");
+  };
+
+  // Same idea, but from a finished Video mode result — there's no
+  // single photo to hand off, so this grabs whatever frame is currently
+  // showing in the <video> element via an offscreen canvas. Unlike the
+  // image version, this is marked as "upload" source (requires the
+  // consent checkbox) — a video's starting frame could have come from
+  // either a synthetic generated photo OR a real photo the user
+  // uploaded directly into Video mode, and there's no reliable way to
+  // tell which from here, so this defaults to the safer, consent-required path.
+  const handleTurnVideoFrameIntoActor = () => {
+    const video = videoResultRef.current;
+    if (!video || !video.videoWidth || !video.videoHeight) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/png");
+    const base64 = dataUrl.split(",")[1];
+    if (!base64) return;
+    setCreateActorPhoto({ base64, mimeType: "image/png" });
+    setCreateActorSource("upload");
     setShowCreateActor(true);
     setHomeMode("talking_actors");
   };
@@ -1400,6 +1427,7 @@ function HomeScreen() {
                   <>
                     {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                     <video
+                      ref={videoResultRef}
                       controls
                       autoPlay
                       loop
@@ -1408,12 +1436,21 @@ function HomeScreen() {
                     />
                     <div className="flex items-center justify-between gap-2 px-4 py-3">
                       <span className="text-xs text-muted-foreground">{IMAGE_VIDEO_MODEL_LABELS[videoModel]}</span>
-                      <button
-                        onClick={handleResetHome}
-                        className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                      >
-                        Create another
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleTurnVideoFrameIntoActor}
+                          title="Save the current frame as a reusable actor"
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Actor
+                        </button>
+                        <button
+                          onClick={handleResetHome}
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Create another
+                        </button>
+                      </div>
                     </div>
                   </>
                 ) : !videoRefImage ? (

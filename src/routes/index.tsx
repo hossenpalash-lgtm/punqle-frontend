@@ -557,7 +557,8 @@ function HomeScreen() {
           <div className="mb-3 flex flex-wrap justify-center gap-2">
             <button
               onClick={() => goTo("ad")}
-              className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground"
+              className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
+              style={{ boxShadow: "var(--shadow-card)" }}
             >
               <Megaphone className="h-4 w-4" />
               Image Ad

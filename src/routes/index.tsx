@@ -424,6 +424,20 @@ function HomeScreen() {
     }
   };
 
+  // One-click "turn this generated image into a reusable actor" — matches
+  // Arcads' own result-screen "Actor" button. Skips straight to the
+  // name/gender/save step of the existing create-actor flow since the
+  // photo's already in hand; deliberately doesn't call handleResetHome
+  // (or handleSwitchMode, which calls it) so the Image mode result stays
+  // intact if the user cancels and switches back.
+  const handleTurnImageIntoActor = () => {
+    if (!homeGeneratedImage) return;
+    setCreateActorPhoto({ base64: homeGeneratedImage, mimeType: "image/png" });
+    setCreateActorSource("generate");
+    setShowCreateActor(true);
+    setHomeMode("talking_actors");
+  };
+
   const handleStartRenameCustomActor = (a: ApiCustomActor) => {
     setEditingCustomActorId(a.id);
     setEditingCustomActorName(a.name);
@@ -1617,15 +1631,23 @@ function HomeScreen() {
                         </span>
                         <div className="flex items-center gap-2">
                           {videoPanel === "closed" && productPanel === "closed" && homeGeneratedImage && !homeGeneratedVideo && (
-                            <button
-                              onClick={() => {
-                                handleOpenVideoComposer();
-                                setHomeMode("video");
-                              }}
-                              className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                            >
-                              Make a video
-                            </button>
+                            <>
+                              <button
+                                onClick={handleTurnImageIntoActor}
+                                className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                              >
+                                Actor
+                              </button>
+                              <button
+                                onClick={() => {
+                                  handleOpenVideoComposer();
+                                  setHomeMode("video");
+                                }}
+                                className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                              >
+                                Make a video
+                              </button>
+                            </>
                           )}
                           <button
                             onClick={handleResetHome}

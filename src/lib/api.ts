@@ -383,15 +383,23 @@ export interface ApiAiActorVideoOperation {
   prediction_id: string;
 }
 
+// Exactly one of actorId/customActorId should be set -- actorId for
+// the built-in _IMAGE_AD_ACTORS catalog, customActorId for a saved
+// custom_actors row (see createCustomActor below). Both go through
+// the same OmniHuman pipeline server-side.
 export function startAiActorVideoGeneration(
-  actorId: string,
   narration: string,
-  language: "english" | "bangla" = "english",
+  options: { actorId?: string; customActorId?: string; language?: "english" | "bangla" },
 ): Promise<ApiAiActorVideoOperation> {
   return apiFetch<ApiAiActorVideoOperation>("/ads/generate-ai-actor-video", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ actor_id: actorId, narration, language }),
+    body: JSON.stringify({
+      actor_id: options.actorId,
+      custom_actor_id: options.customActorId,
+      narration,
+      language: options.language ?? "english",
+    }),
   });
 }
 
@@ -401,6 +409,38 @@ export function checkAiActorVideoStatus(predictionId: string): Promise<ApiAvatar
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prediction_id: predictionId }),
   });
+}
+
+// "Create Your Own Actor" — just a saved photo + name + gender, no
+// trained avatar object on any vendor's side (deliberately not
+// HeyGen — see main.py's create_custom_actor comment). Free; the real
+// cost is whichever of generateImageDirect (1 credit) or nothing
+// (plain upload) produced the photo, plus AI_ACTOR_VIDEO_CREDIT_COST
+// later when startAiActorVideoGeneration is actually called with it.
+export interface ApiCustomActor {
+  id: string;
+  name: string;
+  gender: "female" | "male";
+  photo_base64: string;
+  photo_mime_type: string;
+  created_at: string;
+}
+
+export function createCustomActor(
+  name: string,
+  gender: "female" | "male",
+  photoBase64: string,
+  photoMimeType: string,
+): Promise<ApiCustomActor> {
+  return apiFetch<ApiCustomActor>("/ads/create-custom-actor", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, gender, photo_base64: photoBase64, photo_mime_type: photoMimeType }),
+  });
+}
+
+export function fetchMyCustomActors(): Promise<{ actors: ApiCustomActor[] }> {
+  return apiFetch<{ actors: ApiCustomActor[] }>("/ads/my-custom-actors");
 }
 
 // Punqle Actors v2 — a pre-baked Veo base clip per actor (generated once,

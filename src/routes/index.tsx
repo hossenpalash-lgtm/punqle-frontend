@@ -21,23 +21,28 @@ import { useEffect, useRef, useState } from "react";
 import {
   addEmotionTags,
   type ActorVoiceEngine,
+  type ApiCustomActor,
   type ApiImageActor,
   type ApiVideoOperation,
   type AspectRatio,
   checkActorVideoV2Status,
+  checkAiActorVideoStatus,
   checkImageVideoStatus,
   checkTalkingVideoStatus,
   combineActorAndProduct,
+  createCustomActor,
   fetchActorPreviewVideoUrl,
   fetchActorSituations,
   fetchAdCredits,
   fetchImageActors,
+  fetchMyCustomActors,
   generateImageDirect,
   generateImageVideo,
   generateTalkingVideo,
   type ImageGenModel,
   type ImageVideoModel,
   startActorVideoV2,
+  startAiActorVideoGeneration,
   type VideoAspectRatio,
   type VoiceGender,
 } from "@/lib/api";
@@ -268,6 +273,24 @@ function HomeScreen() {
   const [actorError, setActorError] = useState<string | null>(null);
   const [actorVideoBase64, setActorVideoBase64] = useState<string | null>(null);
   const actorPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // "Create Your Own Actor" — deliberately not HeyGen (see api.ts's
+  // createCustomActor comment): just a saved photo + name + gender,
+  // animated via OmniHuman at video-generation time. selectedActorId
+  // (built-in) and selectedCustomActorId are mutually exclusive.
+  const [customActors, setCustomActors] = useState<ApiCustomActor[]>([]);
+  const [customActorsLoading, setCustomActorsLoading] = useState(false);
+  const [selectedCustomActorId, setSelectedCustomActorId] = useState<string | null>(null);
+  const [showCreateActor, setShowCreateActor] = useState(false);
+  const [createActorSource, setCreateActorSource] = useState<"choose" | "upload" | "generate">("choose");
+  const [createActorName, setCreateActorName] = useState("");
+  const [createActorGender, setCreateActorGender] = useState<"female" | "male">("female");
+  const [createActorPhoto, setCreateActorPhoto] = useState<{ base64: string; mimeType: string } | null>(null);
+  const [createActorConsent, setCreateActorConsent] = useState(false);
+  const [createActorPrompt, setCreateActorPrompt] = useState("");
+  const [createActorGenerating, setCreateActorGenerating] = useState(false);
+  const [createActorSaving, setCreateActorSaving] = useState(false);
+  const [createActorError, setCreateActorError] = useState<string | null>(null);
   // ElevenLabs-only controls (no OpenAI equivalent) — same defaults as
   // AdVideoForm.tsx's own sliders (Arcads-sourced, already validated).
   // "Add emotions" runs a small AI pass on narration right before
@@ -315,10 +338,80 @@ function HomeScreen() {
         })
         .catch(() => {});
     }
+    if (customActors.length === 0 && !customActorsLoading) {
+      setCustomActorsLoading(true);
+      fetchMyCustomActors()
+        .then((r) => setCustomActors(r.actors))
+        .catch(() => {})
+        .finally(() => setCustomActorsLoading(false));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeMode]);
 
   const goTo = (t: Tab) => navigate({ to: "/", search: { tab: t } });
+
+  const handleCreateActorPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const match = result.match(/^data:(.*?);base64,(.*)$/);
+      if (!match) return;
+      setCreateActorPhoto({ mimeType: match[1], base64: match[2] });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleGenerateActorPhoto = async () => {
+    if (!createActorPrompt.trim() || createActorGenerating) return;
+    setCreateActorError(null);
+    setCreateActorGenerating(true);
+    try {
+      const r = await generateImageDirect(createActorPrompt.trim(), "square", "nano_banana_pro");
+      setCreateActorPhoto({ base64: r.banner_image_base64, mimeType: "image/png" });
+      setCredits(r.credits_remaining);
+    } catch (err) {
+      setCreateActorError(err instanceof Error ? err.message : "Couldn't generate that photo.");
+    } finally {
+      setCreateActorGenerating(false);
+    }
+  };
+
+  const handleResetCreateActor = () => {
+    setShowCreateActor(false);
+    setCreateActorSource("choose");
+    setCreateActorName("");
+    setCreateActorGender("female");
+    setCreateActorPhoto(null);
+    setCreateActorConsent(false);
+    setCreateActorPrompt("");
+    setCreateActorError(null);
+  };
+
+  const handleSaveCustomActor = async () => {
+    if (!createActorPhoto || !createActorName.trim() || createActorSaving) return;
+    if (createActorSource === "upload" && !createActorConsent) return;
+    setCreateActorError(null);
+    setCreateActorSaving(true);
+    try {
+      const saved = await createCustomActor(
+        createActorName.trim(),
+        createActorGender,
+        createActorPhoto.base64,
+        createActorPhoto.mimeType,
+      );
+      setCustomActors((prev) => [saved, ...prev]);
+      setSelectedCustomActorId(saved.id);
+      setSelectedActorId(null);
+      handleResetCreateActor();
+    } catch (err) {
+      setCreateActorError(err instanceof Error ? err.message : "Couldn't save that actor.");
+    } finally {
+      setCreateActorSaving(false);
+    }
+  };
 
   const handleHomeGenerateImage = async () => {
     if (!homeIdea.trim() || homeImageGenerating) return;
@@ -352,6 +445,8 @@ function HomeScreen() {
     setProductFile(null);
     setProductError(null);
     setSelectedActorId(null);
+    setSelectedCustomActorId(null);
+    handleResetCreateActor();
     setActorNarration("");
     setActorPanel("compose");
     setActorError(null);
@@ -592,11 +687,15 @@ function HomeScreen() {
     }
   };
 
-  const pollActorVideo = async (predictionId: string) => {
+  // Built-in actors go through Punqle Actors v2 (Veo + Sync Labs
+  // redub); custom actors go through OmniHuman (photo + audio, no
+  // pre-baked base clip) — different vendors, different status
+  // endpoints, same response shape, so one poll loop covers both.
+  const pollActorVideo = async (predictionId: string, pipeline: "v2" | "omnihuman") => {
     try {
-      const r = await checkActorVideoV2Status(predictionId);
+      const r = pipeline === "omnihuman" ? await checkAiActorVideoStatus(predictionId) : await checkActorVideoV2Status(predictionId);
       if (!r.done) {
-        actorPollRef.current = setTimeout(() => pollActorVideo(predictionId), 8000);
+        actorPollRef.current = setTimeout(() => pollActorVideo(predictionId, pipeline), 8000);
         return;
       }
       if (r.credits_remaining !== null) setCredits(r.credits_remaining);
@@ -616,12 +715,15 @@ function HomeScreen() {
   // Same endpoint AdVideoForm.tsx's "Punqle Actors" style already calls
   // (main.py:5364) — the user's own textarea text goes straight in as
   // narration, no script-angle pre-step (that's Ad-Creation-specific).
+  // Custom actors skip the voice-engine/ElevenLabs controls entirely —
+  // OmniHuman always speaks with a fixed gender-matched OpenAI voice,
+  // no engine choice.
   const handleGenerateActorVideo = async () => {
-    if (!selectedActorId || !actorNarration.trim()) return;
+    if ((!selectedActorId && !selectedCustomActorId) || !actorNarration.trim()) return;
     if (credits !== null && credits < ACTOR_VIDEO_V2_CREDIT_COST) return;
     setActorError(null);
     let narration = actorNarration.trim();
-    if (actorVoiceEngine === "elevenlabs" && addEmotions) {
+    if (selectedActorId && actorVoiceEngine === "elevenlabs" && addEmotions) {
       setTaggingEmotions(true);
       try {
         const tagged = await addEmotionTags(narration);
@@ -635,12 +737,17 @@ function HomeScreen() {
     }
     setActorPanel("generating");
     try {
+      if (selectedCustomActorId) {
+        const r = await startAiActorVideoGeneration(narration, { customActorId: selectedCustomActorId, language: "english" });
+        actorPollRef.current = setTimeout(() => pollActorVideo(r.prediction_id, "omnihuman"), 8000);
+        return;
+      }
       const elevenlabsSettings =
         actorVoiceEngine === "elevenlabs"
           ? { stability: elevenlabsStability, similarity_boost: elevenlabsSimilarity, style: elevenlabsStyle, speed: elevenlabsSpeed }
           : undefined;
-      const r = await startActorVideoV2(selectedActorId, narration, actorVoiceEngine, elevenlabsSettings);
-      actorPollRef.current = setTimeout(() => pollActorVideo(r.prediction_id), 8000);
+      const r = await startActorVideoV2(selectedActorId!, narration, actorVoiceEngine, elevenlabsSettings);
+      actorPollRef.current = setTimeout(() => pollActorVideo(r.prediction_id, "v2"), 8000);
     } catch (err) {
       setActorError(err instanceof Error ? err.message : "Couldn't start the actor video.");
       setActorPanel("compose");
@@ -803,7 +910,9 @@ function HomeScreen() {
                     />
                     <div className="flex items-center justify-between gap-2 px-4 py-3">
                       <span className="text-xs text-muted-foreground">
-                        {actors.find((a) => a.id === selectedActorId)?.name ?? "Actor"}
+                        {selectedCustomActorId
+                          ? customActors.find((a) => a.id === selectedCustomActorId)?.name ?? "Your actor"
+                          : actors.find((a) => a.id === selectedActorId)?.name ?? "Actor"}
                       </span>
                       <button
                         onClick={handleResetHome}
@@ -813,6 +922,116 @@ function HomeScreen() {
                       </button>
                     </div>
                   </>
+                ) : showCreateActor ? (
+                  <div className="p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Create your own actor
+                      </p>
+                      <button onClick={handleResetCreateActor} className="text-xs font-semibold text-muted-foreground">
+                        Cancel
+                      </button>
+                    </div>
+                    {createActorError && <p className="mb-2 text-xs font-medium text-destructive">{createActorError}</p>}
+
+                    {createActorSource === "choose" && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setCreateActorSource("upload")}
+                          className="flex flex-col items-center gap-2 rounded-xl border border-border px-4 py-6 text-center"
+                        >
+                          <Upload className="h-5 w-5 text-muted-foreground" />
+                          <span className="text-sm font-semibold text-foreground">Upload a photo</span>
+                        </button>
+                        <button
+                          onClick={() => setCreateActorSource("generate")}
+                          className="flex flex-col items-center gap-2 rounded-xl border border-border px-4 py-6 text-center"
+                        >
+                          <Sparkles className="h-5 w-5 text-muted-foreground" />
+                          <span className="text-sm font-semibold text-foreground">Generate with AI</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {createActorSource === "upload" && !createActorPhoto && (
+                      <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+                        <Upload className="h-5 w-5" />
+                        Choose a photo
+                        <input type="file" accept="image/*" className="hidden" onChange={handleCreateActorPhotoUpload} />
+                      </label>
+                    )}
+
+                    {createActorSource === "generate" && !createActorPhoto && (
+                      <div className="space-y-3">
+                        <textarea
+                          value={createActorPrompt}
+                          onChange={(e) => setCreateActorPrompt(e.target.value)}
+                          placeholder="Describe your actor… (e.g. 30-year-old woman, friendly, casual, natural look)"
+                          rows={2}
+                          className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
+                        />
+                        <button
+                          onClick={handleGenerateActorPhoto}
+                          disabled={!createActorPrompt.trim() || createActorGenerating}
+                          className="w-full rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                        >
+                          {createActorGenerating ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Generate (1 credit)"}
+                        </button>
+                      </div>
+                    )}
+
+                    {createActorPhoto && (
+                      <div className="space-y-3">
+                        <img
+                          src={`data:${createActorPhoto.mimeType};base64,${createActorPhoto.base64}`}
+                          alt="New actor"
+                          className="mx-auto h-32 w-32 rounded-xl object-cover"
+                        />
+                        <input
+                          value={createActorName}
+                          onChange={(e) => setCreateActorName(e.target.value)}
+                          placeholder="Actor's name"
+                          className="w-full rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
+                        />
+                        <div className="flex gap-1.5">
+                          {(["female", "male"] as const).map((g) => (
+                            <button
+                              key={g}
+                              onClick={() => setCreateActorGender(g)}
+                              className={[
+                                "flex-1 rounded-full px-3 py-1.5 text-xs font-semibold capitalize",
+                                createActorGender === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                              ].join(" ")}
+                            >
+                              {g}
+                            </button>
+                          ))}
+                        </div>
+                        {createActorSource === "upload" && (
+                          <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                            <input
+                              type="checkbox"
+                              checked={createActorConsent}
+                              onChange={(e) => setCreateActorConsent(e.target.checked)}
+                              className="h-4 w-4"
+                            />
+                            This is my own photo, or I have permission to use it
+                          </label>
+                        )}
+                        <button
+                          onClick={handleSaveCustomActor}
+                          disabled={
+                            !createActorName.trim() ||
+                            createActorSaving ||
+                            (createActorSource === "upload" && !createActorConsent)
+                          }
+                          className="w-full rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                        >
+                          {createActorSaving ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Save actor"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="p-4">
                     {actorError && <p className="mb-2 text-xs font-medium text-destructive">{actorError}</p>}
@@ -852,7 +1071,11 @@ function HomeScreen() {
                             return (
                               <button
                                 key={a.id}
-                                onClick={() => ready && setSelectedActorId(a.id)}
+                                onClick={() => {
+                                  if (!ready) return;
+                                  setSelectedActorId(a.id);
+                                  setSelectedCustomActorId(null);
+                                }}
                                 disabled={!ready}
                                 onMouseEnter={(e) => {
                                   if (!ready) return;
@@ -907,34 +1130,71 @@ function HomeScreen() {
                               </button>
                             );
                           })}
+                        {customActors
+                          .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
+                          .map((a) => {
+                            const selected = selectedCustomActorId === a.id;
+                            return (
+                              <button
+                                key={a.id}
+                                onClick={() => {
+                                  setSelectedCustomActorId(a.id);
+                                  setSelectedActorId(null);
+                                }}
+                                className="flex flex-col items-center gap-1"
+                              >
+                                <span
+                                  className={[
+                                    "relative aspect-square w-full overflow-hidden rounded-xl",
+                                    selected ? "ring-2 ring-primary" : "",
+                                  ].join(" ")}
+                                >
+                                  <img
+                                    src={`data:${a.photo_mime_type};base64,${a.photo_base64}`}
+                                    alt={a.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                  {selected && (
+                                    <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                      <Check className="h-2.5 w-2.5" />
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="text-[10px] font-medium text-foreground">{a.name}</span>
+                                <span className="text-[9px] text-muted-foreground">Your actor</span>
+                              </button>
+                            );
+                          })}
                         <button
-                          disabled
-                          title="Coming soon"
-                          className="flex cursor-not-allowed flex-col items-center gap-1 opacity-40"
+                          onClick={() => setShowCreateActor(true)}
+                          className="flex flex-col items-center gap-1"
                         >
                           <span className="flex aspect-square w-full items-center justify-center rounded-xl border border-dashed border-border">
                             <Plus className="h-5 w-5 text-muted-foreground" />
                           </span>
                           <span className="text-[10px] font-medium text-foreground">Create your own</span>
-                          <span className="text-[9px] text-muted-foreground">Coming soon</span>
                         </button>
                       </div>
                     )}
 
-                    <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Voice
-                    </p>
-                    <select
-                      value={actorVoiceEngine}
-                      onChange={(e) => setActorVoiceEngine(e.target.value as ActorVoiceEngine)}
-                      className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="openai_natural">OpenAI (Natural)</option>
-                      <option value="openai_standard">OpenAI (Standard) — Recommended</option>
-                      <option value="elevenlabs">ElevenLabs</option>
-                    </select>
+                    {selectedActorId && (
+                      <>
+                        <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Voice
+                        </p>
+                        <select
+                          value={actorVoiceEngine}
+                          onChange={(e) => setActorVoiceEngine(e.target.value as ActorVoiceEngine)}
+                          className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="openai_natural">OpenAI (Natural)</option>
+                          <option value="openai_standard">OpenAI (Standard) — Recommended</option>
+                          <option value="elevenlabs">ElevenLabs</option>
+                        </select>
+                      </>
+                    )}
 
-                    {actorVoiceEngine === "elevenlabs" && (
+                    {selectedActorId && actorVoiceEngine === "elevenlabs" && (
                       <div className="mt-3 space-y-4 rounded-xl bg-secondary/40 p-3">
                         <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
                           <input
@@ -985,7 +1245,7 @@ function HomeScreen() {
                       <button
                         onClick={handleGenerateActorVideo}
                         disabled={
-                          !selectedActorId ||
+                          (!selectedActorId && !selectedCustomActorId) ||
                           !actorNarration.trim() ||
                           actorPanel === "generating" ||
                           taggingEmotions ||

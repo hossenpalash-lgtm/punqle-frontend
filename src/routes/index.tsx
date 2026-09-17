@@ -208,7 +208,7 @@ function HomeScreen() {
   // structurally impossible now: only one mode's block ever renders.
   // "See more" (Image Ad/Try-On/Carousel) stays outside this — those are
   // genuinely separate, heavier wizards that navigate away, unchanged.
-  type HomeMode = "talking_actors" | "video" | "image";
+  type HomeMode = "talking_actors" | "video" | "image" | "product";
   const [homeMode, setHomeMode] = useState<HomeMode>("talking_actors");
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
@@ -616,13 +616,6 @@ function HomeScreen() {
     if (opt) setVideoDuration((d) => Math.min(opt.max, Math.max(opt.min, d)));
   };
 
-  const handleOpenProductComposer = () => {
-    setProductPrompt("");
-    setProductFile(null);
-    setProductError(null);
-    setProductPanel("composer");
-  };
-
   const handleProductFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProductFile(e.target.files?.[0] || null);
   };
@@ -921,6 +914,17 @@ function HomeScreen() {
             >
               <Sparkles className="h-4 w-4" />
               Image
+            </button>
+            <button
+              onClick={() => handleSwitchMode("product")}
+              className={[
+                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
+                homeMode === "product" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
+              ].join(" ")}
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <Package className="h-4 w-4" />
+              Product
             </button>
             <div className="relative">
               <button
@@ -1633,139 +1637,39 @@ function HomeScreen() {
             {/* ---------- Image mode ---------- */}
             {homeMode === "image" && (
               <>
-                {homeGeneratedImage || videoRefImage || productPanel !== "closed" ? (
+                {homeGeneratedImage ? (
                   <>
-                    {videoPanel === "result" && homeGeneratedVideo ? (
-                      // eslint-disable-next-line jsx-a11y/media-has-caption
-                      <video
-                        controls
-                        autoPlay
-                        loop
-                        className="max-h-[420px] w-full bg-[#1E1F24]"
-                        src={`data:video/mp4;base64,${homeGeneratedVideo}`}
-                      />
-                    ) : homeGeneratedImage || videoRefImage ? (
-                      <img
-                        src={
-                          homeGeneratedImage
-                            ? `data:image/png;base64,${homeGeneratedImage}`
-                            : videoRefImage
-                              ? `data:${videoRefImage.mimeType};base64,${videoRefImage.base64}`
-                              : undefined
-                        }
-                        alt="Generated"
-                        className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
-                      />
-                    ) : null}
-                    {(homeGeneratedImage || videoRefImage) && (
-                      <div className="flex items-center justify-between gap-2 px-4 py-3">
-                        <span className="text-xs text-muted-foreground">
-                          {videoPanel === "result"
-                            ? IMAGE_VIDEO_MODEL_LABELS[videoModel]
-                            : homeGeneratedImage
-                              ? IMAGE_MODEL_LABELS[homeImageModel]
-                              : "Your photo"}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {videoPanel === "closed" && productPanel === "closed" && homeGeneratedImage && !homeGeneratedVideo && (
-                            <>
-                              <button
-                                onClick={handleTurnImageIntoActor}
-                                className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                              >
-                                Actor
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleOpenVideoComposer();
-                                  setHomeMode("video");
-                                }}
-                                className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                              >
-                                Make a video
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={handleResetHome}
-                            className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                          >
-                            Create another
-                          </button>
-                        </div>
+                    <img
+                      src={`data:image/png;base64,${homeGeneratedImage}`}
+                      alt="Generated"
+                      className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
+                    />
+                    <div className="flex items-center justify-between gap-2 px-4 py-3">
+                      <span className="text-xs text-muted-foreground">{IMAGE_MODEL_LABELS[homeImageModel]}</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleTurnImageIntoActor}
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Actor
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleOpenVideoComposer();
+                            setHomeMode("video");
+                          }}
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Make a video
+                        </button>
+                        <button
+                          onClick={handleResetHome}
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Create another
+                        </button>
                       </div>
-                    )}
-
-                    {productPanel === "composer" && (
-                      <div className="space-y-3 border-t border-border px-4 py-3">
-                        {productError && <p className="text-xs font-medium text-destructive">{productError}</p>}
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
-                            {videoRefImage ? (
-                              <img
-                                src={`data:${videoRefImage.mimeType};base64,${videoRefImage.base64}`}
-                                alt="Actor"
-                                className="h-10 w-10 rounded-lg object-cover"
-                              />
-                            ) : (
-                              <Upload className="h-3.5 w-3.5" />
-                            )}
-                            {videoRefImage ? "Replace actor photo" : "Upload actor / model photo"}
-                            <input type="file" accept="image/*" className="hidden" onChange={handleUploadProductActor} />
-                          </label>
-                          <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
-                            {productFile ? (
-                              <Package className="h-5 w-5" />
-                            ) : (
-                              <Upload className="h-3.5 w-3.5" />
-                            )}
-                            {productFile ? productFile.name : "Upload a product photo"}
-                            <input type="file" accept="image/*" className="hidden" onChange={handleProductFileChange} />
-                          </label>
-                        </div>
-
-                        <textarea
-                          value={productPrompt}
-                          onChange={(e) => setProductPrompt(e.target.value)}
-                          placeholder="Describe the product and how it's used… (e.g. Strong, durable bottle that can be used every day.)"
-                          rows={2}
-                          className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
-                        />
-
-                        <div className="flex items-center justify-between gap-2 pt-1">
-                          <button
-                            onClick={() => setProductPanel("closed")}
-                            className="rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={handleGenerateProduct}
-                            disabled={!videoRefImage || !productFile || !productPrompt.trim()}
-                            className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
-                          >
-                            Generate
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {productPanel === "generating" && (
-                      <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-6">
-                        <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                        <p className="text-xs text-muted-foreground">Creating your image…</p>
-                      </div>
-                    )}
-
-                    {videoPanel === "generating" && (
-                      <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-6">
-                        <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                        <p className="text-xs text-muted-foreground">
-                          {videoStage === "animating" ? "Animating your video…" : "Adding the voice…"}
-                        </p>
-                      </div>
-                    )}
+                    </div>
                   </>
                 ) : (
                   <>
@@ -1843,13 +1747,6 @@ function HomeScreen() {
                         >
                           <Settings2 className="h-4 w-4" />
                         </button>
-                        <button
-                          onClick={handleOpenProductComposer}
-                          title="Attach an actor + product photo"
-                          className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground"
-                        >
-                          <Package className="h-4 w-4" />
-                        </button>
                       </div>
                       <button
                         onClick={handleHomeGenerateImage}
@@ -1861,6 +1758,102 @@ function HomeScreen() {
                       </button>
                     </div>
                   </>
+                )}
+              </>
+            )}
+
+            {/* ---------- Product mode ---------- */}
+            {homeMode === "product" && (
+              <>
+                {videoPanel === "result" && homeGeneratedVideo ? (
+                  <>
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video
+                      ref={videoResultRef}
+                      controls
+                      autoPlay
+                      loop
+                      className="max-h-[420px] w-full bg-[#1E1F24]"
+                      src={`data:video/mp4;base64,${homeGeneratedVideo}`}
+                    />
+                    <div className="flex items-center justify-between gap-2 px-4 py-3">
+                      <span className="text-xs text-muted-foreground">{IMAGE_VIDEO_MODEL_LABELS[videoModel]}</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleTurnVideoFrameIntoActor}
+                          title="Save the current frame as a reusable actor"
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Actor
+                        </button>
+                        <button
+                          onClick={handleResetHome}
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Create another
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : productPanel === "generating" ? (
+                  <div className="flex flex-col items-center gap-2 px-4 py-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                    <p className="text-xs text-muted-foreground">Creating your image…</p>
+                  </div>
+                ) : videoPanel === "generating" ? (
+                  <div className="flex flex-col items-center gap-2 px-4 py-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                    <p className="text-xs text-muted-foreground">
+                      {videoStage === "animating" ? "Animating your video…" : "Adding the voice…"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 px-4 py-3">
+                    {productError && <p className="text-xs font-medium text-destructive">{productError}</p>}
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
+                        {videoRefImage ? (
+                          <img
+                            src={`data:${videoRefImage.mimeType};base64,${videoRefImage.base64}`}
+                            alt="Actor"
+                            className="h-10 w-10 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <Upload className="h-3.5 w-3.5" />
+                        )}
+                        {videoRefImage ? "Replace actor photo" : "Upload actor / model photo"}
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUploadProductActor} />
+                      </label>
+                      <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
+                        {productFile ? (
+                          <Package className="h-5 w-5" />
+                        ) : (
+                          <Upload className="h-3.5 w-3.5" />
+                        )}
+                        {productFile ? productFile.name : "Upload a product photo"}
+                        <input type="file" accept="image/*" className="hidden" onChange={handleProductFileChange} />
+                      </label>
+                    </div>
+
+                    <textarea
+                      value={productPrompt}
+                      onChange={(e) => setProductPrompt(e.target.value)}
+                      placeholder="Describe the product and how it's used… (e.g. Strong, durable bottle that can be used every day.)"
+                      rows={2}
+                      className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
+                    />
+
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        onClick={handleGenerateProduct}
+                        disabled={!videoRefImage || !productFile || !productPrompt.trim()}
+                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                      >
+                        Generate
+                      </button>
+                    </div>
+                  </div>
                 )}
               </>
             )}

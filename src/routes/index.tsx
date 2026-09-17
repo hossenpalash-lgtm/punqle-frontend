@@ -1244,6 +1244,10 @@ function HomeScreen() {
                       </div>
                     )}
 
+                    {!selectedActorId && !selectedCustomActorId && (
+                      <p className="mt-4 text-xs text-muted-foreground">Pick an actor above to set voice options.</p>
+                    )}
+
                     {selectedActorId && (
                       <>
                         <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

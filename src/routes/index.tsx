@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
+  addEmotionTags,
   type ActorVoiceEngine,
   type ApiImageActor,
   type ApiVideoOperation,
@@ -264,6 +265,17 @@ function HomeScreen() {
   const [actorError, setActorError] = useState<string | null>(null);
   const [actorVideoBase64, setActorVideoBase64] = useState<string | null>(null);
   const actorPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ElevenLabs-only controls (no OpenAI equivalent) — same defaults as
+  // AdVideoForm.tsx's own sliders (Arcads-sourced, already validated).
+  // "Add emotions" runs a small AI pass on narration right before
+  // Generate to insert 2-3 tags automatically, instead of the manual
+  // per-word buttons AdVideoForm.tsx offers on its own review step.
+  const [elevenlabsStability, setElevenlabsStability] = useState(0.5);
+  const [elevenlabsSimilarity, setElevenlabsSimilarity] = useState(0.75);
+  const [elevenlabsStyle, setElevenlabsStyle] = useState(0.5);
+  const [elevenlabsSpeed, setElevenlabsSpeed] = useState(1.0);
+  const [addEmotions, setAddEmotions] = useState(false);
+  const [taggingEmotions, setTaggingEmotions] = useState(false);
 
   useEffect(() => {
     fetchAdCredits()
@@ -340,6 +352,11 @@ function HomeScreen() {
     setActorPanel("compose");
     setActorError(null);
     setActorVideoBase64(null);
+    setElevenlabsStability(0.5);
+    setElevenlabsSimilarity(0.75);
+    setElevenlabsStyle(0.5);
+    setElevenlabsSpeed(1.0);
+    setAddEmotions(false);
   };
 
   // Switching pills always lands on a clean compose view for that mode —
@@ -595,9 +612,26 @@ function HomeScreen() {
     if (!selectedActorId || !actorNarration.trim()) return;
     if (credits !== null && credits < ACTOR_VIDEO_V2_CREDIT_COST) return;
     setActorError(null);
+    let narration = actorNarration.trim();
+    if (actorVoiceEngine === "elevenlabs" && addEmotions) {
+      setTaggingEmotions(true);
+      try {
+        const tagged = await addEmotionTags(narration);
+        narration = tagged.narration || narration;
+      } catch {
+        // Falls back to the plain narration — an emotion-tagging hiccup
+        // shouldn't block generation entirely.
+      } finally {
+        setTaggingEmotions(false);
+      }
+    }
     setActorPanel("generating");
     try {
-      const r = await startActorVideoV2(selectedActorId, actorNarration.trim(), actorVoiceEngine);
+      const elevenlabsSettings =
+        actorVoiceEngine === "elevenlabs"
+          ? { stability: elevenlabsStability, similarity_boost: elevenlabsSimilarity, style: elevenlabsStyle, speed: elevenlabsSpeed }
+          : undefined;
+      const r = await startActorVideoV2(selectedActorId, narration, actorVoiceEngine, elevenlabsSettings);
       actorPollRef.current = setTimeout(() => pollActorVideo(r.prediction_id), 8000);
     } catch (err) {
       setActorError(err instanceof Error ? err.message : "Couldn't start the actor video.");
@@ -892,6 +926,45 @@ function HomeScreen() {
                       <option value="elevenlabs">ElevenLabs</option>
                     </select>
 
+                    {actorVoiceEngine === "elevenlabs" && (
+                      <div className="mt-3 space-y-4 rounded-xl bg-secondary/40 p-3">
+                        <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                          <input
+                            type="checkbox"
+                            checked={addEmotions}
+                            onChange={(e) => setAddEmotions(e.target.checked)}
+                            className="h-4 w-4"
+                          />
+                          Add emotions — AI adds natural delivery cues before generating
+                        </label>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Audio settings
+                        </p>
+                        {[
+                          { label: "Speed", value: elevenlabsSpeed, set: setElevenlabsSpeed, min: 0.5, max: 1.5 },
+                          { label: "Stability", value: elevenlabsStability, set: setElevenlabsStability, min: 0, max: 1 },
+                          { label: "Similarity", value: elevenlabsSimilarity, set: setElevenlabsSimilarity, min: 0, max: 1 },
+                          { label: "Style exaggeration", value: elevenlabsStyle, set: setElevenlabsStyle, min: 0, max: 1 },
+                        ].map(({ label, value, set, min, max }) => (
+                          <div key={label}>
+                            <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                              <span>{label}</span>
+                              <span className="font-mono">{value.toFixed(2)}X</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={min}
+                              max={max}
+                              step={0.05}
+                              value={value}
+                              onChange={(e) => set(parseFloat(e.target.value))}
+                              className="w-full accent-primary"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <textarea
                       value={actorNarration}
                       onChange={(e) => setActorNarration(e.target.value)}
@@ -907,12 +980,15 @@ function HomeScreen() {
                           !selectedActorId ||
                           !actorNarration.trim() ||
                           actorPanel === "generating" ||
+                          taggingEmotions ||
                           (credits !== null && credits < ACTOR_VIDEO_V2_CREDIT_COST)
                         }
                         className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                       >
                         {actorPanel === "generating" ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : taggingEmotions ? (
+                          "Adding emotions…"
                         ) : (
                           `Generate (${ACTOR_VIDEO_V2_CREDIT_COST} credits)`
                         )}

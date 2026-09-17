@@ -455,6 +455,17 @@ export function checkActorVideoV2Status(predictionId: string): Promise<ApiAvatar
   });
 }
 
+// Free — a cheap gpt-4o-mini text pass that auto-inserts 2-3 ElevenLabs
+// bracket emotion tags (e.g. [excited]) into narration at points that
+// match its own tone. ElevenLabs-only — has no OpenAI equivalent.
+export function addEmotionTags(narration: string): Promise<{ narration: string }> {
+  return apiFetch<{ narration: string }>("/ads/add-emotion-tags", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ narration }),
+  });
+}
+
 export type AvatarMusicMood = "upbeat" | "calm" | "energetic" | "corporate";
 
 // Free — mixes a real licensed background track (HeyGen's own music

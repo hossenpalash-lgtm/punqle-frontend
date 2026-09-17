@@ -222,6 +222,11 @@ function HomeScreen() {
   const [homeImageSettingsOpen, setHomeImageSettingsOpen] = useState(false);
   const [homeImageModel, setHomeImageModel] = useState<ImageGenModel>("nano_banana_pro");
   const [homeImageAspectRatio, setHomeImageAspectRatio] = useState<AspectRatio>("square");
+  // Up to 3 versions from one prompt, same idea as Ad Creation's own
+  // versions picker -- the first becomes homeGeneratedImage (primary),
+  // the rest land in homeImageVariants for a small pick-one strip.
+  const [homeImageVersions, setHomeImageVersions] = useState<1 | 2 | 3>(1);
+  const [homeImageVariants, setHomeImageVariants] = useState<string[]>([]);
   const [homeImageGenerating, setHomeImageGenerating] = useState(false);
   const [homeImageError, setHomeImageError] = useState<string | null>(null);
   const [homeGeneratedImage, setHomeGeneratedImage] = useState<string | null>(null);
@@ -238,6 +243,11 @@ function HomeScreen() {
   const [videoModel, setVideoModel] = useState<ImageVideoModel>("kling_3_pro");
   const [videoAspectRatio, setVideoAspectRatio] = useState<VideoAspectRatio>("1:1");
   const [videoDuration, setVideoDuration] = useState(5);
+  // Up to 3 versions from one prompt, same idea as Ad Creation's own
+  // versions picker -- the first becomes homeGeneratedVideo (primary),
+  // the rest land in videoVariants for a small pick-one strip.
+  const [videoVersions, setVideoVersions] = useState<1 | 2 | 3>(1);
+  const [videoVariants, setVideoVariants] = useState<string[]>([]);
   // Defaults to the just-generated image, but the user can swap in their
   // own photo instead via the small "Replace" upload control.
   const [videoRefImage, setVideoRefImage] = useState<{ base64: string; mimeType: string } | null>(null);
@@ -506,10 +516,16 @@ function HomeScreen() {
     if (!homeIdea.trim() || homeImageGenerating) return;
     setHomeImageGenerating(true);
     setHomeImageError(null);
+    setHomeImageVariants([]);
     try {
       const r = await generateImageDirect(homeIdea.trim(), homeImageAspectRatio, homeImageModel);
       setHomeGeneratedImage(r.banner_image_base64);
       setCredits(r.credits_remaining);
+      for (let i = 1; i < homeImageVersions; i++) {
+        const v = await generateImageDirect(homeIdea.trim(), homeImageAspectRatio, homeImageModel);
+        setHomeImageVariants((prev) => [...prev, v.banner_image_base64]);
+        setCredits(v.credits_remaining);
+      }
     } catch (err) {
       setHomeImageError(err instanceof Error ? err.message : "Couldn't generate that image.");
     } finally {
@@ -517,12 +533,24 @@ function HomeScreen() {
     }
   };
 
+  const handleSelectImageVariant = (index: number) => {
+    setHomeImageVariants((prev) => {
+      const next = [...prev];
+      const clicked = next[index];
+      next[index] = homeGeneratedImage as string;
+      setHomeGeneratedImage(clicked);
+      return next;
+    });
+  };
+
   const handleResetHome = () => {
     setHomeGeneratedImage(null);
+    setHomeImageVariants([]);
     setHomeIdea("");
     setHomeImageAspectRatio("square");
     setVideoPanel("closed");
     setHomeGeneratedVideo(null);
+    setVideoVariants([]);
     setVideoPrompt("");
     setVideoRefImage(null);
     setVideoError(null);
@@ -702,17 +730,34 @@ function HomeScreen() {
     }
   };
 
-  const pollImageVideo = async (jobId: string, operation: ApiVideoOperation | null) => {
+  // versionIndex/totalVersions default to 1/1 so every existing call
+  // site (Product mode's own animate step, and Video mode's own default
+  // of 1 version) behaves byte-identical to before -- only Video mode's
+  // multi-version path ever passes anything else.
+  const pollImageVideo = async (
+    jobId: string,
+    operation: ApiVideoOperation | null,
+    versionIndex: number = 1,
+    totalVersions: number = 1,
+  ) => {
     try {
       const r = await checkImageVideoStatus(jobId, operation);
       if (!r.done) {
-        videoPollRef.current = setTimeout(() => pollImageVideo(jobId, operation), 8000);
+        videoPollRef.current = setTimeout(() => pollImageVideo(jobId, operation, versionIndex, totalVersions), 8000);
         return;
       }
       if (r.credits_remaining !== null) setCredits(r.credits_remaining);
       if (r.video_base64) {
-        setHomeGeneratedVideo(r.video_base64);
-        setVideoPanel("result");
+        if (versionIndex === 1) {
+          setHomeGeneratedVideo(r.video_base64);
+        } else {
+          setVideoVariants((prev) => [...prev, r.video_base64 as string]);
+        }
+        if (versionIndex < totalVersions) {
+          startVideoVersion(versionIndex + 1, totalVersions);
+        } else {
+          setVideoPanel("result");
+        }
       } else {
         setVideoError("The video didn't come back — please try again.");
         setVideoPanel("composer");
@@ -723,18 +768,31 @@ function HomeScreen() {
     }
   };
 
-  const pollTalkingVideo = async (jobId: string, operation: ApiVideoOperation | null) => {
+  const pollTalkingVideo = async (
+    jobId: string,
+    operation: ApiVideoOperation | null,
+    versionIndex: number = 1,
+    totalVersions: number = 1,
+  ) => {
     try {
       const r = await checkTalkingVideoStatus(jobId, operation);
       setVideoStage(r.stage);
       if (!r.done) {
-        videoPollRef.current = setTimeout(() => pollTalkingVideo(jobId, operation), 8000);
+        videoPollRef.current = setTimeout(() => pollTalkingVideo(jobId, operation, versionIndex, totalVersions), 8000);
         return;
       }
       if (r.credits_remaining !== null) setCredits(r.credits_remaining);
       if (r.video_base64) {
-        setHomeGeneratedVideo(r.video_base64);
-        setVideoPanel("result");
+        if (versionIndex === 1) {
+          setHomeGeneratedVideo(r.video_base64);
+        } else {
+          setVideoVariants((prev) => [...prev, r.video_base64 as string]);
+        }
+        if (versionIndex < totalVersions) {
+          startVideoVersion(versionIndex + 1, totalVersions);
+        } else {
+          setVideoPanel("result");
+        }
       } else {
         setVideoError("The video didn't come back — please try again.");
         setVideoPanel("composer");
@@ -745,11 +803,12 @@ function HomeScreen() {
     }
   };
 
-  const handleGenerateVideo = async () => {
+  // Extracted from handleGenerateVideo so a multi-version request can
+  // call this again for version 2/3 once the previous one's poll
+  // reports done -- same start-then-poll shape as before, just callable
+  // more than once in a row.
+  const startVideoVersion = async (versionIndex: number, totalVersions: number) => {
     if (!videoRefImage) return;
-    if (videoNarrationEnabled ? !videoNarration.trim() : !videoPrompt.trim()) return;
-    setVideoError(null);
-    setVideoPanel("generating");
     try {
       if (videoNarrationEnabled) {
         setVideoStage("animating");
@@ -762,7 +821,7 @@ function HomeScreen() {
           videoDuration,
           videoAspectRatio,
         );
-        videoPollRef.current = setTimeout(() => pollTalkingVideo(r.job_id, r.operation), 8000);
+        videoPollRef.current = setTimeout(() => pollTalkingVideo(r.job_id, r.operation, versionIndex, totalVersions), 8000);
         return;
       }
       const r = await generateImageVideo(
@@ -773,11 +832,30 @@ function HomeScreen() {
         videoDuration,
         videoAspectRatio,
       );
-      videoPollRef.current = setTimeout(() => pollImageVideo(r.job_id, r.operation), 8000);
+      videoPollRef.current = setTimeout(() => pollImageVideo(r.job_id, r.operation, versionIndex, totalVersions), 8000);
     } catch (err) {
       setVideoError(err instanceof Error ? err.message : "Couldn't start the video.");
       setVideoPanel("composer");
     }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!videoRefImage) return;
+    if (videoNarrationEnabled ? !videoNarration.trim() : !videoPrompt.trim()) return;
+    setVideoError(null);
+    setVideoVariants([]);
+    setVideoPanel("generating");
+    await startVideoVersion(1, videoVersions);
+  };
+
+  const handleSelectVideoVariant = (index: number) => {
+    setVideoVariants((prev) => {
+      const next = [...prev];
+      const clicked = next[index];
+      next[index] = homeGeneratedVideo as string;
+      setHomeGeneratedVideo(clicked);
+      return next;
+    });
   };
 
   // Built-in actors go through Punqle Actors v2 (Veo + Sync Labs
@@ -1452,6 +1530,22 @@ function HomeScreen() {
                       className="max-h-[420px] w-full bg-[#1E1F24]"
                       src={`data:video/mp4;base64,${homeGeneratedVideo}`}
                     />
+                    {videoVariants.length > 0 && (
+                      <div className="flex gap-2 border-t border-border px-4 py-3">
+                        {videoVariants.map((v, i) => (
+                          // eslint-disable-next-line jsx-a11y/media-has-caption
+                          <video
+                            key={i}
+                            src={`data:video/mp4;base64,${v}`}
+                            muted
+                            playsInline
+                            onClick={() => handleSelectVideoVariant(i)}
+                            title="Use this version"
+                            className="h-16 w-16 cursor-pointer rounded-lg object-cover ring-1 ring-border"
+                          />
+                        ))}
+                      </div>
+                    )}
                     <div className="flex items-center justify-between gap-2 px-4 py-3">
                       <span className="text-xs text-muted-foreground">{IMAGE_VIDEO_MODEL_LABELS[videoModel]}</span>
                       <div className="flex items-center gap-2">
@@ -1571,6 +1665,25 @@ function HomeScreen() {
                       </div>
                     </div>
 
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-muted-foreground">Versions</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setVideoVersions((v) => (v > 1 ? ((v - 1) as 1 | 2 | 3) : v))}
+                          className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
+                        >
+                          −
+                        </button>
+                        <span className="w-10 text-center text-sm font-semibold text-foreground">{videoVersions}</span>
+                        <button
+                          onClick={() => setVideoVersions((v) => (v < 3 ? ((v + 1) as 1 | 2 | 3) : v))}
+                          className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="flex items-center justify-between border-t border-border pt-3">
                       <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
                         <input
@@ -1627,7 +1740,7 @@ function HomeScreen() {
                         }
                         className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                       >
-                        Generate ({Math.ceil(videoDuration * IMAGE_VIDEO_CREDIT_PER_SECOND[videoModel]) + (videoNarrationEnabled ? TALKING_VIDEO_REDUB_SURCHARGE : 0)} credits)
+                        Generate ({(Math.ceil(videoDuration * IMAGE_VIDEO_CREDIT_PER_SECOND[videoModel]) + (videoNarrationEnabled ? TALKING_VIDEO_REDUB_SURCHARGE : 0)) * videoVersions} credits)
                       </button>
                     </div>
 
@@ -1658,6 +1771,20 @@ function HomeScreen() {
                       alt="Generated"
                       className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
                     />
+                    {homeImageVariants.length > 0 && (
+                      <div className="flex gap-2 border-t border-border px-4 py-3">
+                        {homeImageVariants.map((v, i) => (
+                          <img
+                            key={i}
+                            src={`data:image/png;base64,${v}`}
+                            alt={`Version ${i + 2}`}
+                            onClick={() => handleSelectImageVariant(i)}
+                            title="Use this version"
+                            className="h-16 w-16 cursor-pointer rounded-lg object-cover ring-1 ring-border"
+                          />
+                        ))}
+                      </div>
+                    )}
                     <div className="flex items-center justify-between gap-2 px-4 py-3">
                       <span className="text-xs text-muted-foreground">{IMAGE_MODEL_LABELS[homeImageModel]}</span>
                       <div className="flex items-center gap-2">
@@ -1743,6 +1870,24 @@ function HomeScreen() {
                                   {r.label}
                                 </button>
                               ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Versions</p>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setHomeImageVersions((v) => (v > 1 ? ((v - 1) as 1 | 2 | 3) : v))}
+                                className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
+                              >
+                                −
+                              </button>
+                              <span className="w-6 text-center text-sm font-semibold text-foreground">{homeImageVersions}</span>
+                              <button
+                                onClick={() => setHomeImageVersions((v) => (v < 3 ? ((v + 1) as 1 | 2 | 3) : v))}
+                                className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
+                              >
+                                +
+                              </button>
                             </div>
                           </div>
                         </div>

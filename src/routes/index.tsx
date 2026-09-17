@@ -2,16 +2,16 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowUp,
   Check,
+  ChevronDown,
   Images,
   Layers,
   Loader2,
   Megaphone,
+  MoreHorizontal,
   Package,
-  Paperclip,
-  Pencil,
+  Plus,
   Settings2,
   Shirt,
-  Shuffle,
   Sparkles,
   Upload,
   UserRound,
@@ -19,16 +19,23 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
+  type ActorVoiceEngine,
+  type ApiImageActor,
   type ApiVideoOperation,
+  checkActorVideoV2Status,
   checkImageVideoStatus,
   checkTalkingVideoStatus,
   combineActorAndProduct,
+  fetchActorPreviewVideoUrl,
+  fetchActorSituations,
   fetchAdCredits,
+  fetchImageActors,
   generateImageDirect,
   generateImageVideo,
   generateTalkingVideo,
   type ImageGenModel,
   type ImageVideoModel,
+  startActorVideoV2,
   type VoiceGender,
 } from "@/lib/api";
 import { AdCreationForm } from "@/components/ads/AdCreationForm";
@@ -155,6 +162,10 @@ const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
 };
 // Mirrors the backend's own TALKING_VIDEO_REDUB_SURCHARGE — display only.
 const TALKING_VIDEO_REDUB_SURCHARGE = 10;
+// Mirrors the backend's own ACTOR_VIDEO_V2_CREDIT_COST (main.py) — same
+// flat price AdVideoForm.tsx's "Punqle Actors" style already charges,
+// since this reuses that exact same endpoint. Display only.
+const ACTOR_VIDEO_V2_CREDIT_COST = 30;
 
 function HomeScreen() {
   const { tab } = Route.useSearch();
@@ -179,6 +190,16 @@ function HomeScreen() {
   // into an unrelated visit (same "no stale reuse" discipline as
   // prefilledIdea above).
   const [entryHint, setEntryHint] = useState<"carousel" | undefined>(undefined);
+
+  // The unified creation bar (2026-09-17) — one mode is active at a time,
+  // which is what makes the old videoPanel/productPanel double-render bug
+  // structurally impossible now: only one mode's block ever renders.
+  // "See more" (Image Ad/Try-On/Carousel) stays outside this — those are
+  // genuinely separate, heavier wizards that navigate away, unchanged.
+  type HomeMode = "talking_actors" | "video" | "image";
+  const [homeMode, setHomeMode] = useState<HomeMode>("talking_actors");
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+
   const [homeIdea, setHomeIdea] = useState("");
   // Standalone quick-image tool living right in the home prompt box —
   // matches a real competitor's own "type a prompt, pick a model,
@@ -225,13 +246,24 @@ function HomeScreen() {
   const [productPrompt, setProductPrompt] = useState("");
   const [productFile, setProductFile] = useState<File | null>(null);
   const [productError, setProductError] = useState<string | null>(null);
-  // The prompt textarea has focus:outline-none (no visible focus ring by
-  // design), so a bare .focus() call from the AI UGC pill was invisible —
-  // this drives a brief highlight so the click reads as having done
-  // something. Also covers the real gap where homePromptRef is null once
-  // an image already exists (the textarea unmounts): in that case AI UGC
-  // jumps straight into the Video composer instead of doing nothing.
-  const [homeUgcPulse, setHomeUgcPulse] = useState(false);
+
+  // Talking Actors mode — reuses Punqle Actors v2 wholesale: same catalog,
+  // same readiness gating, same generate/poll endpoints AdVideoForm.tsx's
+  // own actor picker already calls (main.py:5364/5436, unchanged). This is
+  // the real fix for the gap the founder named (no actor catalog existed
+  // on the home page at all before this).
+  const [actors, setActors] = useState<ApiImageActor[]>([]);
+  const [actorsLoading, setActorsLoading] = useState(false);
+  const [actorSituations, setActorSituations] = useState<Record<string, string>>({});
+  const [actorGenderFilter, setActorGenderFilter] = useState<"all" | "female" | "male">("all");
+  const [actorPreviewVideos, setActorPreviewVideos] = useState<Record<string, string>>({});
+  const [selectedActorId, setSelectedActorId] = useState<string | null>(null);
+  const [actorNarration, setActorNarration] = useState("");
+  const [actorVoiceEngine, setActorVoiceEngine] = useState<ActorVoiceEngine>("openai_standard");
+  const [actorPanel, setActorPanel] = useState<"compose" | "generating" | "result">("compose");
+  const [actorError, setActorError] = useState<string | null>(null);
+  const [actorVideoBase64, setActorVideoBase64] = useState<string | null>(null);
+  const actorPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchAdCredits()
@@ -242,8 +274,34 @@ function HomeScreen() {
   useEffect(() => {
     return () => {
       if (videoPollRef.current) clearTimeout(videoPollRef.current);
+      if (actorPollRef.current) clearTimeout(actorPollRef.current);
     };
   }, []);
+
+  // Same free, already-live GET /ads/image-actors + /ads/actor-situations
+  // AdVideoForm.tsx's own picker already calls — loads once, on first
+  // visit to Talking Actors mode (this is the default mode, so in
+  // practice on page load).
+  useEffect(() => {
+    if (homeMode !== "talking_actors") return;
+    if (actors.length === 0 && !actorsLoading) {
+      setActorsLoading(true);
+      fetchImageActors()
+        .then((r) => setActors(r.actors))
+        .catch(() => {})
+        .finally(() => setActorsLoading(false));
+    }
+    if (Object.keys(actorSituations).length === 0) {
+      fetchActorSituations()
+        .then((r) => {
+          const map: Record<string, string> = {};
+          for (const s of r.situations) map[s.actor_id] = s.situation_id;
+          setActorSituations(map);
+        })
+        .catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeMode]);
 
   const goTo = (t: Tab) => navigate({ to: "/", search: { tab: t } });
 
@@ -277,6 +335,20 @@ function HomeScreen() {
     setProductPrompt("");
     setProductFile(null);
     setProductError(null);
+    setSelectedActorId(null);
+    setActorNarration("");
+    setActorPanel("compose");
+    setActorError(null);
+    setActorVideoBase64(null);
+  };
+
+  // Switching pills always lands on a clean compose view for that mode —
+  // this (plus only ever rendering one mode's block) is what makes the
+  // old double-render bug structurally impossible now.
+  const handleSwitchMode = (mode: HomeMode) => {
+    handleResetHome();
+    setHomeMode(mode);
+    setShowMoreMenu(false);
   };
 
   const handleOpenVideoComposer = () => {
@@ -297,24 +369,6 @@ function HomeScreen() {
     setVideoNarration("");
     setVideoVoiceGender("female");
     setVideoPanel("composer");
-  };
-
-  const handleClickAiUgc = () => {
-    if (homeGeneratedImage || videoRefImage) {
-      // Already have an image on screen (generated or uploaded) -- AI
-      // UGC's whole point is getting to video, so jump straight into the
-      // composer instead of silently doing nothing (its own "Video"
-      // action button is small and easy to miss).
-      if (videoPanel === "closed") handleOpenVideoComposer();
-      return;
-    }
-    homePromptRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    homePromptRef.current?.focus();
-    // The textarea deliberately has no visible focus ring, so .focus()
-    // alone gave no feedback that the click did anything — this drives a
-    // brief highlight on the box instead.
-    setHomeUgcPulse(true);
-    setTimeout(() => setHomeUgcPulse(false), 1200);
   };
 
   const handleReplaceVideoImage = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -513,6 +567,44 @@ function HomeScreen() {
     }
   };
 
+  const pollActorVideo = async (predictionId: string) => {
+    try {
+      const r = await checkActorVideoV2Status(predictionId);
+      if (!r.done) {
+        actorPollRef.current = setTimeout(() => pollActorVideo(predictionId), 8000);
+        return;
+      }
+      if (r.credits_remaining !== null) setCredits(r.credits_remaining);
+      if (r.video_base64) {
+        setActorVideoBase64(r.video_base64);
+        setActorPanel("result");
+      } else {
+        setActorError("The actor video didn't come back — please try again.");
+        setActorPanel("compose");
+      }
+    } catch (err) {
+      setActorError(err instanceof Error ? err.message : "Couldn't check the video's status.");
+      setActorPanel("compose");
+    }
+  };
+
+  // Same endpoint AdVideoForm.tsx's "Punqle Actors" style already calls
+  // (main.py:5364) — the user's own textarea text goes straight in as
+  // narration, no script-angle pre-step (that's Ad-Creation-specific).
+  const handleGenerateActorVideo = async () => {
+    if (!selectedActorId || !actorNarration.trim()) return;
+    if (credits !== null && credits < ACTOR_VIDEO_V2_CREDIT_COST) return;
+    setActorError(null);
+    setActorPanel("generating");
+    try {
+      const r = await startActorVideoV2(selectedActorId, actorNarration.trim(), actorVoiceEngine);
+      actorPollRef.current = setTimeout(() => pollActorVideo(r.prediction_id), 8000);
+    } catch (err) {
+      setActorError(err instanceof Error ? err.message : "Couldn't start the actor video.");
+      setActorPanel("compose");
+    }
+  };
+
   return (
     <main className="flex flex-1 flex-col px-6 py-6">
       <div
@@ -554,459 +646,688 @@ function HomeScreen() {
 
           <div className="flex-1" />
 
-          <div className="mb-3 flex flex-wrap justify-center gap-2">
+          {/* Unified creation bar (2026-09-17, Arcads parity) — one
+              persistent bar, mode pills switch its content in place. Only
+              one homeMode block ever renders below, which is what makes
+              the old videoPanel/productPanel double-render bug
+              structurally impossible now. Image Ad/Try-On/Carousel keep
+              their exact original goTo() handlers, unchanged, tucked
+              under "See more" instead of being permanent top-level pills. */}
+          <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
             <button
-              onClick={() => goTo("ad")}
-              className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
+              onClick={() => handleSwitchMode("talking_actors")}
+              className={[
+                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
+                homeMode === "talking_actors" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
+              ].join(" ")}
               style={{ boxShadow: "var(--shadow-card)" }}
             >
-              <Megaphone className="h-4 w-4" />
-              Image Ad
+              <UserRound className="h-4 w-4" />
+              Talking Actors
             </button>
             <button
-              onClick={handleClickAiUgc}
-              className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
+              onClick={() => handleSwitchMode("video")}
+              className={[
+                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
+                homeMode === "video" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
+              ].join(" ")}
               style={{ boxShadow: "var(--shadow-card)" }}
             >
-              <Sparkles className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
-              AI UGC
+              <Video className="h-4 w-4" />
+              Video
             </button>
             <button
-              onClick={handleOpenProductComposer}
-              className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
+              onClick={() => handleSwitchMode("image")}
+              className={[
+                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
+                homeMode === "image" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
+              ].join(" ")}
               style={{ boxShadow: "var(--shadow-card)" }}
             >
-              <Package className="h-4 w-4" />
-              Product
+              <Sparkles className="h-4 w-4" />
+              Image
             </button>
-            <button
-              onClick={() => goTo("tryon")}
-              className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
-              style={{ boxShadow: "var(--shadow-card)" }}
-            >
-              <Shirt className="h-4 w-4" />
-              Try-On
-            </button>
-            <button
-              onClick={() => {
-                setEntryHint("carousel");
-                goTo("single");
-              }}
-              className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
-              style={{ boxShadow: "var(--shadow-card)" }}
-            >
-              <Images className="h-4 w-4" />
-              Carousel
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowMoreMenu((v) => !v)}
+                className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
+                style={{ boxShadow: "var(--shadow-card)" }}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+                See more
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+              {showMoreMenu && (
+                <div
+                  className="absolute right-0 top-full z-10 mt-2 w-48 overflow-hidden rounded-2xl border border-border bg-card py-1"
+                  style={{ boxShadow: "var(--shadow-card)" }}
+                >
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      goTo("ad");
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-secondary"
+                  >
+                    <Megaphone className="h-4 w-4" />
+                    Image Ad
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      goTo("tryon");
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-secondary"
+                  >
+                    <Shirt className="h-4 w-4" />
+                    Try-On
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      setEntryHint("carousel");
+                      goTo("single");
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-secondary"
+                  >
+                    <Images className="h-4 w-4" />
+                    Carousel
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {homeImageError && (
+          {homeMode === "image" && homeImageError && (
             <p className="mb-2 self-center text-xs font-medium text-destructive">{homeImageError}</p>
           )}
 
-          {homeGeneratedImage || videoRefImage || productPanel !== "closed" ? (
-            <div
-              className="mb-6 w-full self-center overflow-hidden rounded-3xl border border-border bg-card"
-              style={{ boxShadow: "var(--shadow-card)" }}
-            >
-              {videoPanel === "result" && homeGeneratedVideo ? (
-                // eslint-disable-next-line jsx-a11y/media-has-caption
-                <video
-                  controls
-                  autoPlay
-                  loop
-                  className="max-h-[420px] w-full bg-[#1E1F24]"
-                  src={`data:video/mp4;base64,${homeGeneratedVideo}`}
-                />
-              ) : homeGeneratedImage || videoRefImage ? (
-                <img
-                  src={
-                    homeGeneratedImage
-                      ? `data:image/png;base64,${homeGeneratedImage}`
-                      : videoRefImage
-                        ? `data:${videoRefImage.mimeType};base64,${videoRefImage.base64}`
-                        : undefined
-                  }
-                  alt="Generated"
-                  className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
-                />
-              ) : null}
-              {(homeGeneratedImage || videoRefImage) && (
-                <div className="flex items-center justify-between gap-2 px-4 py-3">
-                  <span className="text-xs text-muted-foreground">
-                    {videoPanel === "result"
-                      ? IMAGE_VIDEO_MODEL_LABELS[videoModel]
-                      : homeGeneratedImage
-                        ? IMAGE_MODEL_LABELS[homeImageModel]
-                        : "Your photo"}
-                  </span>
-                  <button
-                    onClick={handleResetHome}
-                    className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                  >
-                    Create another
-                  </button>
-                </div>
-              )}
+          <div
+            className="mb-6 w-full self-center overflow-hidden rounded-3xl border border-border bg-card"
+            style={{ boxShadow: "var(--shadow-card)" }}
+          >
+            {/* ---------- Talking Actors mode ---------- */}
+            {homeMode === "talking_actors" && (
+              <>
+                {actorPanel === "result" && actorVideoBase64 ? (
+                  <>
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video
+                      controls
+                      autoPlay
+                      loop
+                      className="max-h-[420px] w-full bg-[#1E1F24]"
+                      src={`data:video/mp4;base64,${actorVideoBase64}`}
+                    />
+                    <div className="flex items-center justify-between gap-2 px-4 py-3">
+                      <span className="text-xs text-muted-foreground">
+                        {actors.find((a) => a.id === selectedActorId)?.name ?? "Actor"}
+                      </span>
+                      <button
+                        onClick={handleResetHome}
+                        className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                      >
+                        Create another
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4">
+                    {actorError && <p className="mb-2 text-xs font-medium text-destructive">{actorError}</p>}
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Choose your actor
+                    </p>
+                    <div className="mb-3 flex gap-2">
+                      {(["all", "female", "male"] as const).map((g) => (
+                        <button
+                          key={g}
+                          onClick={() => setActorGenderFilter(g)}
+                          className={[
+                            "flex-1 rounded-full px-3 py-2 text-xs font-semibold capitalize",
+                            actorGenderFilter === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                          ].join(" ")}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                    {actorsLoading ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                        {actors
+                          .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
+                          .map((a) => {
+                            const selected = selectedActorId === a.id;
+                            const situationId = actorSituations[a.id];
+                            const ready = Boolean(situationId);
+                            const situationLabel = situationId
+                              ? situationId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+                              : "Coming soon";
+                            const previewUrl = actorPreviewVideos[a.id];
+                            return (
+                              <button
+                                key={a.id}
+                                onClick={() => ready && setSelectedActorId(a.id)}
+                                disabled={!ready}
+                                onMouseEnter={(e) => {
+                                  if (!ready) return;
+                                  if (!actorPreviewVideos[a.id]) {
+                                    fetchActorPreviewVideoUrl(a.id)
+                                      .then((url) => setActorPreviewVideos((prev) => ({ ...prev, [a.id]: url })))
+                                      .catch(() => {});
+                                    return;
+                                  }
+                                  const video = e.currentTarget.querySelector("video");
+                                  video?.play().catch(() => {});
+                                }}
+                                onMouseLeave={(e) => {
+                                  const video = e.currentTarget.querySelector("video");
+                                  if (video) {
+                                    video.pause();
+                                    video.currentTime = 0;
+                                  }
+                                }}
+                                className={["flex flex-col items-center gap-1", ready ? "" : "cursor-not-allowed opacity-40"].join(" ")}
+                              >
+                                <span
+                                  className={[
+                                    "relative aspect-square w-full overflow-hidden rounded-xl",
+                                    selected ? "ring-2 ring-primary" : "",
+                                  ].join(" ")}
+                                >
+                                  <img
+                                    src={`data:image/jpeg;base64,${a.preview_image_base64}`}
+                                    alt={a.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                  {previewUrl && (
+                                    // eslint-disable-next-line jsx-a11y/media-has-caption
+                                    <video
+                                      src={previewUrl}
+                                      muted
+                                      loop
+                                      playsInline
+                                      autoPlay
+                                      className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-200 hover:opacity-100"
+                                    />
+                                  )}
+                                  {selected && (
+                                    <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                      <Check className="h-2.5 w-2.5" />
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="text-[10px] font-medium text-foreground">{a.name}</span>
+                                <span className="text-[9px] text-muted-foreground">{situationLabel}</span>
+                              </button>
+                            );
+                          })}
+                        <button
+                          disabled
+                          title="Coming soon"
+                          className="flex cursor-not-allowed flex-col items-center gap-1 opacity-40"
+                        >
+                          <span className="flex aspect-square w-full items-center justify-center rounded-xl border border-dashed border-border">
+                            <Plus className="h-5 w-5 text-muted-foreground" />
+                          </span>
+                          <span className="text-[10px] font-medium text-foreground">Create your own</span>
+                          <span className="text-[9px] text-muted-foreground">Coming soon</span>
+                        </button>
+                      </div>
+                    )}
 
-              {videoPanel === "closed" && productPanel === "closed" && (homeGeneratedImage || videoRefImage) && (
-                <div className="grid grid-cols-5 gap-2 border-t border-border px-4 py-3">
-                  <button
-                    disabled
-                    title="Coming soon"
-                    className="flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-semibold text-muted-foreground opacity-40"
-                  >
-                    <Pencil className="h-4 w-4" />
-                    Edit
-                  </button>
-                  <button
-                    disabled
-                    title="Coming soon"
-                    className="flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-semibold text-muted-foreground opacity-40"
-                  >
-                    <Shuffle className="h-4 w-4" />
-                    Remix
-                  </button>
-                  <button
-                    onClick={handleOpenProductComposer}
-                    className="flex flex-col items-center gap-1 rounded-xl bg-secondary py-2 text-[11px] font-semibold text-secondary-foreground"
-                  >
-                    <Package className="h-4 w-4" />
-                    Product
-                  </button>
-                  <button
-                    onClick={handleOpenVideoComposer}
-                    className="flex flex-col items-center gap-1 rounded-xl bg-secondary py-2 text-[11px] font-semibold text-secondary-foreground"
-                  >
-                    <Video className="h-4 w-4" />
-                    Video
-                  </button>
-                  <button
-                    disabled
-                    title="Coming soon"
-                    className="flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-semibold text-muted-foreground opacity-40"
-                  >
-                    <UserRound className="h-4 w-4" />
-                    Actor
-                  </button>
-                </div>
-              )}
+                    <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Voice
+                    </p>
+                    <select
+                      value={actorVoiceEngine}
+                      onChange={(e) => setActorVoiceEngine(e.target.value as ActorVoiceEngine)}
+                      className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="openai_natural">OpenAI (Natural)</option>
+                      <option value="openai_standard">OpenAI (Standard) — Recommended</option>
+                      <option value="elevenlabs">ElevenLabs</option>
+                    </select>
 
-              {productPanel === "composer" && (
-                <div className="space-y-3 border-t border-border px-4 py-3">
-                  {productError && <p className="text-xs font-medium text-destructive">{productError}</p>}
+                    <textarea
+                      value={actorNarration}
+                      onChange={(e) => setActorNarration(e.target.value)}
+                      placeholder="What should your actor say?…"
+                      rows={2}
+                      className="mt-3 w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
+                    />
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
-                      {videoRefImage ? (
-                        <img
-                          src={`data:${videoRefImage.mimeType};base64,${videoRefImage.base64}`}
-                          alt="Actor"
-                          className="h-10 w-10 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <Upload className="h-3.5 w-3.5" />
-                      )}
-                      {videoRefImage ? "Replace actor photo" : "Upload actor / model photo"}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleUploadProductActor} />
-                    </label>
-                    <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
-                      {productFile ? (
-                        <Package className="h-5 w-5" />
-                      ) : (
-                        <Upload className="h-3.5 w-3.5" />
-                      )}
-                      {productFile ? productFile.name : "Upload a product photo"}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleProductFileChange} />
+                    <div className="mt-3 flex items-center justify-end gap-2">
+                      <button
+                        onClick={handleGenerateActorVideo}
+                        disabled={
+                          !selectedActorId ||
+                          !actorNarration.trim() ||
+                          actorPanel === "generating" ||
+                          (credits !== null && credits < ACTOR_VIDEO_V2_CREDIT_COST)
+                        }
+                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                      >
+                        {actorPanel === "generating" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          `Generate (${ACTOR_VIDEO_V2_CREDIT_COST} credits)`
+                        )}
+                      </button>
+                    </div>
+
+                    {actorPanel === "generating" && (
+                      <div className="mt-3 flex flex-col items-center gap-2 border-t border-border pt-3">
+                        <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                        <p className="text-xs text-muted-foreground">Creating your actor's video… usually a few minutes.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ---------- Video mode ---------- */}
+            {homeMode === "video" && (
+              <>
+                {videoPanel === "result" && homeGeneratedVideo ? (
+                  <>
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video
+                      controls
+                      autoPlay
+                      loop
+                      className="max-h-[420px] w-full bg-[#1E1F24]"
+                      src={`data:video/mp4;base64,${homeGeneratedVideo}`}
+                    />
+                    <div className="flex items-center justify-between gap-2 px-4 py-3">
+                      <span className="text-xs text-muted-foreground">{IMAGE_VIDEO_MODEL_LABELS[videoModel]}</span>
+                      <button
+                        onClick={handleResetHome}
+                        className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                      >
+                        Create another
+                      </button>
+                    </div>
+                  </>
+                ) : !videoRefImage ? (
+                  <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+                    <Video className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Upload a photo to turn into a short video.</p>
+                    <label className="flex cursor-pointer items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground">
+                      <Upload className="h-4 w-4" />
+                      Upload a photo
+                      <input type="file" accept="image/*" className="hidden" onChange={handleUploadOwnImageForVideo} />
                     </label>
                   </div>
+                ) : (
+                  <div className="space-y-3 px-4 py-3">
+                    {videoError && <p className="text-xs font-medium text-destructive">{videoError}</p>}
 
-                  <textarea
-                    value={productPrompt}
-                    onChange={(e) => setProductPrompt(e.target.value)}
-                    placeholder="Describe the product and how it's used… (e.g. Strong, durable bottle that can be used every day.)"
-                    rows={2}
-                    className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
-                  />
-
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <button
-                      onClick={() => setProductPanel("closed")}
-                      className="rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleGenerateProduct}
-                      disabled={!videoRefImage || !productFile || !productPrompt.trim()}
-                      className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
-                    >
-                      Generate
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {productPanel === "generating" && (
-                <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-6">
-                  <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                  <p className="text-xs text-muted-foreground">Creating your image…</p>
-                </div>
-              )}
-
-              {videoPanel === "composer" && (
-                <div className="space-y-3 border-t border-border px-4 py-3">
-                  {videoError && <p className="text-xs font-medium text-destructive">{videoError}</p>}
-
-                  <div className="flex items-center gap-2">
-                    {videoRefImage && (
+                    <div className="flex items-center gap-2">
                       <img
                         src={`data:${videoRefImage.mimeType};base64,${videoRefImage.base64}`}
                         alt="Reference"
                         className="h-10 w-10 shrink-0 rounded-lg object-cover"
                       />
-                    )}
-                    <span className="flex-1 text-xs text-muted-foreground">Reference image</span>
-                    <label className="flex cursor-pointer items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground">
-                      <Upload className="h-3 w-3" />
-                      Replace
-                      <input type="file" accept="image/*" className="hidden" onChange={handleReplaceVideoImage} />
-                    </label>
-                  </div>
-
-                  {!videoNarrationEnabled && (
-                    <textarea
-                      value={videoPrompt}
-                      onChange={(e) => setVideoPrompt(e.target.value)}
-                      placeholder="Describe the motion… (e.g. she walks towards the camera, notices near the end, and does a pose)"
-                      rows={2}
-                      className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
-                    />
-                  )}
-
-                  <div>
-                    <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Model</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {IMAGE_VIDEO_MODEL_OPTIONS.map((m) => (
-                        <button
-                          key={m.id}
-                          onClick={() => handleVideoModelChange(m.id)}
-                          className={[
-                            "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
-                            videoModel === m.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                          ].join(" ")}
-                        >
-                          {videoModel === m.id && <Check className="h-3 w-3" />}
-                          {m.label}
-                        </button>
-                      ))}
+                      <span className="flex-1 text-xs text-muted-foreground">Reference image</span>
+                      <label className="flex cursor-pointer items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground">
+                        <Upload className="h-3 w-3" />
+                        Replace
+                        <input type="file" accept="image/*" className="hidden" onChange={handleReplaceVideoImage} />
+                      </label>
                     </div>
-                  </div>
 
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-muted-foreground">Aspect ratio</p>
-                    <div className="flex gap-1.5">
-                      {(["1:1", "9:16"] as const).map((r) => (
-                        <button
-                          key={r}
-                          onClick={() => setVideoAspectRatio(r)}
-                          className={[
-                            "rounded-full px-3 py-1.5 text-xs font-semibold",
-                            videoAspectRatio === r ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                          ].join(" ")}
-                        >
-                          {r}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-muted-foreground">Length</p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === videoModel)!;
-                          setVideoDuration((d) => Math.max(opt.min, d - 1));
-                        }}
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
-                      >
-                        −
-                      </button>
-                      <span className="w-10 text-center text-sm font-semibold text-foreground">{videoDuration}s</span>
-                      <button
-                        onClick={() => {
-                          const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === videoModel)!;
-                          setVideoDuration((d) => Math.min(opt.max, d + 1));
-                        }}
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between border-t border-border pt-3">
-                    <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                      <input
-                        type="checkbox"
-                        checked={videoNarrationEnabled}
-                        onChange={(e) => setVideoNarrationEnabled(e.target.checked)}
-                        className="h-4 w-4"
-                      />
-                      Add spoken narration
-                    </label>
-                  </div>
-
-                  {videoNarrationEnabled && (
-                    <div className="space-y-2 rounded-xl bg-secondary/50 p-3">
+                    {!videoNarrationEnabled && (
                       <textarea
-                        value={videoNarration}
-                        onChange={(e) => setVideoNarration(e.target.value)}
-                        placeholder="What should they say?… (e.g. This bottle is very durable and keeps your drink cold all day.)"
+                        value={videoPrompt}
+                        onChange={(e) => setVideoPrompt(e.target.value)}
+                        placeholder="Describe the motion… (e.g. she walks towards the camera, notices near the end, and does a pose)"
                         rows={2}
-                        className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none"
+                        className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
                       />
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-muted-foreground">Voice</p>
-                        <div className="flex gap-1.5">
-                          {(["female", "male"] as const).map((g) => (
+                    )}
+
+                    <div>
+                      <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Model</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {IMAGE_VIDEO_MODEL_OPTIONS.map((m) => (
+                          <button
+                            key={m.id}
+                            onClick={() => handleVideoModelChange(m.id)}
+                            className={[
+                              "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
+                              videoModel === m.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                            ].join(" ")}
+                          >
+                            {videoModel === m.id && <Check className="h-3 w-3" />}
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-muted-foreground">Aspect ratio</p>
+                      <div className="flex gap-1.5">
+                        {(["1:1", "9:16"] as const).map((r) => (
+                          <button
+                            key={r}
+                            onClick={() => setVideoAspectRatio(r)}
+                            className={[
+                              "rounded-full px-3 py-1.5 text-xs font-semibold",
+                              videoAspectRatio === r ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                            ].join(" ")}
+                          >
+                            {r}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-muted-foreground">Length</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === videoModel)!;
+                            setVideoDuration((d) => Math.max(opt.min, d - 1));
+                          }}
+                          className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
+                        >
+                          −
+                        </button>
+                        <span className="w-10 text-center text-sm font-semibold text-foreground">{videoDuration}s</span>
+                        <button
+                          onClick={() => {
+                            const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === videoModel)!;
+                            setVideoDuration((d) => Math.min(opt.max, d + 1));
+                          }}
+                          className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border pt-3">
+                      <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                        <input
+                          type="checkbox"
+                          checked={videoNarrationEnabled}
+                          onChange={(e) => setVideoNarrationEnabled(e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                        Add spoken narration
+                      </label>
+                    </div>
+
+                    {videoNarrationEnabled && (
+                      <div className="space-y-2 rounded-xl bg-secondary/50 p-3">
+                        <textarea
+                          value={videoNarration}
+                          onChange={(e) => setVideoNarration(e.target.value)}
+                          placeholder="What should they say?… (e.g. This bottle is very durable and keeps your drink cold all day.)"
+                          rows={2}
+                          className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none"
+                        />
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-muted-foreground">Voice</p>
+                          <div className="flex gap-1.5">
+                            {(["female", "male"] as const).map((g) => (
+                              <button
+                                key={g}
+                                onClick={() => setVideoVoiceGender(g)}
+                                className={[
+                                  "rounded-full px-3 py-1.5 text-xs font-semibold capitalize",
+                                  videoVoiceGender === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                                ].join(" ")}
+                              >
+                                {g}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <button
+                        onClick={() => setVideoRefImage(null)}
+                        className="rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleGenerateVideo}
+                        disabled={
+                          !videoRefImage ||
+                          (videoNarrationEnabled ? !videoNarration.trim() : !videoPrompt.trim())
+                        }
+                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                      >
+                        Generate ({Math.ceil(videoDuration * IMAGE_VIDEO_CREDIT_PER_SECOND[videoModel]) + (videoNarrationEnabled ? TALKING_VIDEO_REDUB_SURCHARGE : 0)} credits)
+                      </button>
+                    </div>
+
+                    {videoPanel === "generating" && (
+                      <div className="flex flex-col items-center gap-2 border-t border-border pt-3">
+                        <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                        <p className="text-xs text-muted-foreground">
+                          {videoNarrationEnabled
+                            ? videoStage === "animating"
+                              ? "Animating your video…"
+                              : "Adding the voice…"
+                            : "Generating your video… this can take a minute or two."}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ---------- Image mode ---------- */}
+            {homeMode === "image" && (
+              <>
+                {homeGeneratedImage || videoRefImage || productPanel !== "closed" ? (
+                  <>
+                    {videoPanel === "result" && homeGeneratedVideo ? (
+                      // eslint-disable-next-line jsx-a11y/media-has-caption
+                      <video
+                        controls
+                        autoPlay
+                        loop
+                        className="max-h-[420px] w-full bg-[#1E1F24]"
+                        src={`data:video/mp4;base64,${homeGeneratedVideo}`}
+                      />
+                    ) : homeGeneratedImage || videoRefImage ? (
+                      <img
+                        src={
+                          homeGeneratedImage
+                            ? `data:image/png;base64,${homeGeneratedImage}`
+                            : videoRefImage
+                              ? `data:${videoRefImage.mimeType};base64,${videoRefImage.base64}`
+                              : undefined
+                        }
+                        alt="Generated"
+                        className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
+                      />
+                    ) : null}
+                    {(homeGeneratedImage || videoRefImage) && (
+                      <div className="flex items-center justify-between gap-2 px-4 py-3">
+                        <span className="text-xs text-muted-foreground">
+                          {videoPanel === "result"
+                            ? IMAGE_VIDEO_MODEL_LABELS[videoModel]
+                            : homeGeneratedImage
+                              ? IMAGE_MODEL_LABELS[homeImageModel]
+                              : "Your photo"}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {videoPanel === "closed" && productPanel === "closed" && homeGeneratedImage && !homeGeneratedVideo && (
                             <button
-                              key={g}
-                              onClick={() => setVideoVoiceGender(g)}
+                              onClick={() => {
+                                handleOpenVideoComposer();
+                                setHomeMode("video");
+                              }}
+                              className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                            >
+                              Make a video
+                            </button>
+                          )}
+                          <button
+                            onClick={handleResetHome}
+                            className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                          >
+                            Create another
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {productPanel === "composer" && (
+                      <div className="space-y-3 border-t border-border px-4 py-3">
+                        {productError && <p className="text-xs font-medium text-destructive">{productError}</p>}
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
+                            {videoRefImage ? (
+                              <img
+                                src={`data:${videoRefImage.mimeType};base64,${videoRefImage.base64}`}
+                                alt="Actor"
+                                className="h-10 w-10 rounded-lg object-cover"
+                              />
+                            ) : (
+                              <Upload className="h-3.5 w-3.5" />
+                            )}
+                            {videoRefImage ? "Replace actor photo" : "Upload actor / model photo"}
+                            <input type="file" accept="image/*" className="hidden" onChange={handleUploadProductActor} />
+                          </label>
+                          <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
+                            {productFile ? (
+                              <Package className="h-5 w-5" />
+                            ) : (
+                              <Upload className="h-3.5 w-3.5" />
+                            )}
+                            {productFile ? productFile.name : "Upload a product photo"}
+                            <input type="file" accept="image/*" className="hidden" onChange={handleProductFileChange} />
+                          </label>
+                        </div>
+
+                        <textarea
+                          value={productPrompt}
+                          onChange={(e) => setProductPrompt(e.target.value)}
+                          placeholder="Describe the product and how it's used… (e.g. Strong, durable bottle that can be used every day.)"
+                          rows={2}
+                          className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
+                        />
+
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <button
+                            onClick={() => setProductPanel("closed")}
+                            className="rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleGenerateProduct}
+                            disabled={!videoRefImage || !productFile || !productPrompt.trim()}
+                            className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                          >
+                            Generate
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {productPanel === "generating" && (
+                      <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-6">
+                        <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                        <p className="text-xs text-muted-foreground">Creating your image…</p>
+                      </div>
+                    )}
+
+                    {videoPanel === "generating" && (
+                      <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-6">
+                        <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                        <p className="text-xs text-muted-foreground">
+                          {videoStage === "animating" ? "Animating your video…" : "Adding the voice…"}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <textarea
+                      ref={homePromptRef}
+                      value={homeIdea}
+                      onChange={(e) => setHomeIdea(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter" || e.shiftKey || !homeIdea.trim()) return;
+                        e.preventDefault();
+                        handleHomeGenerateImage();
+                      }}
+                      placeholder="Describe what you want to create… (e.g. a Gen Z girl holding our product)"
+                      rows={2}
+                      className="w-full resize-none rounded-t-3xl bg-transparent px-5 py-4 text-sm text-foreground focus:outline-none"
+                    />
+                    {homeImageSettingsOpen && (
+                      <div className="border-t border-border px-4 py-3">
+                        <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Model</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {IMAGE_MODEL_OPTIONS.map((m) => (
+                            <button
+                              key={m.id}
+                              onClick={() => setHomeImageModel(m.id)}
                               className={[
-                                "rounded-full px-3 py-1.5 text-xs font-semibold capitalize",
-                                videoVoiceGender === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                                "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
+                                homeImageModel === m.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
                               ].join(" ")}
                             >
-                              {g}
+                              {homeImageModel === m.id && <Check className="h-3 w-3" />}
+                              {m.label}
                             </button>
                           ))}
                         </div>
                       </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setHomeImageSettingsOpen((v) => !v)}
+                          aria-label="Image settings"
+                          className={[
+                            "flex h-9 w-9 items-center justify-center rounded-full",
+                            homeImageSettingsOpen ? "bg-secondary text-foreground" : "text-muted-foreground",
+                          ].join(" ")}
+                        >
+                          <Settings2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={handleOpenProductComposer}
+                          title="Attach an actor + product photo"
+                          className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground"
+                        >
+                          <Package className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <button
+                        onClick={handleHomeGenerateImage}
+                        disabled={!homeIdea.trim() || homeImageGenerating}
+                        aria-label="Create"
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+                      >
+                        {homeImageGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+                      </button>
                     </div>
-                  )}
-
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <button
-                      onClick={() => setVideoPanel("closed")}
-                      className="rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleGenerateVideo}
-                      disabled={
-                        !videoRefImage ||
-                        (videoNarrationEnabled ? !videoNarration.trim() : !videoPrompt.trim())
-                      }
-                      className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
-                    >
-                      Generate ({Math.ceil(videoDuration * IMAGE_VIDEO_CREDIT_PER_SECOND[videoModel]) + (videoNarrationEnabled ? TALKING_VIDEO_REDUB_SURCHARGE : 0)} credits)
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {videoPanel === "generating" && (
-                <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-6">
-                  <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                  <p className="text-xs text-muted-foreground">
-                    {videoNarrationEnabled
-                      ? videoStage === "animating"
-                        ? "Animating your video…"
-                        : "Adding the voice…"
-                      : "Generating your video… this can take a minute or two."}
-                  </p>
-                </div>
-              )}
-
-              {videoPanel === "result" && (
-                <div className="flex items-center justify-center border-t border-border px-4 py-3">
-                  <button
-                    onClick={() => setVideoPanel("closed")}
-                    className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                  >
-                    Back to image
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-          <div
-            className={[
-              "mb-6 w-full self-center rounded-3xl border bg-card transition-shadow",
-              homeUgcPulse ? "border-accent ring-2 ring-accent" : "border-border",
-            ].join(" ")}
-            style={{ boxShadow: "var(--shadow-card)" }}
-          >
-            <textarea
-              ref={homePromptRef}
-              value={homeIdea}
-              onChange={(e) => setHomeIdea(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter" || e.shiftKey || !homeIdea.trim()) return;
-                e.preventDefault();
-                handleHomeGenerateImage();
-              }}
-              placeholder="Describe what you want to create… (e.g. a Gen Z girl holding our product)"
-              rows={2}
-              className="w-full resize-none rounded-t-3xl bg-transparent px-5 py-4 text-sm text-foreground focus:outline-none"
-            />
-            {homeImageSettingsOpen && (
-              <div className="border-t border-border px-4 py-3">
-                <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Model</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {IMAGE_MODEL_OPTIONS.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => setHomeImageModel(m.id)}
-                      className={[
-                        "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
-                        homeImageModel === m.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                      ].join(" ")}
-                    >
-                      {homeImageModel === m.id && <Check className="h-3 w-3" />}
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                  </>
+                )}
+              </>
             )}
-            <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setHomeImageSettingsOpen((v) => !v)}
-                  aria-label="Image settings"
-                  className={[
-                    "flex h-9 w-9 items-center justify-center rounded-full",
-                    homeImageSettingsOpen ? "bg-secondary text-foreground" : "text-muted-foreground",
-                  ].join(" ")}
-                >
-                  <Settings2 className="h-4 w-4" />
-                </button>
-                {/* Skip AI image generation entirely -- pick a photo from
-                    your computer and go straight to the Video composer
-                    with it as the reference. */}
-                <label
-                  title="Use your own photo instead"
-                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground"
-                >
-                  <Paperclip className="h-4 w-4" />
-                  <input type="file" accept="image/*" className="hidden" onChange={handleUploadOwnImageForVideo} />
-                </label>
-              </div>
-              <button
-                onClick={handleHomeGenerateImage}
-                disabled={!homeIdea.trim() || homeImageGenerating}
-                aria-label="Create"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
-              >
-                {homeImageGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
-              </button>
-            </div>
           </div>
-          )}
         </div>
       )}
 

@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Settings2,
   Shirt,
+  Smartphone,
   Sparkles,
   Upload,
   UserRound,
@@ -33,6 +34,7 @@ import {
   checkAiActorVideoStatus,
   checkImageVideoStatus,
   checkTalkingVideoStatus,
+  combineActorAndAppScreenshot,
   combineActorAndProduct,
   createCustomActor,
   deleteCustomActor,
@@ -211,7 +213,7 @@ function HomeScreen() {
   // structurally impossible now: only one mode's block ever renders.
   // "See more" (Image Ad/Try-On/Carousel) stays outside this — those are
   // genuinely separate, heavier wizards that navigate away, unchanged.
-  type HomeMode = "talking_actors" | "video" | "image" | "product" | "unboxing";
+  type HomeMode = "talking_actors" | "video" | "image" | "product" | "unboxing" | "show_app";
   const [homeMode, setHomeMode] = useState<HomeMode>("talking_actors");
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
@@ -283,6 +285,18 @@ function HomeScreen() {
   const [unboxingScene, setUnboxingScene] = useState("");
   const [unboxingImage, setUnboxingImage] = useState<string | null>(null);
   const [unboxingError, setUnboxingError] = useState<string | null>(null);
+
+  // The home page's "Show Your App" pill -- attach an app screenshot to
+  // an actor (reusing the same videoRefImage actor state Product mode
+  // uses) and the actor is shown holding a phone displaying it. Matches
+  // Arcads' own real "Show Your App" feature (confirmed via frame-by-
+  // frame video review): no free-text prompt field, just an upload + an
+  // actor + Generate.
+  const [showAppPanel, setShowAppPanel] = useState<"closed" | "generating">("closed");
+  const [showAppFile, setShowAppFile] = useState<File | null>(null);
+  const [showAppImage, setShowAppImage] = useState<string | null>(null);
+  const [showAppError, setShowAppError] = useState<string | null>(null);
+  const [showAppActorPicker, setShowAppActorPicker] = useState(false);
 
   // Talking Actors mode — reuses Punqle Actors v2 wholesale: same catalog,
   // same readiness gating, same generate/poll endpoints AdVideoForm.tsx's
@@ -579,6 +593,11 @@ function HomeScreen() {
     setUnboxingScene("");
     setUnboxingImage(null);
     setUnboxingError(null);
+    setShowAppPanel("closed");
+    setShowAppFile(null);
+    setShowAppImage(null);
+    setShowAppError(null);
+    setShowAppActorPicker(false);
     setSelectedActorId(null);
     setSelectedCustomActorId(null);
     handleResetCreateActor();
@@ -770,6 +789,50 @@ function HomeScreen() {
     } catch (err) {
       setUnboxingError(err instanceof Error ? err.message : "Couldn't create that shot.");
       setUnboxingPanel("closed");
+    }
+  };
+
+  const handleUploadShowAppScreenshot = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setShowAppFile(e.target.files?.[0] || null);
+  };
+
+  // Reuses the exact same actor sources Product mode already offers
+  // (upload own photo, or pick from the built-in/custom catalog) --
+  // stored in the same videoRefImage state, since only one mode is ever
+  // mounted at a time.
+  const handleUploadShowAppActor = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const match = result.match(/^data:(.*?);base64,(.*)$/);
+      if (!match) return;
+      setVideoRefImage({ mimeType: match[1], base64: match[2] });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePickShowAppActor = (base64: string, mimeType: string) => {
+    setVideoRefImage({ base64, mimeType });
+    setShowAppActorPicker(false);
+  };
+
+  const handleGenerateShowApp = async () => {
+    const actorBase64 = videoRefImage?.base64 || homeGeneratedImage;
+    if (!actorBase64 || !showAppFile) return;
+    const actorMimeType = videoRefImage?.mimeType || "image/png";
+    setShowAppError(null);
+    setShowAppPanel("generating");
+    try {
+      const r = await combineActorAndAppScreenshot(actorBase64, showAppFile, homeImageAspectRatio, actorMimeType);
+      setShowAppImage(r.banner_image_base64);
+      setCredits(r.credits_remaining);
+      setShowAppPanel("closed");
+    } catch (err) {
+      setShowAppError(err instanceof Error ? err.message : "Couldn't create that shot.");
+      setShowAppPanel("closed");
     }
   };
 
@@ -1071,6 +1134,17 @@ function HomeScreen() {
             >
               <PackageOpen className="h-4 w-4" />
               Unboxing
+            </button>
+            <button
+              onClick={() => handleSwitchMode("show_app")}
+              className={[
+                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
+                homeMode === "show_app" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
+              ].join(" ")}
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <Smartphone className="h-4 w-4" />
+              Show Your App
             </button>
             <div className="relative">
               <button
@@ -2277,6 +2351,174 @@ function HomeScreen() {
                       <button
                         onClick={handleGenerateUnboxing}
                         disabled={!unboxingFile || !unboxingScene.trim()}
+                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                      >
+                        Generate
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ---------- Show Your App mode ---------- */}
+            {homeMode === "show_app" && (
+              <>
+                {showAppImage ? (
+                  <>
+                    <img
+                      src={`data:image/png;base64,${showAppImage}`}
+                      alt="Generated"
+                      className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
+                    />
+                    <div className="flex items-center justify-between gap-2 px-4 py-3">
+                      <span className="text-xs text-muted-foreground">Show Your App shot</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setVideoRefImage({ base64: showAppImage, mimeType: "image/png" });
+                            handleOpenVideoComposer();
+                            setHomeMode("video");
+                          }}
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Make a video
+                        </button>
+                        <button
+                          onClick={handleGenerateShowApp}
+                          title="Generate again with the same actor and screenshot"
+                          className="flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Remix
+                        </button>
+                        <button
+                          onClick={handleResetHome}
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Create another
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : showAppPanel === "generating" ? (
+                  <div className="flex flex-col items-center gap-2 px-4 py-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                    <p className="text-xs text-muted-foreground">Creating your shot…</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 px-4 py-3">
+                    {showAppError && <p className="text-xs font-medium text-destructive">{showAppError}</p>}
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
+                        {videoRefImage ? (
+                          <img
+                            src={`data:${videoRefImage.mimeType};base64,${videoRefImage.base64}`}
+                            alt="Actor"
+                            className="h-10 w-10 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <Upload className="h-3.5 w-3.5" />
+                        )}
+                        {videoRefImage ? "Replace actor photo" : "Upload actor / model photo"}
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUploadShowAppActor} />
+                      </label>
+                      <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
+                        {showAppFile ? (
+                          <Smartphone className="h-5 w-5" />
+                        ) : (
+                          <Upload className="h-3.5 w-3.5" />
+                        )}
+                        {showAppFile ? showAppFile.name : "Upload a screenshot of your app"}
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUploadShowAppScreenshot} />
+                      </label>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowAppActorPicker((v) => !v)}
+                      className="text-xs font-semibold text-accent"
+                    >
+                      {showAppActorPicker ? "Hide actors" : "Or choose an actor"}
+                    </button>
+
+                    {showAppActorPicker && (
+                      <div className="flex flex-wrap gap-2 rounded-xl border border-border p-2">
+                        {(actorsLoading || customActorsLoading) && actors.length === 0 && customActors.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">Loading actors…</p>
+                        ) : (
+                          <>
+                            {customActors.map((a) => (
+                              <button
+                                key={a.id}
+                                type="button"
+                                title={a.name}
+                                onClick={() => handlePickShowAppActor(a.photo_base64, a.photo_mime_type)}
+                                className="h-12 w-12 shrink-0 overflow-hidden rounded-lg ring-1 ring-border"
+                              >
+                                <img
+                                  src={`data:${a.photo_mime_type};base64,${a.photo_base64}`}
+                                  alt={a.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              </button>
+                            ))}
+                            {actors.map((a) => {
+                              const previewUrl = actorPreviewVideos[a.id];
+                              return (
+                                <button
+                                  key={a.id}
+                                  type="button"
+                                  title={a.name}
+                                  onClick={() => handlePickShowAppActor(a.preview_image_base64, "image/jpeg")}
+                                  onMouseEnter={(e) => {
+                                    if (!actorPreviewVideos[a.id]) {
+                                      fetchActorPreviewVideoUrl(a.id)
+                                        .then((url) => setActorPreviewVideos((prev) => ({ ...prev, [a.id]: url })))
+                                        .catch(() => {});
+                                      return;
+                                    }
+                                    const video = e.currentTarget.querySelector("video");
+                                    video?.play().catch(() => {});
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    const video = e.currentTarget.querySelector("video");
+                                    if (video) {
+                                      video.pause();
+                                      video.currentTime = 0;
+                                    }
+                                  }}
+                                  className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg ring-1 ring-border"
+                                >
+                                  <img
+                                    src={`data:image/jpeg;base64,${a.preview_image_base64}`}
+                                    alt={a.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                  {previewUrl && (
+                                    // eslint-disable-next-line jsx-a11y/media-has-caption
+                                    <video
+                                      src={previewUrl}
+                                      muted
+                                      loop
+                                      playsInline
+                                      autoPlay
+                                      className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-200 hover:opacity-100"
+                                    />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        onClick={handleGenerateShowApp}
+                        disabled={(!videoRefImage && !homeGeneratedImage) || !showAppFile}
                         className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                       >
                         Generate

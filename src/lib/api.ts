@@ -813,6 +813,27 @@ export function combineActorAndProduct(
   });
 }
 
+// The home page's "Show Your App" pill -- attaches an app screenshot to
+// an actor photo; the actor is shown holding a phone whose screen
+// displays that exact screenshot. Deliberately a separate endpoint from
+// combineActorAndProduct (not a thin wrapper) -- see the backend
+// function's own docstring for why the prompt has to differ.
+export function combineActorAndAppScreenshot(
+  actorImageBase64: string,
+  screenshotFile: File,
+  aspectRatio: AspectRatio = "square",
+  actorImageMimeType: string = "image/png",
+): Promise<ApiAdImageVariantResponse> {
+  const formData = new FormData();
+  formData.append("actor_file", base64ToBlob(actorImageBase64, actorImageMimeType), "actor.png");
+  formData.append("screenshot_file", screenshotFile);
+  const params = new URLSearchParams({ aspect_ratio: aspectRatio });
+  return apiFetch<ApiAdImageVariantResponse>(`/ads/generate-show-app?${params}`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 // The home page's "Unboxing" pill -- restyles only the background/surface
 // behind a real uploaded product photo (product itself untouched), no
 // curated surface-photo library, just a text description of the scene.

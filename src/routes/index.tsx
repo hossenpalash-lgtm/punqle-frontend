@@ -21,6 +21,7 @@ import {
   UserRound,
   Video,
   X,
+  ZoomIn,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -30,10 +31,12 @@ import {
   type ApiImageActor,
   type ApiVideoOperation,
   type AspectRatio,
+  type AvatarTier,
   checkActorVideoV2Status,
   checkAiActorVideoStatus,
   checkImageVideoStatus,
   checkTalkingVideoStatus,
+  checkVideoUpscaleStatus,
   combineActorAndAppScreenshot,
   combineActorAndProduct,
   createCustomActor,
@@ -52,6 +55,8 @@ import {
   renameCustomActor,
   startActorVideoV2,
   startAiActorVideoGeneration,
+  startVideoUpscale,
+  upscaleImage,
   type VideoAspectRatio,
   type VoiceGender,
 } from "@/lib/api";
@@ -184,6 +189,10 @@ const TALKING_VIDEO_REDUB_SURCHARGE = 10;
 // since this reuses that exact same endpoint. Display only.
 const ACTOR_VIDEO_V2_CREDIT_COST = 30;
 
+// Mirrors the backend's own VIDEO_UPSCALE_CREDIT_COST (main.py) — display
+// only, the backend computes and charges the real amount server-side.
+const UPSCALE_VIDEO_CREDIT_COST: Record<AvatarTier, number> = { standard: 4, premium: 10 };
+
 function HomeScreen() {
   const { tab } = Route.useSearch();
   const navigate = useNavigate();
@@ -213,7 +222,7 @@ function HomeScreen() {
   // structurally impossible now: only one mode's block ever renders.
   // "See more" (Image Ad/Try-On/Carousel) stays outside this — those are
   // genuinely separate, heavier wizards that navigate away, unchanged.
-  type HomeMode = "talking_actors" | "video" | "image" | "product" | "unboxing" | "show_app";
+  type HomeMode = "talking_actors" | "video" | "image" | "product" | "unboxing" | "show_app" | "upscale";
   const [homeMode, setHomeMode] = useState<HomeMode>("talking_actors");
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
@@ -298,6 +307,19 @@ function HomeScreen() {
   const [showAppError, setShowAppError] = useState<string | null>(null);
   const [showAppActorPicker, setShowAppActorPicker] = useState(false);
 
+  // The home page's "Upscale" pill -- one upload slot, auto-detects
+  // image vs video by file type. Image side is fast/synchronous
+  // (flat 1 credit); video side is a genuinely slow async job (Topaz
+  // Labs, a real run took ~7 minutes) needing a Standard/Premium tier
+  // pick + poll, same shape as Cinematic UGC.
+  const [upscalePanel, setUpscalePanel] = useState<"closed" | "generating">("closed");
+  const [upscaleFile, setUpscaleFile] = useState<File | null>(null);
+  const [upscaleTier, setUpscaleTier] = useState<AvatarTier>("standard");
+  const [upscaleResultImage, setUpscaleResultImage] = useState<string | null>(null);
+  const [upscaleResultVideo, setUpscaleResultVideo] = useState<string | null>(null);
+  const [upscaleError, setUpscaleError] = useState<string | null>(null);
+  const upscalePollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Talking Actors mode — reuses Punqle Actors v2 wholesale: same catalog,
   // same readiness gating, same generate/poll endpoints AdVideoForm.tsx's
   // own actor picker already calls (main.py:5364/5436, unchanged). This is
@@ -362,6 +384,7 @@ function HomeScreen() {
     return () => {
       if (videoPollRef.current) clearTimeout(videoPollRef.current);
       if (actorPollRef.current) clearTimeout(actorPollRef.current);
+      if (upscalePollRef.current) clearTimeout(upscalePollRef.current);
     };
   }, []);
 
@@ -598,6 +621,13 @@ function HomeScreen() {
     setShowAppImage(null);
     setShowAppError(null);
     setShowAppActorPicker(false);
+    if (upscalePollRef.current) clearTimeout(upscalePollRef.current);
+    setUpscalePanel("closed");
+    setUpscaleFile(null);
+    setUpscaleTier("standard");
+    setUpscaleResultImage(null);
+    setUpscaleResultVideo(null);
+    setUpscaleError(null);
     setSelectedActorId(null);
     setSelectedCustomActorId(null);
     handleResetCreateActor();
@@ -833,6 +863,71 @@ function HomeScreen() {
     } catch (err) {
       setShowAppError(err instanceof Error ? err.message : "Couldn't create that shot.");
       setShowAppPanel("closed");
+    }
+  };
+
+  const handleUploadUpscaleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUpscaleFile(e.target.files?.[0] || null);
+    setUpscaleResultImage(null);
+    setUpscaleResultVideo(null);
+    setUpscaleError(null);
+  };
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const match = result.match(/^data:(.*?);base64,(.*)$/);
+        if (!match) {
+          reject(new Error("Couldn't read that file."));
+          return;
+        }
+        resolve(match[2]);
+      };
+      reader.onerror = () => reject(new Error("Couldn't read that file."));
+      reader.readAsDataURL(file);
+    });
+
+  const pollVideoUpscale = async (predictionId: string) => {
+    try {
+      const r = await checkVideoUpscaleStatus(predictionId);
+      if (!r.done) {
+        upscalePollRef.current = setTimeout(() => pollVideoUpscale(predictionId), 8000);
+        return;
+      }
+      if (r.credits_remaining !== null) setCredits(r.credits_remaining);
+      if (r.video_base64) {
+        setUpscaleResultVideo(r.video_base64);
+        setUpscalePanel("closed");
+      } else {
+        setUpscaleError("Couldn't upscale that video — please try again.");
+        setUpscalePanel("closed");
+      }
+    } catch (err) {
+      setUpscaleError(err instanceof Error ? err.message : "Couldn't check the upscale's status.");
+      setUpscalePanel("closed");
+    }
+  };
+
+  const handleGenerateUpscale = async () => {
+    if (!upscaleFile) return;
+    setUpscaleError(null);
+    setUpscalePanel("generating");
+    try {
+      if (upscaleFile.type.startsWith("video/")) {
+        const base64 = await fileToBase64(upscaleFile);
+        const started = await startVideoUpscale(base64, upscaleTier);
+        upscalePollRef.current = setTimeout(() => pollVideoUpscale(started.prediction_id), 8000);
+      } else {
+        const r = await upscaleImage(upscaleFile);
+        setUpscaleResultImage(r.banner_image_base64);
+        setCredits(r.credits_remaining);
+        setUpscalePanel("closed");
+      }
+    } catch (err) {
+      setUpscaleError(err instanceof Error ? err.message : "Couldn't upscale that.");
+      setUpscalePanel("closed");
     }
   };
 
@@ -1145,6 +1240,17 @@ function HomeScreen() {
             >
               <Smartphone className="h-4 w-4" />
               Show Your App
+            </button>
+            <button
+              onClick={() => handleSwitchMode("upscale")}
+              className={[
+                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
+                homeMode === "upscale" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
+              ].join(" ")}
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <ZoomIn className="h-4 w-4" />
+              Upscale
             </button>
             <div className="relative">
               <button
@@ -2519,6 +2625,121 @@ function HomeScreen() {
                       <button
                         onClick={handleGenerateShowApp}
                         disabled={(!videoRefImage && !homeGeneratedImage) || !showAppFile}
+                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                      >
+                        Generate
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ---------- Upscale mode ---------- */}
+            {homeMode === "upscale" && (
+              <>
+                {upscaleResultImage || upscaleResultVideo ? (
+                  <>
+                    {upscaleResultImage ? (
+                      <img
+                        src={`data:image/png;base64,${upscaleResultImage}`}
+                        alt="Upscaled"
+                        className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
+                      />
+                    ) : (
+                      // eslint-disable-next-line jsx-a11y/media-has-caption
+                      <video
+                        controls
+                        autoPlay
+                        loop
+                        className="max-h-[420px] w-full bg-[#1E1F24]"
+                        src={`data:video/mp4;base64,${upscaleResultVideo}`}
+                      />
+                    )}
+                    <div className="flex items-center justify-between gap-2 px-4 py-3">
+                      <span className="text-xs text-muted-foreground">Upscaled</span>
+                      <div className="flex items-center gap-2">
+                        {upscaleResultImage && (
+                          <button
+                            onClick={() => {
+                              setVideoRefImage({ base64: upscaleResultImage, mimeType: "image/png" });
+                              handleOpenVideoComposer();
+                              setHomeMode("video");
+                            }}
+                            className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                          >
+                            Make a video
+                          </button>
+                        )}
+                        <button
+                          onClick={handleGenerateUpscale}
+                          title="Upscale again with the same file"
+                          className="flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Remix
+                        </button>
+                        <button
+                          onClick={handleResetHome}
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Create another
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : upscalePanel === "generating" ? (
+                  <div className="flex flex-col items-center gap-2 px-4 py-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                    <p className="text-xs text-muted-foreground">
+                      {upscaleFile?.type.startsWith("video/") ? "Upscaling your video… this can take several minutes." : "Upscaling your image…"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 px-4 py-3">
+                    {upscaleError && <p className="text-xs font-medium text-destructive">{upscaleError}</p>}
+
+                    <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-4 text-center text-xs text-muted-foreground">
+                      {upscaleFile ? (
+                        <ZoomIn className="h-5 w-5" />
+                      ) : (
+                        <Upload className="h-3.5 w-3.5" />
+                      )}
+                      {upscaleFile ? upscaleFile.name : "Upload a video or image to upscale"}
+                      <input type="file" accept="image/*,video/*" className="hidden" onChange={handleUploadUpscaleFile} />
+                    </label>
+
+                    {upscaleFile?.type.startsWith("video/") && (
+                      <div className="grid grid-cols-2 gap-2">
+                        {(["standard", "premium"] as AvatarTier[]).map((t) => {
+                          const selected = upscaleTier === t;
+                          return (
+                            <button
+                              key={t}
+                              type="button"
+                              onClick={() => setUpscaleTier(t)}
+                              className={[
+                                "rounded-xl px-3 py-2.5 text-left capitalize transition-colors",
+                                selected ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
+                              ].join(" ")}
+                            >
+                              <span className="flex items-center gap-1.5 text-sm font-semibold">
+                                {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
+                                {t}
+                              </span>
+                              <span className={["block text-xs normal-case", selected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}>
+                                {UPSCALE_VIDEO_CREDIT_COST[t]} credits · {t === "premium" ? "4K" : "1080p"}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        onClick={handleGenerateUpscale}
+                        disabled={!upscaleFile}
                         className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                       >
                         Generate

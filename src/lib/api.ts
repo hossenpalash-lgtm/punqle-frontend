@@ -376,6 +376,36 @@ export function checkCinematicUgcStatus(predictionId: string): Promise<ApiAvatar
   });
 }
 
+// The home page's "Upscale" pill, matching Arcads' own real feature.
+// Image side is a fast, synchronous Real-ESRGAN call; video side
+// (Topaz Labs, genuinely slow -- a real run took ~7 minutes) reuses the
+// same async job/poll shape as Cinematic UGC, same standard/premium
+// tier naming.
+export function upscaleImage(file: File): Promise<ApiAdImageVariantResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFetch<ApiAdImageVariantResponse>("/ads/upscale-image", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export function startVideoUpscale(videoBase64: string, tier: AvatarTier): Promise<ApiCinematicUgcOperation> {
+  return apiFetch<ApiCinematicUgcOperation>("/ads/upscale-video-start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ video_base64: videoBase64, tier }),
+  });
+}
+
+export function checkVideoUpscaleStatus(predictionId: string): Promise<ApiAvatarVideoStatusResponse> {
+  return apiFetch<ApiAvatarVideoStatusResponse>("/ads/upscale-video-status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prediction_id: predictionId }),
+  });
+}
+
 // AI Actor talking video (OmniHuman, via Replicate) — a fourth video
 // path, same "reads a script" job as Avatar but using one of Punqle's
 // own fetchImageActors() personas instead of a HeyGen stock avatar.

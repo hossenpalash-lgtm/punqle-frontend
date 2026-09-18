@@ -406,6 +406,22 @@ export function checkVideoUpscaleStatus(predictionId: string): Promise<ApiAvatar
   });
 }
 
+// "Create your own actor"'s iterative refine step -- takes the current
+// AI-generated candidate photo + a free-text edit instruction, returns
+// a new photo. Only offered for the "Generate with AI" source, never an
+// uploaded real photo.
+export function refineActorPhoto(
+  imageBase64: string,
+  mimeType: string,
+  instruction: string,
+): Promise<ApiAdImageVariantResponse> {
+  return apiFetch<ApiAdImageVariantResponse>("/ads/refine-actor-photo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image_base64: imageBase64, mime_type: mimeType, instruction }),
+  });
+}
+
 // AI Actor talking video (OmniHuman, via Replicate) — a fourth video
 // path, same "reads a script" job as Avatar but using one of Punqle's
 // own fetchImageActors() personas instead of a HeyGen stock avatar.

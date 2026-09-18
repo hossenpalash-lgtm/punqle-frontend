@@ -52,6 +52,7 @@ import {
   generateUnboxingShot,
   type ImageGenModel,
   type ImageVideoModel,
+  refineActorPhoto,
   renameCustomActor,
   startActorVideoV2,
   startAiActorVideoGeneration,
@@ -360,6 +361,12 @@ function HomeScreen() {
   const [createActorGenerating, setCreateActorGenerating] = useState(false);
   const [createActorSaving, setCreateActorSaving] = useState(false);
   const [createActorError, setCreateActorError] = useState<string | null>(null);
+  // Iterative creation (Arcads-style): "Generate with AI" first shows 3
+  // candidate photos to pick from, then the picked one can be refined
+  // in place via free-text follow-up instructions before saving.
+  const [createActorCandidates, setCreateActorCandidates] = useState<{ base64: string; mimeType: string }[]>([]);
+  const [createActorRefinePrompt, setCreateActorRefinePrompt] = useState("");
+  const [createActorRefining, setCreateActorRefining] = useState(false);
   const [editingCustomActorId, setEditingCustomActorId] = useState<string | null>(null);
   const [editingCustomActorName, setEditingCustomActorName] = useState("");
   // ElevenLabs-only controls (no OpenAI equivalent) — same defaults as
@@ -438,18 +445,46 @@ function HomeScreen() {
     reader.readAsDataURL(file);
   };
 
+  // Generates 3 candidates from the same prompt (matches Arcads' own
+  // real "pick one of 3" flow) — sequential, not Promise.all, so a
+  // mid-batch failure still leaves whatever already succeeded visible
+  // rather than losing everything to one rejected call.
   const handleGenerateActorPhoto = async () => {
     if (!createActorPrompt.trim() || createActorGenerating) return;
     setCreateActorError(null);
     setCreateActorGenerating(true);
+    setCreateActorCandidates([]);
     try {
-      const r = await generateImageDirect(createActorPrompt.trim(), "square", "nano_banana_pro");
-      setCreateActorPhoto({ base64: r.banner_image_base64, mimeType: "image/png" });
-      setCredits(r.credits_remaining);
+      for (let i = 0; i < 3; i++) {
+        const r = await generateImageDirect(createActorPrompt.trim(), "square", "nano_banana_pro");
+        setCreateActorCandidates((prev) => [...prev, { base64: r.banner_image_base64, mimeType: "image/png" }]);
+        setCredits(r.credits_remaining);
+      }
     } catch (err) {
-      setCreateActorError(err instanceof Error ? err.message : "Couldn't generate that photo.");
+      setCreateActorError(err instanceof Error ? err.message : "Couldn't generate those photos.");
     } finally {
       setCreateActorGenerating(false);
+    }
+  };
+
+  const handlePickActorCandidate = (photo: { base64: string; mimeType: string }) => {
+    setCreateActorPhoto(photo);
+    setCreateActorCandidates([]);
+  };
+
+  const handleRefineActorPhoto = async () => {
+    if (!createActorPhoto || !createActorRefinePrompt.trim() || createActorRefining) return;
+    setCreateActorError(null);
+    setCreateActorRefining(true);
+    try {
+      const r = await refineActorPhoto(createActorPhoto.base64, createActorPhoto.mimeType, createActorRefinePrompt.trim());
+      setCreateActorPhoto({ base64: r.banner_image_base64, mimeType: "image/png" });
+      setCredits(r.credits_remaining);
+      setCreateActorRefinePrompt("");
+    } catch (err) {
+      setCreateActorError(err instanceof Error ? err.message : "Couldn't make that change.");
+    } finally {
+      setCreateActorRefining(false);
     }
   };
 
@@ -462,6 +497,8 @@ function HomeScreen() {
     setCreateActorConsent(false);
     setCreateActorPrompt("");
     setCreateActorError(null);
+    setCreateActorCandidates([]);
+    setCreateActorRefinePrompt("");
   };
 
   const handleSaveCustomActor = async () => {
@@ -1386,7 +1423,7 @@ function HomeScreen() {
                       </label>
                     )}
 
-                    {createActorSource === "generate" && !createActorPhoto && (
+                    {createActorSource === "generate" && !createActorPhoto && createActorCandidates.length === 0 && (
                       <div className="space-y-3">
                         <textarea
                           value={createActorPrompt}
@@ -1400,8 +1437,38 @@ function HomeScreen() {
                           disabled={!createActorPrompt.trim() || createActorGenerating}
                           className="w-full rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                         >
-                          {createActorGenerating ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Generate (1 credit)"}
+                          {createActorGenerating ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Generate (3 credits)"}
                         </button>
+                      </div>
+                    )}
+
+                    {/* Iterative creation, step 1: pick one of up to 3 candidates.
+                        Shown mid-generation too (fills in as each of the 3 calls
+                        resolves) rather than waiting for all 3 before showing any. */}
+                    {createActorSource === "generate" && !createActorPhoto && createActorCandidates.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Choose your actor</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {createActorCandidates.map((c, i) => (
+                            <button
+                              key={i}
+                              onClick={() => handlePickActorCandidate(c)}
+                              className="aspect-square overflow-hidden rounded-xl ring-1 ring-border"
+                            >
+                              <img
+                                src={`data:${c.mimeType};base64,${c.base64}`}
+                                alt={`Candidate ${i + 1}`}
+                                className="h-full w-full object-cover"
+                              />
+                            </button>
+                          ))}
+                          {createActorGenerating &&
+                            Array.from({ length: 3 - createActorCandidates.length }).map((_, i) => (
+                              <div key={`loading-${i}`} className="flex aspect-square items-center justify-center rounded-xl bg-secondary">
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              </div>
+                            ))}
+                        </div>
                       </div>
                     )}
 
@@ -1412,6 +1479,26 @@ function HomeScreen() {
                           alt="New actor"
                           className="mx-auto h-32 w-32 rounded-xl object-cover"
                         />
+                        {/* Iterative creation, step 2: refine the picked photo in
+                            place via free-text follow-ups -- generated photos
+                            only, never an uploaded real photo of a real person. */}
+                        {createActorSource === "generate" && (
+                          <div className="flex gap-1.5">
+                            <input
+                              value={createActorRefinePrompt}
+                              onChange={(e) => setCreateActorRefinePrompt(e.target.value)}
+                              placeholder="Make changes… (e.g. put a mug in her hand)"
+                              className="min-w-0 flex-1 rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
+                            />
+                            <button
+                              onClick={handleRefineActorPhoto}
+                              disabled={!createActorRefinePrompt.trim() || createActorRefining}
+                              className="shrink-0 rounded-xl bg-secondary px-3 py-2 text-xs font-bold text-secondary-foreground disabled:opacity-40"
+                            >
+                              {createActorRefining ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refine"}
+                            </button>
+                          </div>
+                        )}
                         <input
                           value={createActorName}
                           onChange={(e) => setCreateActorName(e.target.value)}

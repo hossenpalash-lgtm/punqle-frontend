@@ -813,6 +813,23 @@ export function combineActorAndProduct(
   });
 }
 
+// The home page's "Unboxing" pill -- restyles only the background/surface
+// behind a real uploaded product photo (product itself untouched), no
+// curated surface-photo library, just a text description of the scene.
+export function generateUnboxingShot(
+  productFile: File,
+  scene: string,
+  aspectRatio: AspectRatio = "square",
+): Promise<ApiAdImageVariantResponse> {
+  const formData = new FormData();
+  formData.append("product_file", productFile);
+  const params = new URLSearchParams({ scene, aspect_ratio: aspectRatio });
+  return apiFetch<ApiAdImageVariantResponse>(`/ads/generate-unboxing?${params}`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 // The generated banner images live in state as raw base64 PNG strings
 // (that's what the backend returns) — these two tools re-upload that same
 // image to a fresh Gemini edit call, so it needs converting back to a

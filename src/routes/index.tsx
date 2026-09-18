@@ -9,6 +9,7 @@ import {
   Megaphone,
   MoreHorizontal,
   Package,
+  PackageOpen,
   Pencil,
   Plus,
   RefreshCw,
@@ -43,6 +44,7 @@ import {
   generateImageDirect,
   generateImageVideo,
   generateTalkingVideo,
+  generateUnboxingShot,
   type ImageGenModel,
   type ImageVideoModel,
   renameCustomActor,
@@ -209,7 +211,7 @@ function HomeScreen() {
   // structurally impossible now: only one mode's block ever renders.
   // "See more" (Image Ad/Try-On/Carousel) stays outside this — those are
   // genuinely separate, heavier wizards that navigate away, unchanged.
-  type HomeMode = "talking_actors" | "video" | "image" | "product";
+  type HomeMode = "talking_actors" | "video" | "image" | "product" | "unboxing";
   const [homeMode, setHomeMode] = useState<HomeMode>("talking_actors");
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
@@ -272,6 +274,15 @@ function HomeScreen() {
   const [productFile, setProductFile] = useState<File | null>(null);
   const [productError, setProductError] = useState<string | null>(null);
   const [showProductActorPicker, setShowProductActorPicker] = useState(false);
+
+  // The home page's "Unboxing" pill -- restyles only the background/
+  // surface behind a real product photo, no curated surface-photo
+  // library, just quick-pick text presets that fill unboxingScene.
+  const [unboxingPanel, setUnboxingPanel] = useState<"closed" | "generating">("closed");
+  const [unboxingFile, setUnboxingFile] = useState<File | null>(null);
+  const [unboxingScene, setUnboxingScene] = useState("");
+  const [unboxingImage, setUnboxingImage] = useState<string | null>(null);
+  const [unboxingError, setUnboxingError] = useState<string | null>(null);
 
   // Talking Actors mode — reuses Punqle Actors v2 wholesale: same catalog,
   // same readiness gating, same generate/poll endpoints AdVideoForm.tsx's
@@ -563,6 +574,11 @@ function HomeScreen() {
     setProductFile(null);
     setProductError(null);
     setShowProductActorPicker(false);
+    setUnboxingPanel("closed");
+    setUnboxingFile(null);
+    setUnboxingScene("");
+    setUnboxingImage(null);
+    setUnboxingError(null);
     setSelectedActorId(null);
     setSelectedCustomActorId(null);
     handleResetCreateActor();
@@ -728,6 +744,32 @@ function HomeScreen() {
       setProductError(err instanceof Error ? err.message : "Couldn't create that video.");
       setProductPanel("composer");
       setVideoPanel("closed");
+    }
+  };
+
+  const handleUploadUnboxingProduct = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUnboxingFile(e.target.files?.[0] || null);
+  };
+
+  // Quick-pick surface presets insert a short scene phrase rather than
+  // replacing whatever the user already typed, so picking one is a
+  // starting point, not a reset.
+  const handlePickUnboxingSurface = (phrase: string) => {
+    setUnboxingScene((prev) => (prev.trim() ? `${prev.trim()}, ${phrase}` : phrase));
+  };
+
+  const handleGenerateUnboxing = async () => {
+    if (!unboxingFile || !unboxingScene.trim()) return;
+    setUnboxingError(null);
+    setUnboxingPanel("generating");
+    try {
+      const r = await generateUnboxingShot(unboxingFile, unboxingScene.trim(), homeImageAspectRatio);
+      setUnboxingImage(r.banner_image_base64);
+      setCredits(r.credits_remaining);
+      setUnboxingPanel("closed");
+    } catch (err) {
+      setUnboxingError(err instanceof Error ? err.message : "Couldn't create that shot.");
+      setUnboxingPanel("closed");
     }
   };
 
@@ -1018,6 +1060,17 @@ function HomeScreen() {
             >
               <Package className="h-4 w-4" />
               Product
+            </button>
+            <button
+              onClick={() => handleSwitchMode("unboxing")}
+              className={[
+                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
+                homeMode === "unboxing" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
+              ].join(" ")}
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <PackageOpen className="h-4 w-4" />
+              Unboxing
             </button>
             <div className="relative">
               <button
@@ -2122,6 +2175,108 @@ function HomeScreen() {
                       <button
                         onClick={handleGenerateProduct}
                         disabled={!videoRefImage || !productFile || !productPrompt.trim()}
+                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                      >
+                        Generate
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ---------- Unboxing mode ---------- */}
+            {homeMode === "unboxing" && (
+              <>
+                {unboxingImage ? (
+                  <>
+                    <img
+                      src={`data:image/png;base64,${unboxingImage}`}
+                      alt="Generated"
+                      className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
+                    />
+                    <div className="flex items-center justify-between gap-2 px-4 py-3">
+                      <span className="text-xs text-muted-foreground">Unboxing shot</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setVideoRefImage({ base64: unboxingImage, mimeType: "image/png" });
+                            handleOpenVideoComposer();
+                            setHomeMode("video");
+                          }}
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Make a video
+                        </button>
+                        <button
+                          onClick={handleGenerateUnboxing}
+                          title="Generate again with the same photo and scene"
+                          className="flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Remix
+                        </button>
+                        <button
+                          onClick={handleResetHome}
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Create another
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : unboxingPanel === "generating" ? (
+                  <div className="flex flex-col items-center gap-2 px-4 py-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                    <p className="text-xs text-muted-foreground">Creating your shot…</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 px-4 py-3">
+                    {unboxingError && <p className="text-xs font-medium text-destructive">{unboxingError}</p>}
+
+                    <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-4 text-center text-xs text-muted-foreground">
+                      {unboxingFile ? (
+                        <PackageOpen className="h-5 w-5" />
+                      ) : (
+                        <Upload className="h-3.5 w-3.5" />
+                      )}
+                      {unboxingFile ? unboxingFile.name : "Upload a product photo"}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleUploadUnboxingProduct} />
+                    </label>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {(
+                        [
+                          { label: "Marble", phrase: "on a marble kitchen counter, soft morning light" },
+                          { label: "Wood", phrase: "on a warm wooden table, natural daylight" },
+                          { label: "Linen", phrase: "on soft wrinkled linen fabric, cozy natural light" },
+                          { label: "Outdoor", phrase: "on a rustic outdoor patio table, golden hour light" },
+                          { label: "Tile", phrase: "on a clean bathroom tile counter, bright even light" },
+                        ] as const
+                      ).map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => handlePickUnboxingSurface(preset.phrase)}
+                          className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <textarea
+                      value={unboxingScene}
+                      onChange={(e) => setUnboxingScene(e.target.value)}
+                      placeholder="Describe the surface or setting… (e.g. on a marble kitchen counter, soft morning light)"
+                      rows={2}
+                      className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
+                    />
+
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        onClick={handleGenerateUnboxing}
+                        disabled={!unboxingFile || !unboxingScene.trim()}
                         className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                       >
                         Generate

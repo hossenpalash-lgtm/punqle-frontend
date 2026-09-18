@@ -1241,17 +1241,6 @@ function HomeScreen() {
               <Smartphone className="h-4 w-4" />
               Show Your App
             </button>
-            <button
-              onClick={() => handleSwitchMode("upscale")}
-              className={[
-                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "upscale" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
-              ].join(" ")}
-              style={{ boxShadow: "var(--shadow-card)" }}
-            >
-              <ZoomIn className="h-4 w-4" />
-              Upscale
-            </button>
             <div className="relative">
               <button
                 onClick={() => setShowMoreMenu((v) => !v)}
@@ -1267,6 +1256,16 @@ function HomeScreen() {
                   className="absolute right-0 top-full z-10 mt-2 w-48 overflow-hidden rounded-2xl border border-border bg-card py-1"
                   style={{ boxShadow: "var(--shadow-card)" }}
                 >
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      handleSwitchMode("upscale");
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-secondary"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                    Upscale
+                  </button>
                   <button
                     onClick={() => {
                       setShowMoreMenu(false);

@@ -2692,7 +2692,9 @@ function HomeScreen() {
                   <div className="flex flex-col items-center gap-2 px-4 py-10">
                     <Loader2 className="h-5 w-5 animate-spin text-accent" />
                     <p className="text-xs text-muted-foreground">
-                      {upscaleFile?.type.startsWith("video/") ? "Upscaling your video… this can take several minutes." : "Upscaling your image…"}
+                      {upscaleFile?.type.startsWith("video/")
+                        ? "Upscaling your video… this can take several minutes. You can browse other tabs while you wait — just don't switch away from Upscale here."
+                        : "Upscaling your image…"}
                     </p>
                   </div>
                 ) : (

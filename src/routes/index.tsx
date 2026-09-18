@@ -11,6 +11,7 @@ import {
   Package,
   Pencil,
   Plus,
+  RefreshCw,
   Settings2,
   Shirt,
   Sparkles,
@@ -1096,12 +1097,22 @@ function HomeScreen() {
                           ? customActors.find((a) => a.id === selectedCustomActorId)?.name ?? "Your actor"
                           : actors.find((a) => a.id === selectedActorId)?.name ?? "Actor"}
                       </span>
-                      <button
-                        onClick={handleResetHome}
-                        className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                      >
-                        Create another
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleGenerateActorVideo}
+                          title="Generate again with the same actor and script"
+                          className="flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Remix
+                        </button>
+                        <button
+                          onClick={handleResetHome}
+                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          Create another
+                        </button>
+                      </div>
                     </div>
                   </>
                 ) : showCreateActor ? (
@@ -1557,6 +1568,14 @@ function HomeScreen() {
                           Actor
                         </button>
                         <button
+                          onClick={handleGenerateVideo}
+                          title="Generate again with the same photo and settings"
+                          className="flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Remix
+                        </button>
+                        <button
                           onClick={handleResetHome}
                           className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
                         >
@@ -1804,6 +1823,14 @@ function HomeScreen() {
                           Make a video
                         </button>
                         <button
+                          onClick={handleHomeGenerateImage}
+                          title="Generate again with the same prompt and settings"
+                          className="flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Remix
+                        </button>
+                        <button
                           onClick={handleResetHome}
                           className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
                         >
@@ -1944,6 +1971,14 @@ function HomeScreen() {
                           className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
                         >
                           Actor
+                        </button>
+                        <button
+                          onClick={handleGenerateProduct}
+                          title="Generate again with the same photos and description"
+                          className="flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Remix
                         </button>
                         <button
                           onClick={handleResetHome}

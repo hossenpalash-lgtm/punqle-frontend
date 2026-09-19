@@ -195,6 +195,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
     const clone = el.cloneNode(true) as HTMLElement;
     clone.querySelectorAll(".no-print").forEach((n) => n.remove());
     clone.querySelectorAll("details").forEach((d) => d.setAttribute("open", ""));
+    clone.querySelectorAll("div.hidden").forEach((d) => d.classList.remove("hidden"));
     const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
       .map((n) => n.outerHTML)
       .join("");
@@ -357,13 +358,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
             ))}
           </div>
 
-          {igOpened && (
-            <div className={tab === "instagram" ? "" : "hidden"}>
-              <InstagramStats key={result.id ?? result.source_url} initialUsername={igHandle} competitorName={result.competitor_name} />
-            </div>
-          )}
-
-          <div className={tab === "overview" ? "space-y-3" : "hidden"}>
+          <div className={`space-y-3 ${tab === "overview" ? "" : "hidden"}`}>
             <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
               <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <Link2 className="h-3.5 w-3.5" />
@@ -558,6 +553,12 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
               </Section>
             )}
           </div>
+
+          {igOpened && (
+            <div className={tab === "instagram" ? "" : "hidden"}>
+              <InstagramStats key={result.id ?? result.source_url} initialUsername={igHandle} competitorName={result.competitor_name} />
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -258,18 +258,25 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
 
       {data && data.status === "ok" && (
         <>
-          <div className="flex items-center justify-between">
-            <a
-              href={`https://www.instagram.com/${data.username}/`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm font-semibold text-foreground hover:underline"
-            >
-              <Instagram className="h-4 w-4" />@{data.username}
-              <ExternalLink className="h-3 w-3 text-muted-foreground" />
-            </a>
-            <p className="text-xs text-muted-foreground">
-              {data.analyzed_posts} recent posts · {data.date_from} → {data.date_to}
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-1">
+              <a
+                href={`https://www.instagram.com/${data.username}/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-foreground hover:underline"
+              >
+                <Instagram className="h-4 w-4" />@{data.username}
+                {data.account_name && <span className="font-normal text-muted-foreground">· {data.account_name}</span>}
+                <ExternalLink className="h-3 w-3 text-muted-foreground" />
+              </a>
+              <p className="text-xs text-muted-foreground">
+                {data.analyzed_posts} recent posts · {data.date_from} → {data.date_to}
+              </p>
+            </div>
+            <p className="no-print mt-0.5 text-[11px] text-muted-foreground">
+              {data.account_website ? `Website on this account: ${data.account_website.replace(/^https?:\/\//, "").replace(/\/$/, "")}. ` : ""}
+              Not the right account? Type another username above.
             </p>
           </div>
 

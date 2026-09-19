@@ -1831,6 +1831,8 @@ export interface ApiInstagramStats {
   status: "ok" | "needs_unlock" | "no_instagram" | "unavailable_account" | "error";
   message: string;
   username: string;
+  account_name: string;
+  account_website: string;
   followers: number | null;
   total_posts: number | null;
   analyzed_posts: number;

@@ -1,12 +1,45 @@
-import { AlertCircle, ArrowRight, Binoculars, Link2, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowRight, Binoculars, ExternalLink, Link2, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { fetchCompetitorAnalysis, type ApiCompetitorAnalysisResponse } from "@/lib/api";
 
-// Free — one fetch + one text-only GPT call, same economics as
-// Blog-to-posts. Works best against a competitor's own website; a
-// Facebook/Instagram page URL usually only exposes its public
-// link-preview title/description to a plain fetch (their real feed is
-// JS-rendered and login-gated), so results there will be thinner.
+// Rewritten 2026-09-19 alongside the backend's real web-search-grounded
+// rewrite (see _generate_competitor_analysis) -- the richer schema
+// (snapshot/public_presence/customer_signals/sources) needed this whole
+// result view redesigned, not just a backend swap. Metrics that come
+// back null render as "Not publicly available", never a fabricated
+// number -- see main.py's own docstring for why they're usually null.
+const SNAPSHOT_FIELDS: { key: keyof ApiCompetitorAnalysisResponse["snapshot"]; label: string }[] = [
+  { key: "category", label: "Category" },
+  { key: "what_they_sell", label: "What they sell" },
+  { key: "target_customer", label: "Target customer" },
+  { key: "positioning", label: "Positioning" },
+];
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{children}</p>;
+}
+
+function SourceLink({ url }: { url: string | null }) {
+  if (!url) return null;
+  let host = url;
+  try {
+    host = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    // keep raw url if it doesn't parse
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:underline"
+    >
+      <ExternalLink className="h-3 w-3" />
+      {host}
+    </a>
+  );
+}
+
 export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) => void }) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,11 +60,22 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
     }
   };
 
+  const metrics = result?.public_presence.metrics;
+  const metricRows = metrics
+    ? [
+        { label: "Facebook followers", value: metrics.facebook_followers },
+        { label: "Facebook likes", value: metrics.facebook_likes },
+        { label: "Instagram followers", value: metrics.instagram_followers },
+        { label: "Visible post engagement", value: metrics.visible_post_engagement },
+      ]
+    : [];
+
   return (
     <div>
       <h1 className="font-display mb-1 text-lg font-extrabold text-foreground">Competitive Edge</h1>
       <p className="mb-4 text-sm text-muted-foreground">
-        Paste a competitor's website and find opportunities they've missed for your next ad.
+        Paste a competitor's website or social page — Punqle searches the real web (not just that one page) to
+        find opportunities they've missed.
       </p>
 
       <div className="mb-4 flex gap-2">
@@ -39,7 +83,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://competitor.com"
+          placeholder="https://competitor.com or facebook.com/theirpage"
           disabled={loading}
           className="flex-1 rounded-full border border-input bg-background px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
@@ -60,18 +104,25 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
         </p>
       )}
 
+      {loading && (
+        <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border py-16 text-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <p className="text-xs text-muted-foreground">Searching the real web — this takes a bit longer than before…</p>
+        </div>
+      )}
+
       {!result && !loading && !error && (
         <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border py-16 text-center">
           <Binoculars className="h-8 w-8 text-muted-foreground" />
           <p className="text-sm font-semibold text-muted-foreground">No analysis yet</p>
           <p className="px-6 text-xs text-muted-foreground">
-            Works best on a competitor's own website — Facebook/Instagram pages usually only expose their title
-            and short description.
+            Works on a Facebook/Instagram page too now — Punqle identifies the real brand and searches the open
+            web for it, instead of only reading that one page.
           </p>
         </div>
       )}
 
-      {result && (
+      {result && !loading && (
         <div className="space-y-3">
           <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
             <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -79,22 +130,93 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
               {result.competitor_name}
             </p>
             <p className="text-sm text-foreground">{result.summary}</p>
+            {result.snapshot.recent_developments && (
+              <p className="mt-2 rounded-lg bg-secondary px-3 py-2 text-xs text-secondary-foreground">
+                <span className="font-semibold">Recent: </span>
+                {result.snapshot.recent_developments}
+              </p>
+            )}
           </div>
+
+          {(result.snapshot.category || result.snapshot.what_they_sell || result.snapshot.target_customer || result.snapshot.positioning) && (
+            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+              <SectionLabel>Snapshot</SectionLabel>
+              <div className="grid grid-cols-2 gap-2">
+                {SNAPSHOT_FIELDS.filter((f) => result.snapshot[f.key]).map((f) => (
+                  <div key={f.key} className="rounded-lg bg-secondary px-2.5 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{f.label}</p>
+                    <p className="text-xs text-secondary-foreground">{result.snapshot[f.key]}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(result.public_presence.website || result.public_presence.facebook || result.public_presence.instagram) && (
+            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+              <SectionLabel>Public presence</SectionLabel>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {result.public_presence.website && <SourceLink url={result.public_presence.website} />}
+                {result.public_presence.facebook && <SourceLink url={result.public_presence.facebook} />}
+                {result.public_presence.instagram && <SourceLink url={result.public_presence.instagram} />}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {metricRows.map((m) => (
+                  <div key={m.label} className="rounded-lg bg-secondary px-2.5 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{m.label}</p>
+                    <p className={m.value ? "text-xs font-semibold text-secondary-foreground" : "text-xs italic text-muted-foreground"}>
+                      {m.value || "Not publicly available"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.what_theyre_doing.length > 0 && (
+            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+              <SectionLabel>What they're doing</SectionLabel>
+              <div className="flex flex-col gap-2">
+                {result.what_theyre_doing.map((item, i) => (
+                  <div key={i} className="rounded-xl bg-secondary px-3 py-2">
+                    <p className="text-sm text-secondary-foreground">{item.observation}</p>
+                    {item.evidence && <p className="mt-1 text-xs italic text-muted-foreground">{item.evidence}</p>}
+                    <SourceLink url={item.source_url} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.customer_signals.length > 0 && (
+            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+              <SectionLabel>Customer signals</SectionLabel>
+              <div className="flex flex-col gap-2">
+                {result.customer_signals.map((item, i) => (
+                  <div key={i} className="rounded-xl bg-secondary px-3 py-2">
+                    <p className="text-sm text-secondary-foreground">{item.signal}</p>
+                    {item.evidence && <p className="mt-1 text-xs italic text-muted-foreground">{item.evidence}</p>}
+                    <SourceLink url={item.source_url} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Ways to stand out
-            </p>
+            <SectionLabel>Opportunities for you</SectionLabel>
             <div className="flex flex-col gap-2">
-              {result.differentiation_ideas.map((item, i) => (
+              {result.opportunities.map((item, i) => (
                 <div key={i} className="rounded-xl bg-secondary px-3 py-2">
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">{item.angle}</p>
-                  <p className="mb-1.5 text-sm text-secondary-foreground">{item.idea}</p>
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">{item.title}</p>
+                  <p className="mb-1.5 text-sm text-secondary-foreground">{item.opportunity}</p>
                   {item.evidence && (
                     <p className="mb-1.5 text-xs italic text-muted-foreground">Why: {item.evidence}</p>
                   )}
+                  <SourceLink url={item.source_url} />
                   <button
-                    onClick={() => onCreateAd(item.idea)}
-                    className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                    onClick={() => onCreateAd(item.action || item.opportunity)}
+                    className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                   >
                     Create an ad from this
                     <ArrowRight className="h-3 w-3" />
@@ -103,6 +225,25 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
               ))}
             </div>
           </div>
+
+          {result.sources.length > 0 && (
+            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+              <SectionLabel>Sources</SectionLabel>
+              <div className="flex flex-wrap gap-2">
+                {result.sources.map((s, i) => (
+                  <a
+                    key={i}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-secondary-foreground hover:underline"
+                  >
+                    {s.title || s.url}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

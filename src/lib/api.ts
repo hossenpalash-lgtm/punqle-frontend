@@ -1710,16 +1710,67 @@ export function createPortalSession(): Promise<{ portal_url: string }> {
   return apiFetch<{ portal_url: string }>("/billing/portal", { method: "POST" });
 }
 
-export interface ApiCompetitorDifferentiationIdea {
-  angle: string;
-  idea: string;
+// Rewritten 2026-09-19 -- see the backend's own _generate_competitor_analysis
+// docstring for why (real web-search-grounded analysis, replacing a
+// single-static-page fetch that silently broke on Facebook/Instagram URLs).
+export interface ApiCompetitorSnapshot {
+  category: string;
+  what_they_sell: string;
+  target_customer: string;
+  positioning: string;
+  recent_developments: string;
+}
+
+export interface ApiCompetitorMetrics {
+  facebook_followers: string | null;
+  facebook_likes: string | null;
+  instagram_followers: string | null;
+  visible_post_engagement: string | null;
+}
+
+export interface ApiCompetitorPublicPresence {
+  website: string | null;
+  facebook: string | null;
+  instagram: string | null;
+  metrics: ApiCompetitorMetrics;
+}
+
+export interface ApiCompetitorObservation {
+  observation: string;
   evidence: string;
+  source_url: string | null;
+}
+
+export interface ApiCompetitorCustomerSignal {
+  signal: string;
+  evidence: string;
+  source_url: string | null;
+}
+
+export interface ApiCompetitorOpportunity {
+  title: string;
+  opportunity: string;
+  action: string;
+  evidence: string;
+  source_url: string | null;
+}
+
+export interface ApiCompetitorSource {
+  title: string;
+  url: string;
+  source_type: string;
 }
 
 export interface ApiCompetitorAnalysisResponse {
   competitor_name: string;
+  source_url: string;
   summary: string;
-  differentiation_ideas: ApiCompetitorDifferentiationIdea[];
+  snapshot: ApiCompetitorSnapshot;
+  public_presence: ApiCompetitorPublicPresence;
+  what_theyre_doing: ApiCompetitorObservation[];
+  customer_signals: ApiCompetitorCustomerSignal[];
+  opportunities: ApiCompetitorOpportunity[];
+  sources: ApiCompetitorSource[];
 }
 
 export function fetchCompetitorAnalysis(url: string): Promise<ApiCompetitorAnalysisResponse> {

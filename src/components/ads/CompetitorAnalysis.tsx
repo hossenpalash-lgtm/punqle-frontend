@@ -107,7 +107,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
       {loading && (
         <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border py-16 text-center">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <p className="text-xs text-muted-foreground">Searching the real web — this takes a bit longer than before…</p>
+          <p className="text-xs text-muted-foreground">Searching the real web for reviews, news and their own pages — this can take up to 30 seconds…</p>
         </div>
       )}
 
@@ -137,6 +137,22 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
               </p>
             )}
           </div>
+
+          {result.limitations.length > 0 && (
+            <div className="rounded-2xl bg-secondary p-4">
+              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <AlertCircle className="h-3.5 w-3.5" />
+                Research notes
+              </p>
+              <ul className="space-y-1">
+                {result.limitations.map((note, i) => (
+                  <li key={i} className="text-xs text-secondary-foreground">
+                    {note}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {(result.snapshot.category || result.snapshot.what_they_sell || result.snapshot.target_customer || result.snapshot.positioning) && (
             <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
@@ -188,9 +204,9 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
             </div>
           )}
 
-          {result.customer_signals.length > 0 && (
-            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-              <SectionLabel>Customer signals</SectionLabel>
+          <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+            <SectionLabel>Customer signals</SectionLabel>
+            {result.customer_signals.length > 0 ? (
               <div className="flex flex-col gap-2">
                 {result.customer_signals.map((item, i) => (
                   <div key={i} className="rounded-xl bg-secondary px-3 py-2">
@@ -200,11 +216,21 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="rounded-xl bg-secondary px-3 py-2 text-xs italic text-muted-foreground">
+                Limited public customer feedback found — no reliable third-party reviews or discussions turned up
+                for this competitor.
+              </p>
+            )}
+          </div>
 
           <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
             <SectionLabel>Opportunities for you</SectionLabel>
+            {result.opportunities.length === 0 && (
+              <p className="rounded-xl bg-secondary px-3 py-2 text-xs italic text-muted-foreground">
+                Not enough real evidence to identify a strong opportunity for this competitor.
+              </p>
+            )}
             <div className="flex flex-col gap-2">
               {result.opportunities.map((item, i) => (
                 <div key={i} className="rounded-xl bg-secondary px-3 py-2">

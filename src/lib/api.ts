@@ -1771,6 +1771,7 @@ export interface ApiCompetitorAnalysisResponse {
   customer_signals: ApiCompetitorCustomerSignal[];
   opportunities: ApiCompetitorOpportunity[];
   sources: ApiCompetitorSource[];
+  limitations: string[];
 }
 
 export function fetchCompetitorAnalysis(url: string): Promise<ApiCompetitorAnalysisResponse> {

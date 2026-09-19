@@ -1,6 +1,22 @@
-import { AlertCircle, ArrowRight, Binoculars, ExternalLink, Link2, Loader2 } from "lucide-react";
-import { useState } from "react";
-import { fetchCompetitorAnalysis, type ApiCompetitorAnalysisResponse } from "@/lib/api";
+import { AlertCircle, ArrowRight, Binoculars, ExternalLink, FileDown, Link2, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  deleteSavedCompetitor,
+  fetchCompetitorAnalysis,
+  fetchSavedCompetitor,
+  fetchSavedCompetitors,
+  type ApiCompetitorAnalysisResponse,
+  type ApiSavedCompetitor,
+} from "@/lib/api";
+
+function timeAgo(iso?: string | null): string {
+  if (!iso) return "";
+  const seconds = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (!Number.isFinite(seconds) || seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hr ago`;
+  return `${Math.floor(seconds / 86400)} day${Math.floor(seconds / 86400) === 1 ? "" : "s"} ago`;
+}
 
 // Rewritten 2026-09-19 alongside the backend's real web-search-grounded
 // rewrite (see _generate_competitor_analysis) -- the richer schema
@@ -45,19 +61,80 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ApiCompetitorAnalysisResponse | null>(null);
+  const [saved, setSaved] = useState<ApiSavedCompetitor[]>([]);
+  const reportRef = useRef<HTMLDivElement>(null);
 
-  const handleAnalyze = async () => {
-    if (!url.trim() || loading) return;
+  const loadSaved = async () => {
+    try {
+      const r = await fetchSavedCompetitors();
+      setSaved(r.competitors);
+    } catch {
+      // the saved list is a convenience -- the tool still works without it
+    }
+  };
+
+  useEffect(() => {
+    void loadSaved();
+  }, []);
+
+  const handleAnalyze = async (refresh = false, urlOverride?: string) => {
+    const target = (urlOverride ?? url).trim();
+    if (!target || loading) return;
     setLoading(true);
     setError(null);
     try {
-      const r = await fetchCompetitorAnalysis(url.trim());
+      const r = await fetchCompetitorAnalysis(target, refresh);
       setResult(r);
+      void loadSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't analyze that link.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenSaved = async (item: ApiSavedCompetitor) => {
+    if (loading) return;
+    setError(null);
+    setUrl(item.source_url);
+    try {
+      setResult(await fetchSavedCompetitor(item.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't open that saved competitor.");
+      void loadSaved();
+    }
+  };
+
+  const handleRemoveSaved = async (id: string) => {
+    try {
+      await deleteSavedCompetitor(id);
+      if (result?.id === id) setResult(null);
+      void loadSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't remove that competitor.");
+    }
+  };
+
+  const handleSavePdf = () => {
+    const el = reportRef.current;
+    if (!el) return;
+    const w = window.open("", "_blank");
+    if (!w) {
+      setError("Your browser blocked the pop-up. Allow pop-ups for this site to save as PDF.");
+      return;
+    }
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll(".no-print").forEach((n) => n.remove());
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map((n) => n.outerHTML)
+      .join("");
+    const title = `${result?.competitor_name ?? "Competitor"} - Competitive Edge`;
+    w.document.write(
+      `<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/</g, "&lt;")}</title>${styles}` +
+        `<style>body{background:#fff;padding:24px;max-width:820px;margin:0 auto}</style></head><body>${clone.outerHTML}</body></html>`,
+    );
+    w.document.close();
+    w.addEventListener("load", () => setTimeout(() => w.print(), 400));
   };
 
   const metrics = result?.public_presence.metrics;
@@ -88,7 +165,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
           className="flex-1 rounded-full border border-input bg-background px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <button
-          onClick={handleAnalyze}
+          onClick={() => void handleAnalyze()}
           disabled={!url.trim() || loading}
           className="flex shrink-0 items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
           style={{ background: "var(--gradient-primary)" }}
@@ -96,6 +173,29 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Analyze"}
         </button>
       </div>
+
+      {saved.length > 0 && (
+        <div className="mb-4">
+          <SectionLabel>Saved competitors</SectionLabel>
+          <div className="flex flex-wrap gap-2">
+            {saved.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => void handleOpenSaved(c)}
+                disabled={loading}
+                title={`Analyzed ${timeAgo(c.analyzed_at)}`}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60 ${
+                  result?.id === c.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/70"
+                }`}
+              >
+                {c.competitor_name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {error && (
         <p className="mb-4 flex items-center gap-1.5 text-sm font-medium text-destructive">
@@ -123,7 +223,39 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
       )}
 
       {result && !loading && (
-        <div className="space-y-3">
+        <div className="space-y-3" ref={reportRef}>
+          <div className="no-print flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              {result.analyzed_at
+                ? `${result.cached ? "Saved analysis" : "Analyzed"} · ${timeAgo(result.analyzed_at)}`
+                : "Not saved"}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => void handleAnalyze(true, result.source_url || url)}
+                className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-secondary/70"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Refresh
+              </button>
+              <button
+                onClick={handleSavePdf}
+                className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-secondary/70"
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                Save as PDF
+              </button>
+              {result.id && (
+                <button
+                  onClick={() => void handleRemoveSaved(result.id as string)}
+                  aria-label="Remove saved competitor"
+                  className="flex items-center rounded-full bg-secondary p-1.5 text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
           <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
             <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               <Link2 className="h-3.5 w-3.5" />
@@ -242,7 +374,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
                   <SourceLink url={item.source_url} />
                   <button
                     onClick={() => onCreateAd(item.action || item.opportunity)}
-                    className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                    className="no-print mt-1.5 flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                   >
                     Create an ad from this
                     <ArrowRight className="h-3 w-3" />

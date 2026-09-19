@@ -1772,12 +1772,34 @@ export interface ApiCompetitorAnalysisResponse {
   opportunities: ApiCompetitorOpportunity[];
   sources: ApiCompetitorSource[];
   limitations: string[];
+  id?: string | null;
+  analyzed_at?: string | null;
+  cached?: boolean;
 }
 
-export function fetchCompetitorAnalysis(url: string): Promise<ApiCompetitorAnalysisResponse> {
+export function fetchCompetitorAnalysis(url: string, refresh = false): Promise<ApiCompetitorAnalysisResponse> {
   return apiFetch<ApiCompetitorAnalysisResponse>("/ads/competitor-analysis", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({ url, refresh }),
   });
+}
+
+export interface ApiSavedCompetitor {
+  id: string;
+  competitor_name: string;
+  source_url: string;
+  analyzed_at: string;
+}
+
+export function fetchSavedCompetitors(): Promise<{ competitors: ApiSavedCompetitor[] }> {
+  return apiFetch<{ competitors: ApiSavedCompetitor[] }>("/ads/competitors");
+}
+
+export function fetchSavedCompetitor(id: string): Promise<ApiCompetitorAnalysisResponse> {
+  return apiFetch<ApiCompetitorAnalysisResponse>(`/ads/competitors/${id}`);
+}
+
+export function deleteSavedCompetitor(id: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(`/ads/competitors/${id}`, { method: "DELETE" });
 }

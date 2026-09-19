@@ -1354,8 +1354,8 @@ export function syncShopifyProducts(): Promise<{ products: ApiImportedProduct[] 
   return apiFetch<{ products: ApiImportedProduct[] }>("/shopify/sync", { method: "POST" });
 }
 
-export function getMetaConnectUrl(): Promise<{ authorize_url: string }> {
-  return apiFetch<{ authorize_url: string }>("/meta/connect-url");
+export function getMetaConnectUrl(insights = false): Promise<{ authorize_url: string }> {
+  return apiFetch<{ authorize_url: string }>(`/meta/connect-url${insights ? "?insights=true" : ""}`);
 }
 
 export interface ApiMetaStatus {
@@ -1782,6 +1782,81 @@ export function fetchCompetitorAnalysis(url: string, refresh = false): Promise<A
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url, refresh }),
+  });
+}
+
+export interface ApiIgTypeStat {
+  type: string;
+  label: string;
+  posts: number;
+  share_pct: number;
+  avg_engagement: number;
+  total_engagement: number;
+}
+
+export interface ApiIgHashtagStat {
+  tag: string;
+  posts: number;
+  avg_engagement: number;
+}
+
+export interface ApiIgThemeStat {
+  theme: string;
+  posts: number;
+  share_pct: number;
+  engagement_share_pct: number;
+  avg_engagement: number;
+}
+
+export interface ApiIgTopPost {
+  url: string;
+  type: string;
+  date: string;
+  likes: number | null;
+  comments: number;
+  engagement: number;
+  caption: string;
+}
+
+export interface ApiIgTimelinePoint {
+  label: string;
+  posts: number;
+  engagement: number;
+}
+
+// status is "ok" for real data; the others are expected, actionable states
+// (needs_unlock / no_instagram / unavailable_account / error) the UI renders
+// as explanations, not failures.
+export interface ApiInstagramStats {
+  status: "ok" | "needs_unlock" | "no_instagram" | "unavailable_account" | "error";
+  message: string;
+  username: string;
+  followers: number | null;
+  total_posts: number | null;
+  analyzed_posts: number;
+  date_from: string | null;
+  date_to: string | null;
+  avg_likes: number | null;
+  avg_comments: number | null;
+  avg_engagement: number | null;
+  engagement_rate_pct: number | null;
+  likes_hidden: boolean;
+  types: ApiIgTypeStat[];
+  heatmap_posts: number[][];
+  heatmap_engagement: number[][];
+  timeline: ApiIgTimelinePoint[];
+  timeline_unit: "week" | "month";
+  hashtags: ApiIgHashtagStat[];
+  themes: ApiIgThemeStat[];
+  top_posts: ApiIgTopPost[];
+  takeaways: string[];
+}
+
+export function fetchInstagramStats(username: string): Promise<ApiInstagramStats> {
+  return apiFetch<ApiInstagramStats>("/ads/competitor-instagram-stats", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username }),
   });
 }
 

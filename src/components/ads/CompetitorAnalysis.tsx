@@ -1,4 +1,18 @@
-import { AlertCircle, ArrowRight, Binoculars, ExternalLink, FileDown, Link2, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  Binoculars,
+  ChevronDown,
+  ExternalLink,
+  Eye,
+  FileDown,
+  Lightbulb,
+  Link2,
+  Loader2,
+  MessageSquare,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   deleteSavedCompetitor,
@@ -8,6 +22,7 @@ import {
   type ApiCompetitorAnalysisResponse,
   type ApiSavedCompetitor,
 } from "@/lib/api";
+import { InstagramStats } from "./InstagramStats";
 
 function timeAgo(iso?: string | null): string {
   if (!iso) return "";
@@ -16,6 +31,14 @@ function timeAgo(iso?: string | null): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)} hr ago`;
   return `${Math.floor(seconds / 86400)} day${Math.floor(seconds / 86400) === 1 ? "" : "s"} ago`;
+}
+
+function instagramHandle(r: ApiCompetitorAnalysisResponse): string {
+  for (const candidate of [r.public_presence.instagram, r.source_url]) {
+    const m = (candidate || "").match(/instagram\.com\/([A-Za-z0-9._]+)/i);
+    if (m && !["p", "reel", "reels", "explore", "stories"].includes(m[1].toLowerCase())) return m[1];
+  }
+  return "";
 }
 
 // Rewritten 2026-09-19 alongside the backend's real web-search-grounded
@@ -31,11 +54,46 @@ const SNAPSHOT_FIELDS: { key: keyof ApiCompetitorAnalysisResponse["snapshot"]; l
   { key: "positioning", label: "Positioning" },
 ];
 
+const KIND_STYLES: Record<string, { label: string; className: string }> = {
+  review: { label: "Review", className: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
+  news: { label: "News", className: "bg-sky-500/15 text-sky-700 dark:text-sky-300" },
+  official: { label: "Their site", className: "bg-secondary text-muted-foreground" },
+  discussion: { label: "Discussion", className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
+  social: { label: "Social", className: "bg-violet-500/15 text-violet-700 dark:text-violet-300" },
+};
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{children}</p>;
 }
 
-function SourceLink({ url }: { url: string | null }) {
+function Section({
+  title,
+  count,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  count?: number;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details open={defaultOpen} className="group rounded-2xl bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-4 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {title}
+          {count !== undefined && (
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold normal-case text-secondary-foreground">{count}</span>
+          )}
+        </span>
+        <ChevronDown className="no-print h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="px-4 pb-4">{children}</div>
+    </details>
+  );
+}
+
+function SourceLink({ url, kind }: { url: string | null; kind?: string }) {
   if (!url) return null;
   let host = url;
   try {
@@ -43,16 +101,20 @@ function SourceLink({ url }: { url: string | null }) {
   } catch {
     // keep raw url if it doesn't parse
   }
+  const style = kind ? KIND_STYLES[kind] : undefined;
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:underline"
-    >
-      <ExternalLink className="h-3 w-3" />
-      {host}
-    </a>
+    <span className="mt-1 flex flex-wrap items-center gap-1.5">
+      {style && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${style.className}`}>{style.label}</span>}
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:underline"
+      >
+        <ExternalLink className="h-3 w-3" />
+        {host}
+      </a>
+    </span>
   );
 }
 
@@ -62,6 +124,8 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ApiCompetitorAnalysisResponse | null>(null);
   const [saved, setSaved] = useState<ApiSavedCompetitor[]>([]);
+  const [tab, setTab] = useState<"overview" | "instagram">("overview");
+  const [igOpened, setIgOpened] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
   const loadSaved = async () => {
@@ -77,14 +141,19 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
     void loadSaved();
   }, []);
 
+  const showResult = (r: ApiCompetitorAnalysisResponse) => {
+    setResult(r);
+    setTab("overview");
+    setIgOpened(false);
+  };
+
   const handleAnalyze = async (refresh = false, urlOverride?: string) => {
     const target = (urlOverride ?? url).trim();
     if (!target || loading) return;
     setLoading(true);
     setError(null);
     try {
-      const r = await fetchCompetitorAnalysis(target, refresh);
-      setResult(r);
+      showResult(await fetchCompetitorAnalysis(target, refresh));
       void loadSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't analyze that link.");
@@ -98,7 +167,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
     setError(null);
     setUrl(item.source_url);
     try {
-      setResult(await fetchSavedCompetitor(item.id));
+      showResult(await fetchSavedCompetitor(item.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't open that saved competitor.");
       void loadSaved();
@@ -125,6 +194,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
     }
     const clone = el.cloneNode(true) as HTMLElement;
     clone.querySelectorAll(".no-print").forEach((n) => n.remove());
+    clone.querySelectorAll("details").forEach((d) => d.setAttribute("open", ""));
     const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
       .map((n) => n.outerHTML)
       .join("");
@@ -146,6 +216,14 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
         { label: "Visible post engagement", value: metrics.visible_post_engagement },
       ]
     : [];
+  const kindByUrl: Record<string, string> = {};
+  result?.sources.forEach((s) => {
+    kindByUrl[s.url] = s.source_type;
+  });
+  const igHandle = result ? instagramHandle(result) : "";
+  const firstDoing = result?.what_theyre_doing[0];
+  const firstSignal = result?.customer_signals[0];
+  const firstOpp = result?.opportunities[0];
 
   return (
     <div>
@@ -256,152 +334,230 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
               )}
             </div>
           </div>
-          <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <Link2 className="h-3.5 w-3.5" />
-              {result.competitor_name}
-            </p>
-            <p className="text-sm text-foreground">{result.summary}</p>
-            {result.snapshot.recent_developments && (
-              <p className="mt-2 rounded-lg bg-secondary px-3 py-2 text-xs text-secondary-foreground">
-                <span className="font-semibold">Recent: </span>
-                {result.snapshot.recent_developments}
-              </p>
-            )}
+
+          <div className="no-print flex gap-1.5 rounded-full bg-secondary p-1">
+            {(
+              [
+                ["overview", "Overview"],
+                ["instagram", "Instagram stats"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => {
+                  setTab(key);
+                  if (key === "instagram") setIgOpened(true);
+                }}
+                className={`flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  tab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          {result.limitations.length > 0 && (
-            <div className="rounded-2xl bg-secondary p-4">
-              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <AlertCircle className="h-3.5 w-3.5" />
-                Research notes
+          {igOpened && (
+            <div className={tab === "instagram" ? "" : "hidden"}>
+              <InstagramStats key={result.id ?? result.source_url} initialUsername={igHandle} competitorName={result.competitor_name} />
+            </div>
+          )}
+
+          <div className={tab === "overview" ? "space-y-3" : "hidden"}>
+            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Link2 className="h-3.5 w-3.5" />
+                {result.competitor_name}
               </p>
-              <ul className="space-y-1">
-                {result.limitations.map((note, i) => (
-                  <li key={i} className="text-xs text-secondary-foreground">
-                    {note}
-                  </li>
-                ))}
-              </ul>
+              <p className="text-sm text-foreground">{result.summary}</p>
+              {result.snapshot.recent_developments && (
+                <p className="mt-2 rounded-lg bg-secondary px-3 py-2 text-xs text-secondary-foreground">
+                  <span className="font-semibold">Recent: </span>
+                  {result.snapshot.recent_developments}
+                </p>
+              )}
             </div>
-          )}
 
-          {(result.snapshot.category || result.snapshot.what_they_sell || result.snapshot.target_customer || result.snapshot.positioning) && (
             <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-              <SectionLabel>Snapshot</SectionLabel>
-              <div className="grid grid-cols-2 gap-2">
-                {SNAPSHOT_FIELDS.filter((f) => result.snapshot[f.key]).map((f) => (
-                  <div key={f.key} className="rounded-lg bg-secondary px-2.5 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{f.label}</p>
-                    <p className="text-xs text-secondary-foreground">{result.snapshot[f.key]}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {(result.public_presence.website || result.public_presence.facebook || result.public_presence.instagram) && (
-            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-              <SectionLabel>Public presence</SectionLabel>
-              <div className="mb-3 flex flex-wrap gap-2">
-                {result.public_presence.website && <SourceLink url={result.public_presence.website} />}
-                {result.public_presence.facebook && <SourceLink url={result.public_presence.facebook} />}
-                {result.public_presence.instagram && <SourceLink url={result.public_presence.instagram} />}
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {metricRows.map((m) => (
-                  <div key={m.label} className="rounded-lg bg-secondary px-2.5 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{m.label}</p>
-                    <p className={m.value ? "text-xs font-semibold text-secondary-foreground" : "text-xs italic text-muted-foreground"}>
-                      {m.value || "Not publicly available"}
+              <SectionLabel>At a glance</SectionLabel>
+              <div className="space-y-2">
+                <div className="flex items-start gap-3 rounded-xl bg-secondary px-3 py-2.5">
+                  <Eye className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">What they do</p>
+                    <p className="text-sm text-secondary-foreground">
+                      {firstDoing?.observation || result.snapshot.positioning || "Not enough public information found."}
                     </p>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {result.what_theyre_doing.length > 0 && (
-            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-              <SectionLabel>What they're doing</SectionLabel>
-              <div className="flex flex-col gap-2">
-                {result.what_theyre_doing.map((item, i) => (
-                  <div key={i} className="rounded-xl bg-secondary px-3 py-2">
-                    <p className="text-sm text-secondary-foreground">{item.observation}</p>
-                    {item.evidence && <p className="mt-1 text-xs italic text-muted-foreground">{item.evidence}</p>}
-                    <SourceLink url={item.source_url} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-            <SectionLabel>Customer signals</SectionLabel>
-            {result.customer_signals.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {result.customer_signals.map((item, i) => (
-                  <div key={i} className="rounded-xl bg-secondary px-3 py-2">
-                    <p className="text-sm text-secondary-foreground">{item.signal}</p>
-                    {item.evidence && <p className="mt-1 text-xs italic text-muted-foreground">{item.evidence}</p>}
-                    <SourceLink url={item.source_url} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="rounded-xl bg-secondary px-3 py-2 text-xs italic text-muted-foreground">
-                Limited public customer feedback found — no reliable third-party reviews or discussions turned up
-                for this competitor.
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-            <SectionLabel>Opportunities for you</SectionLabel>
-            {result.opportunities.length === 0 && (
-              <p className="rounded-xl bg-secondary px-3 py-2 text-xs italic text-muted-foreground">
-                Not enough real evidence to identify a strong opportunity for this competitor.
-              </p>
-            )}
-            <div className="flex flex-col gap-2">
-              {result.opportunities.map((item, i) => (
-                <div key={i} className="rounded-xl bg-secondary px-3 py-2">
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">{item.title}</p>
-                  <p className="mb-1.5 text-sm text-secondary-foreground">{item.opportunity}</p>
-                  {item.evidence && (
-                    <p className="mb-1.5 text-xs italic text-muted-foreground">Why: {item.evidence}</p>
-                  )}
-                  <SourceLink url={item.source_url} />
-                  <button
-                    onClick={() => onCreateAd(item.action || item.opportunity)}
-                    className="no-print mt-1.5 flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                  >
-                    Create an ad from this
-                    <ArrowRight className="h-3 w-3" />
-                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {result.sources.length > 0 && (
-            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-              <SectionLabel>Sources</SectionLabel>
-              <div className="flex flex-wrap gap-2">
-                {result.sources.map((s, i) => (
-                  <a
-                    key={i}
-                    href={s.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-secondary-foreground hover:underline"
-                  >
-                    {s.title || s.url}
-                  </a>
+                <div className="flex items-start gap-3 rounded-xl bg-secondary px-3 py-2.5">
+                  <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Customers say</p>
+                    <p className="text-sm text-secondary-foreground">
+                      {firstSignal?.signal || "No reliable public customer feedback found."}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-xl bg-secondary px-3 py-2.5">
+                  <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Your best move</p>
+                    {firstOpp ? (
+                      <>
+                        <p className="text-sm font-medium text-secondary-foreground">{firstOpp.title}</p>
+                        <button
+                          onClick={() => onCreateAd(firstOpp.action || firstOpp.opportunity)}
+                          className="no-print mt-1 flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                        >
+                          Create an ad from this
+                          <ArrowRight className="h-3 w-3" />
+                        </button>
+                      </>
+                    ) : (
+                      <p className="text-sm text-secondary-foreground">Not enough real evidence yet for a strong opportunity.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {[
+                  `${result.customer_signals.length} customer signal${result.customer_signals.length === 1 ? "" : "s"}`,
+                  `${result.opportunities.length} opportunit${result.opportunities.length === 1 ? "y" : "ies"}`,
+                  `${result.sources.length} source${result.sources.length === 1 ? "" : "s"}`,
+                ].map((chip) => (
+                  <span key={chip} className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-secondary-foreground">
+                    {chip}
+                  </span>
                 ))}
               </div>
             </div>
-          )}
+
+            {result.limitations.length > 0 && (
+              <div className="rounded-2xl bg-secondary p-4">
+                <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  Research notes
+                </p>
+                <ul className="space-y-1">
+                  {result.limitations.map((note, i) => (
+                    <li key={i} className="text-xs text-secondary-foreground">
+                      {note}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <Section title="Opportunities for you" count={result.opportunities.length} defaultOpen>
+              {result.opportunities.length === 0 && (
+                <p className="rounded-xl bg-secondary px-3 py-2 text-xs italic text-muted-foreground">
+                  Not enough real evidence to identify a strong opportunity for this competitor.
+                </p>
+              )}
+              <div className="flex flex-col gap-2">
+                {result.opportunities.map((item, i) => (
+                  <div key={i} className="rounded-xl bg-secondary px-3 py-2">
+                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">{item.title}</p>
+                    <p className="mb-1.5 text-sm text-secondary-foreground">{item.opportunity}</p>
+                    {item.evidence && <p className="mb-1.5 text-xs italic text-muted-foreground">Why: {item.evidence}</p>}
+                    <SourceLink url={item.source_url} kind={item.source_url ? kindByUrl[item.source_url] : undefined} />
+                    <button
+                      onClick={() => onCreateAd(item.action || item.opportunity)}
+                      className="no-print mt-1.5 flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                    >
+                      Create an ad from this
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            <Section title="Customer signals" count={result.customer_signals.length}>
+              {result.customer_signals.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {result.customer_signals.map((item, i) => (
+                    <div key={i} className="rounded-xl bg-secondary px-3 py-2">
+                      <p className="text-sm text-secondary-foreground">{item.signal}</p>
+                      {item.evidence && <p className="mt-1 text-xs italic text-muted-foreground">{item.evidence}</p>}
+                      <SourceLink url={item.source_url} kind={item.source_url ? kindByUrl[item.source_url] : undefined} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-xl bg-secondary px-3 py-2 text-xs italic text-muted-foreground">
+                  Limited public customer feedback found — no reliable third-party reviews or discussions turned up
+                  for this competitor.
+                </p>
+              )}
+            </Section>
+
+            {result.what_theyre_doing.length > 0 && (
+              <Section title="What they're doing" count={result.what_theyre_doing.length}>
+                <div className="flex flex-col gap-2">
+                  {result.what_theyre_doing.map((item, i) => (
+                    <div key={i} className="rounded-xl bg-secondary px-3 py-2">
+                      <p className="text-sm text-secondary-foreground">{item.observation}</p>
+                      {item.evidence && <p className="mt-1 text-xs italic text-muted-foreground">{item.evidence}</p>}
+                      <SourceLink url={item.source_url} kind={item.source_url ? kindByUrl[item.source_url] : undefined} />
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {(result.snapshot.category || result.snapshot.what_they_sell || result.snapshot.target_customer || result.snapshot.positioning) && (
+              <Section title="Snapshot">
+                <div className="grid grid-cols-2 gap-2">
+                  {SNAPSHOT_FIELDS.filter((f) => result.snapshot[f.key]).map((f) => (
+                    <div key={f.key} className="rounded-lg bg-secondary px-2.5 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{f.label}</p>
+                      <p className="text-xs text-secondary-foreground">{result.snapshot[f.key]}</p>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {(result.public_presence.website || result.public_presence.facebook || result.public_presence.instagram) && (
+              <Section title="Public presence">
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {result.public_presence.website && <SourceLink url={result.public_presence.website} />}
+                  {result.public_presence.facebook && <SourceLink url={result.public_presence.facebook} />}
+                  {result.public_presence.instagram && <SourceLink url={result.public_presence.instagram} />}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {metricRows.map((m) => (
+                    <div key={m.label} className="rounded-lg bg-secondary px-2.5 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{m.label}</p>
+                      <p className={m.value ? "text-xs font-semibold text-secondary-foreground" : "text-xs italic text-muted-foreground"}>
+                        {m.value || "Not publicly available"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {result.sources.length > 0 && (
+              <Section title="Sources" count={result.sources.length}>
+                <div className="flex flex-wrap gap-2">
+                  {result.sources.map((s, i) => (
+                    <a
+                      key={i}
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-secondary-foreground hover:underline"
+                    >
+                      {s.title || s.url}
+                    </a>
+                  ))}
+                </div>
+              </Section>
+            )}
+          </div>
         </div>
       )}
     </div>

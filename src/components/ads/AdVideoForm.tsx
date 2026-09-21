@@ -222,6 +222,8 @@ export function AdVideoForm({
   // from this map isn't broken, just not yet populated (real library
   // still growing, see scripts/populate_actor_video_clips.py).
   const [actorSituations, setActorSituations] = useState<Record<string, string>>({});
+  // Only actors with a real base clip are listed; wait until we know which those are.
+  const [situationsLoaded, setSituationsLoaded] = useState(false);
   // actor_id -> blob URL, populated lazily on first hover (fetchActorPreviewVideoUrl)
   const [actorPreviewVideos, setActorPreviewVideos] = useState<Record<string, string>>({});
 
@@ -347,7 +349,8 @@ export function AdVideoForm({
           for (const s of r.situations) map[s.actor_id] = s.situation_id;
           setActorSituations(map);
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setSituationsLoaded(true));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoStyle]);
@@ -1440,13 +1443,19 @@ export function AdVideoForm({
                   </button>
                 ))}
               </div>
-              {actorsLoading ? (
+              {actorsLoading || !situationsLoaded ? (
                 <div className="flex items-center justify-center py-6">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
               ) : (
                 <div className="grid grid-cols-4 gap-2">
+                  {actors.filter((a) => Boolean(actorSituations[a.id])).length === 0 && (
+                    <p className="col-span-full py-3 text-center text-xs text-muted-foreground">
+                      No actors are ready yet — check back soon.
+                    </p>
+                  )}
                   {actors
+                    .filter((a) => Boolean(actorSituations[a.id]))
                     .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
                     .map((a) => {
                       const selected = selectedActorId === a.id;

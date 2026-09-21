@@ -329,6 +329,9 @@ function HomeScreen() {
   const [actors, setActors] = useState<ApiImageActor[]>([]);
   const [actorsLoading, setActorsLoading] = useState(false);
   const [actorSituations, setActorSituations] = useState<Record<string, string>>({});
+  // Talking Actors only lists actors that already have a real base clip; until this is true we
+  // don't know which those are, so the grid waits instead of flashing not-ready faces.
+  const [situationsLoaded, setSituationsLoaded] = useState(false);
   const [actorGenderFilter, setActorGenderFilter] = useState<"all" | "female" | "male">("all");
   // Collapsed by default (first 4 + a "More" tile) so the compose area
   // (narration/voice/Generate) is visible without scrolling — matches
@@ -417,7 +420,8 @@ function HomeScreen() {
           for (const s of r.situations) map[s.actor_id] = s.situation_id;
           setActorSituations(map);
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setSituationsLoaded(true));
     }
     if (customActors.length === 0 && !customActorsLoading) {
       setCustomActorsLoading(true);
@@ -1567,7 +1571,7 @@ function HomeScreen() {
                         </button>
                       ))}
                     </div>
-                    {actorsLoading ? (
+                    {actorsLoading || !situationsLoaded ? (
                       <div className="flex items-center justify-center py-6">
                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                       </div>
@@ -1577,7 +1581,7 @@ function HomeScreen() {
                       // pushed the compose box below the fold. "More"
                       // reveals the rest in place; switching the gender
                       // filter re-collapses (see setActorGenderFilter above).
-                      const filteredActors = actors.filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter);
+                      const filteredActors = actors.filter((a) => Boolean(actorSituations[a.id]) && (actorGenderFilter === "all" || a.gender === actorGenderFilter));
                       const filteredCustomActors = customActors.filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter);
                       const totalCount = filteredActors.length + filteredCustomActors.length;
                       const visibleActors = showAllActors ? filteredActors : filteredActors.slice(0, 4);
@@ -1587,6 +1591,11 @@ function HomeScreen() {
                       const hasMore = totalCount > 4;
                       return (
                       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                        {totalCount === 0 && (
+                          <p className="col-span-full py-3 text-center text-xs text-muted-foreground">
+                            No actors are ready yet — check back soon.
+                          </p>
+                        )}
                         {visibleActors
                           .map((a) => {
                             const selected = selectedActorId === a.id;

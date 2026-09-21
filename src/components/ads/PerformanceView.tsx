@@ -1,12 +1,27 @@
-import { Eye, Facebook, Heart, Loader2, MessageCircle, RefreshCw, Share2, TrendingUp, Youtube } from "lucide-react";
+import { Eye, Facebook, Heart, Instagram, Loader2, MessageCircle, RefreshCw, Share2, Trophy, TrendingUp, Youtube } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { TikTokIcon } from "@/components/TikTokIcon";
 import { fetchOrganicPerformance, type ApiPerformancePost } from "@/lib/api";
+import { bestWinner, groupLeaders, isWinner, scorePosts, type TagDimension } from "@/lib/performance-insights";
 
 function PlatformIcon({ platform, className }: { platform: ApiPerformancePost["platform"]; className: string }) {
   if (platform === "youtube") return <Youtube className={className} />;
   if (platform === "tiktok") return <TikTokIcon className={className} />;
+  if (platform === "instagram") return <Instagram className={className} />;
   return <Facebook className={className} />;
+}
+
+const PLATFORM_LABEL: Record<ApiPerformancePost["platform"], string> = {
+  facebook: "Facebook",
+  instagram: "Instagram",
+  youtube: "YouTube",
+  tiktok: "TikTok",
+};
+
+const DIMENSION_LABEL: Record<TagDimension, string> = { angle: "angle", style: "style", goal: "goal" };
+
+function formatMultiple(n: number): string {
+  return `${n.toFixed(1)}×`;
 }
 
 function formatDate(iso: string): string {
@@ -106,6 +121,10 @@ export function PerformanceView() {
 
   useEffect(() => load(false), []);
 
+  const scores = useMemo(() => scorePosts(posts), [posts]);
+  const winner = useMemo(() => bestWinner(posts, scores), [posts, scores]);
+  const leaders = useMemo(() => groupLeaders(posts, scores), [posts, scores]);
+
   const groupRows = useMemo(
     () => (groupBy === "none" ? [] : groupPosts(posts, groupBy)),
     [posts, groupBy],
@@ -150,6 +169,46 @@ export function PerformanceView() {
 
       {error && <p className="mb-4 text-sm font-medium text-destructive">{error}</p>}
 
+      {!loading && posts.length > 0 && (winner || leaders.length > 0) && (
+        <div className="mb-4 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
+            <Trophy className="h-3.5 w-3.5" />
+            What's working
+          </p>
+          {winner && (
+            <div className="flex gap-3">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
+                {winner.post.image_base64 ? (
+                  <img src={`data:image/jpeg;base64,${winner.post.image_base64}`} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <PlatformIcon platform={winner.post.platform} className="h-5 w-5 text-muted-foreground" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-foreground">
+                  Your best post earned {formatMultiple(winner.score.multiple)} your {PLATFORM_LABEL[winner.post.platform]} average
+                </p>
+                <p className="mb-1 line-clamp-1 text-xs text-muted-foreground">{winner.post.caption || "(no caption)"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {winner.score.engagement} likes, comments and shares combined
+                </p>
+              </div>
+            </div>
+          )}
+          {leaders.length > 0 && (
+            <ul className={`space-y-1 text-sm text-foreground ${winner ? "mt-3 border-t border-border pt-3" : ""}`}>
+              {leaders.map((l) => (
+                <li key={l.dimension}>
+                  Your <span className="font-semibold">{formatLabel(l.value)}</span> {DIMENSION_LABEL[l.dimension]} does{" "}
+                  {formatMultiple(l.averageMultiple)} your average{" "}
+                  <span className="text-xs text-muted-foreground">({l.postCount} posts)</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -157,7 +216,7 @@ export function PerformanceView() {
         </div>
       ) : posts.length === 0 ? (
         <div className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground" style={{ boxShadow: "var(--shadow-card)" }}>
-          Nothing published yet — publish a post to Facebook, YouTube, or TikTok and its numbers will show up here.
+          Nothing published yet — publish a post to Facebook, Instagram, YouTube, or TikTok and it will show up here.
         </div>
       ) : groupBy !== "none" ? (
         <div className="space-y-3">
@@ -213,6 +272,12 @@ export function PerformanceView() {
                 <div className="mb-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                   <PlatformIcon platform={post.platform} className="h-3 w-3" />
                   {formatDate(post.scheduled_time)}
+                  {isWinner(scores.get(post.id)) && (
+                    <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-accent">
+                      <Trophy className="h-2.5 w-2.5" />
+                      Winner · {formatMultiple(scores.get(post.id)!.multiple)}
+                    </span>
+                  )}
                   {post.angle && (
                     <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-secondary-foreground">
                       {formatLabel(post.angle)}

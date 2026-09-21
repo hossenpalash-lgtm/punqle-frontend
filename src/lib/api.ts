@@ -1610,7 +1610,7 @@ export function publishToTikTok(
 
 export interface ApiScheduledPost {
   id: string;
-  platform: "facebook" | "youtube" | "tiktok";
+  platform: "facebook" | "youtube" | "tiktok" | "instagram";
   external_post_id: string | null;
   caption: string;
   description: string | null;
@@ -1669,7 +1669,7 @@ export interface ApiPostMetrics {
 
 export interface ApiPerformancePost {
   id: string;
-  platform: "facebook" | "youtube" | "tiktok";
+  platform: "facebook" | "youtube" | "tiktok" | "instagram";
   external_post_id: string | null;
   caption: string;
   image_base64: string | null;

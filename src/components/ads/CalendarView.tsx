@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Clock,
   Facebook,
+  Instagram,
   Loader2,
   Send,
   Trash2,
@@ -31,6 +32,7 @@ const PLATFORM_META: Record<
   { icon: ComponentType<{ className?: string }>; label: string }
 > = {
   facebook: { icon: Facebook, label: "Facebook" },
+  instagram: { icon: Instagram, label: "Instagram" },
   youtube: { icon: Youtube, label: "YouTube" },
   tiktok: { icon: TikTokIcon, label: "TikTok" },
 };

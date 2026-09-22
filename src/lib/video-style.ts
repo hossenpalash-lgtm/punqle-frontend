@@ -3,7 +3,6 @@ import {
   Clapperboard,
   Hand,
   Heart,
-  Lightbulb,
   Package,
   Sparkles,
   UserRound,
@@ -20,26 +19,32 @@ import {
 export type VideoStyle =
   | "product_showcase"
   | "lifestyle"
-  | "problem_solution"
   | "before_after"
   | "cinematic"
   | "avatar"
   | "cinematic_ugc"
   | "ai_actor";
 
-// `group` drives VideoStyleStep's visual grouping (added 2026-09-08 per
-// the approved nav wireframe) — "ai_ugc" (avatar/Cinematic UGC, a person
-// leads the shot) is shown first and labelled Recommended, "product" (the
-// 5 Veo-prompt styles below, no AI presenter) shown second. This is
-// display-only: VIDEO_STYLES' own array order, findVideoStyle's fallback,
-// and the default selected style in AdVideoForm are all unchanged — same
-// routes, same pricing, just reordered on screen.
+// `group` drives VideoStyleStep's visual grouping. "ai_ugc" (Ready Actors,
+// Cinematic UGC — Punqle's own real-footage/product-in-hand pipelines) is
+// shown first and labelled Recommended; "product" (plain Veo-prompt
+// styles, no person) shown second; "presenter" (HeyGen's stock avatar)
+// shown last and deliberately NOT badged Recommended (2026-09-23,
+// founder's call after real market research: HeyGen is still a
+// legitimate tool — good for multilingual/many-language scripts — but
+// reads as more "polished/corporate" than native UGC, the opposite of
+// what small-business paid-social ads want, and Punqle's own filmed
+// Ready Actors already beat it on realism per this project's own
+// side-by-side tests. Kept, not removed, but not pushed as the
+// flagship). This is display-only: VIDEO_STYLES' own array order,
+// findVideoStyle's fallback, and the default selected style in
+// AdVideoForm are all unchanged — same routes, same pricing.
 export interface VideoStyleOption {
   id: VideoStyle;
   label: string;
   description: string;
   promptModifier: string;
-  group: "ai_ugc" | "product";
+  group: "ai_ugc" | "product" | "presenter";
   icon: LucideIcon;
   // A real credit figure, not a placeholder — mirrors the backend's own
   // constants (main.py: VIDEO_CREDIT_COST=10, AVATAR_STANDARD/PREMIUM=4/10,
@@ -74,15 +79,6 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     creditHint: "10 credits",
   },
   {
-    id: "problem_solution",
-    label: "Problem → Solution",
-    description: "The problem, then the fix",
-    promptModifier: "shows the everyday problem first, then the product as the clear solution",
-    group: "product",
-    icon: Lightbulb,
-    creditHint: "10 credits",
-  },
-  {
     id: "before_after",
     label: "Before & After",
     description: "A clear before/after contrast",
@@ -99,17 +95,6 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     group: "product",
     icon: Clapperboard,
     creditHint: "10 credits",
-  },
-  {
-    id: "avatar",
-    label: "AI Presenter",
-    description: "A talking avatar reads your script",
-    // Unused — Avatar bypasses Veo/promptModifier entirely; handleGenerate
-    // special-cases videoStyle === "avatar" and calls HeyGen instead.
-    promptModifier: "",
-    group: "ai_ugc",
-    icon: UserRound,
-    creditHint: "4–10 credits",
   },
   {
     id: "cinematic_ugc",
@@ -142,6 +127,19 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     icon: Sparkles,
     creditHint: "30 credits",
   },
+  {
+    id: "avatar",
+    label: "AI Presenter",
+    description: "A stock AI avatar — good for multilingual scripts",
+    // Unused — Avatar bypasses Veo/promptModifier entirely; handleGenerate
+    // special-cases videoStyle === "avatar" and calls HeyGen instead. Kept
+    // (2026-09-23) but demoted out of "Recommended" — see the group-field
+    // comment above for why.
+    promptModifier: "",
+    group: "presenter",
+    icon: UserRound,
+    creditHint: "4–10 credits",
+  },
 ];
 
 export function findVideoStyle(id: VideoStyle | string): VideoStyleOption {
@@ -156,9 +154,9 @@ export function findVideoStyle(id: VideoStyle | string): VideoStyleOption {
 // the same thing Image Ad's "warm_lifestyle" direction does (natural
 // imagery, human feel, no AI presenter), so it gets the same restrained
 // editorial Lora headline instead of the default Bold treatment. None of
-// the other 6 styles (including avatar/cinematic_ugc, which don't burn a
-// headline bar over the presenter at all) has an equivalent real match,
-// so this deliberately doesn't try to force one.
+// the other styles (including avatar/cinematic_ugc/ai_actor, which don't
+// burn a headline bar over the presenter at all) has an equivalent real
+// match, so this deliberately doesn't try to force one.
 export function headlineFontStyleFor(style: VideoStyle): string | undefined {
   return style === "lifestyle" ? "warm_lifestyle" : undefined;
 }

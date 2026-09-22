@@ -7,18 +7,18 @@ import { VIDEO_STYLES, type VideoStyle, type VideoStyleOption } from "@/lib/vide
 // what this feature needs; the description text under each chip does
 // the same "help them picture it" job at a fraction of the cost.
 //
-// Regrouped 2026-09-08 per the approved nav wireframe: the 7 styles used
-// to render as one flat list, giving the 5 generic Veo-prompt styles the
-// same visual weight as the 2 AI UGC options even though they're a
-// completely different underlying capability (and the more differentiated
-// one, per the founder's own read of the market). Two labelled groups now
-// — AI UGC first — no change to routes, pricing, or the actual generation
-// logic, purely how this one screen presents the same 7 choices. Wording
-// is the founder's own refinement, not the original "Product-only
-// styles (no person)" draft.
+// Regrouped 2026-09-08 per the approved nav wireframe, then again
+// 2026-09-23 after real market research (see video-style.ts's own
+// comment): "ai_ugc" now holds only Punqle's two real, owned pipelines
+// (Ready Actors, Cinematic UGC) — the actual differentiators — badged
+// Recommended; "product" is the plain Veo-prompt styles; "presenter"
+// (HeyGen's stock avatar) is its own small, deliberately un-badged
+// group at the end, so it stays available without reading as the
+// flagship choice. No change to routes, pricing, or generation logic.
 const STYLE_GROUPS: { key: VideoStyleOption["group"]; title: string; subtitle: string }[] = [
-  { key: "ai_ugc", title: "AI UGC — Recommended", subtitle: "Human-led ads with a creator or presenter" },
-  { key: "product", title: "Product Videos", subtitle: "Product-focused styles without an AI presenter" },
+  { key: "ai_ugc", title: "AI UGC — Recommended", subtitle: "Punqle's own actors — real footage, real motion" },
+  { key: "product", title: "Product Videos", subtitle: "Product-focused styles without a presenter" },
+  { key: "presenter", title: "Also available", subtitle: "A stock AI avatar reads your script" },
 ];
 
 export function VideoStyleStep({

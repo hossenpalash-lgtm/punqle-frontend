@@ -3,12 +3,10 @@ import {
   Camera,
   Captions,
   Check,
-  ChevronDown,
   Clock,
   Download,
   Loader2,
   Music,
-  Settings2,
   Sparkles,
   Upload,
   Video,
@@ -94,7 +92,10 @@ function fileToBase64(file: File): Promise<string> {
 // as AdCreationForm.tsx's sibling rewrite): a single smart input (link or
 // free text) + Goal, with Style/script-language/angle/aspect-ratio/photo
 // (and, when relevant, the avatar picker or Cinematic UGC scene prompt)
-// tucked behind an optional collapsed Settings panel. Replaces the old
+// all directly on screen — no collapsed panel (2026-09-23: these are all
+// creative decisions, same principle as AdCreationForm.tsx's "Advanced"
+// split, except Video Ad has no equivalent purely-technical setting to
+// hide, so there's no toggle here at all). Replaces the old
 // choose/quick/brief/angles/style/avatar-picker/setup chain — a real
 // Arcads video review found every one of their flows is "describe it,
 // optional settings, generate," never a sequence of separate mandatory
@@ -133,7 +134,6 @@ export function AdVideoForm({
   const [mainInput, setMainInput] = useState("");
   const [inputFetching, setInputFetching] = useState(false);
   const [inputError, setInputError] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [offerDescription, setOfferDescription] = useState("");
   const [goal, setGoal] = useState<AdGoal>(initialVideo?.goal ?? "sales");
@@ -876,7 +876,6 @@ export function AdVideoForm({
     setStep("create");
     setMainInput("");
     setInputError(null);
-    setSettingsOpen(false);
     setOfferDescription("");
     setGoal("sales");
     setAngle(null);
@@ -1324,17 +1323,15 @@ export function AdVideoForm({
         ))}
       </div>
 
-      <button
-        onClick={() => setSettingsOpen((v) => !v)}
-        className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"
-      >
-        <Settings2 className="h-3.5 w-3.5" />
-        Settings
-        <ChevronDown className={["h-3.5 w-3.5 transition-transform", settingsOpen ? "rotate-180" : ""].join(" ")} />
-      </button>
-
-      {settingsOpen && (
-        <div className="mb-4 w-full rounded-2xl bg-secondary/60 p-4 text-left">
+      {/* Style/Angle/Photo/Format un-collapsed onto the main screen
+          (2026-09-23, same principle as Image Ad's redesign — see
+          AdCreationForm.tsx): these are creative decisions that change
+          the actual output, not implementation detail, so no "Settings"
+          toggle gate needed. Unlike Image Ad, Video Ad has no equivalent
+          "Advanced" bucket item (no separate model picker) — Voice engine
+          stays inline inside the Ready Actors panel below, since it's
+          the one place it's relevant and already defaults sensibly. */}
+      <div className="mb-4 w-full rounded-2xl bg-secondary/60 p-4 text-left">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Script language</p>
           <div className="mb-4 flex gap-2">
             {(["english", "bangla"] as AvatarLanguage[]).map((lang) => (
@@ -1611,8 +1608,7 @@ export function AdVideoForm({
               Vertical (9:16)
             </button>
           </div>
-        </div>
-      )}
+      </div>
 
       <div className="mb-4 w-full rounded-2xl border border-dashed border-border bg-secondary/60 p-3 text-center text-xs font-semibold text-foreground">
         1 video · {currentCost} credits ·{" "}
@@ -1625,13 +1621,13 @@ export function AdVideoForm({
         </p>
       )}
       {styleNeedsMoreInput && videoStyle === "avatar" && (
-        <p className="mb-4 text-xs text-muted-foreground">Open Settings and pick an AI presenter first.</p>
+        <p className="mb-4 text-xs text-muted-foreground">Pick an AI presenter above first.</p>
       )}
       {styleNeedsMoreInput && videoStyle === "cinematic_ugc" && (
-        <p className="mb-4 text-xs text-muted-foreground">Open Settings and describe what happens in the shot first.</p>
+        <p className="mb-4 text-xs text-muted-foreground">Describe what happens in the shot above first.</p>
       )}
       {styleNeedsMoreInput && videoStyle === "ai_actor" && (
-        <p className="mb-4 text-xs text-muted-foreground">Open Settings and pick an actor first.</p>
+        <p className="mb-4 text-xs text-muted-foreground">Pick an actor above first.</p>
       )}
       {hasLogo && videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && (
         <p className="mb-4 text-xs text-muted-foreground">Your Brand Kit logo will be added to this video automatically.</p>

@@ -1353,12 +1353,7 @@ export function AdVideoForm({
 
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Style</p>
           <div className="mb-4 rounded-2xl bg-card p-3">
-            <VideoStyleStep
-              selected={videoStyle}
-              onSelect={setVideoStyle}
-              onContinue={() => {}}
-              onBack={() => {}}
-            />
+            <VideoStyleStep selected={videoStyle} onSelect={setVideoStyle} />
           </div>
 
           {videoStyle === "avatar" && (
@@ -1377,8 +1372,6 @@ export function AdVideoForm({
                 voices={avatarVoices}
                 selectedVoiceId={selectedVoiceId}
                 onSelectVoice={setSelectedVoiceId}
-                onContinue={() => {}}
-                onBack={() => {}}
                 onRetry={fetchAvatarOptionsForStep}
               />
             </div>

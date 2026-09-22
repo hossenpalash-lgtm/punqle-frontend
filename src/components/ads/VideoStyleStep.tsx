@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Check, Sparkles } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { VIDEO_STYLES, type VideoStyle, type VideoStyleOption } from "@/lib/video-style";
 
 // Step 2 of Video Ad — deliberately just chips, no rich preview cards
@@ -24,13 +24,9 @@ const STYLE_GROUPS: { key: VideoStyleOption["group"]; title: string; subtitle: s
 export function VideoStyleStep({
   selected,
   onSelect,
-  onContinue,
-  onBack,
 }: {
   selected: VideoStyle;
   onSelect: (v: VideoStyle) => void;
-  onContinue: () => void;
-  onBack: () => void;
 }) {
   return (
     <div className="flex flex-col items-center text-center">
@@ -101,24 +97,6 @@ export function VideoStyleStep({
           </div>
           );
         })}
-      </div>
-
-      <div className="flex w-full gap-2">
-        <button
-          onClick={onBack}
-          className="flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-secondary px-5 py-4 text-sm font-semibold text-secondary-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </button>
-        <button
-          onClick={onContinue}
-          className="flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground"
-          style={{ background: "var(--gradient-primary)" }}
-        >
-          Continue
-          <ArrowRight className="h-4 w-4" />
-        </button>
       </div>
     </div>
   );

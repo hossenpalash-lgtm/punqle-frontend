@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { AlertCircle, Check, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ApiAvatarOption, ApiAvatarVoice, ApiAvatarVoicesResponse, AvatarLanguage, AvatarTier } from "@/lib/api";
 
@@ -43,8 +43,6 @@ export function AvatarPickerStep({
   voices,
   selectedVoiceId,
   onSelectVoice,
-  onContinue,
-  onBack,
   onRetry,
 }: {
   tier: AvatarTier;
@@ -60,8 +58,6 @@ export function AvatarPickerStep({
   voices: ApiAvatarVoicesResponse | null;
   selectedVoiceId: string | null;
   onSelectVoice: (voiceId: string) => void;
-  onContinue: () => void;
-  onBack: () => void;
   onRetry: () => void;
 }) {
   // Voice options for the chosen script language, regardless of the
@@ -275,25 +271,6 @@ export function AvatarPickerStep({
           Load more ({filtered.length - visibleCount} more)
         </button>
       )}
-
-      <div className="flex w-full gap-2">
-        <button
-          onClick={onBack}
-          className="flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-secondary px-5 py-4 text-sm font-semibold text-secondary-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </button>
-        <button
-          onClick={onContinue}
-          disabled={loading || !!error || !selectedAvatarId}
-          className="flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
-          style={{ background: "var(--gradient-primary)" }}
-        >
-          Continue
-          <ArrowRight className="h-4 w-4" />
-        </button>
-      </div>
     </div>
   );
 }

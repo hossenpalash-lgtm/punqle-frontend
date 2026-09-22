@@ -1501,7 +1501,7 @@ export function AdVideoForm({
                             ].join(" ")}
                           >
                             <img
-                              src={`data:image/jpeg;base64,${a.preview_image_base64}`}
+                              src={`data:image/jpeg;base64,${a.situation_preview_base64 ?? a.preview_image_base64}`}
                               alt={a.name}
                               className="h-full w-full object-cover"
                             />

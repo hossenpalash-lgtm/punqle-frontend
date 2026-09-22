@@ -235,6 +235,12 @@ export interface ApiImageActor {
   gender: string;
   style: string;
   preview_image_base64: string;
+  // A frame from the actor's own real base video (their actual situation),
+  // only present when one exists. Use ONLY in a Talking Actors picker (a
+  // real result), never in Image Ad's / Product's / Show Your App's actor
+  // pickers (a compositing input) -- those keep preview_image_base64, the
+  // plain studio-style portrait Gemini composites best from.
+  situation_preview_base64?: string | null;
 }
 
 export interface ApiImageActorsResponse {

@@ -25,9 +25,12 @@ export type VideoStyle =
   | "cinematic_ugc"
   | "ai_actor";
 
-// `group` drives VideoStyleStep's visual grouping. "ai_ugc" (Ready Actors,
-// Cinematic UGC — Punqle's own real-footage/product-in-hand pipelines) is
-// shown first and labelled Recommended; "product" (plain Veo-prompt
+// `group` drives VideoStyleStep's visual grouping. "ai_ugc" — Punqle's own
+// two pipelines, Ready Actors (real filmed footage, an AI-swapped face)
+// and Cinematic UGC (a fully AI-imagined actor and motion via Seedance,
+// no filming at all — NOT the same claim as Ready Actors, keep the
+// wording honest per style, not blanketed across the group) — is shown
+// first and labelled Recommended; "product" (plain Veo-prompt
 // styles, no person) shown second; "presenter" (HeyGen's stock avatar)
 // shown last and deliberately NOT badged Recommended (2026-09-23,
 // founder's call after real market research: HeyGen is still a
@@ -99,7 +102,14 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
   {
     id: "cinematic_ugc",
     label: "Cinematic UGC",
-    description: "Real product-in-hand, real human motion",
+    // Deliberately doesn't say "real" — Seedance 2.5 is text-to-video, a
+    // fully AI-imagined actor and motion, not filmed footage. Confirmed
+    // 2026-09-23 (a founder-relayed review flagged the exact wording
+    // risk): only Ready Actors' base clips are genuinely real filmed
+    // footage; Cinematic UGC's realism is in how natural the AI motion
+    // looks, not in what it's made from. Wording must track which is
+    // actually true, not blur the two.
+    description: "An AI-imagined actor shows the product in hand",
     // Unused — like Avatar, Cinematic UGC bypasses Veo/promptModifier
     // entirely; handleGenerate special-cases videoStyle === "cinematic_ugc"
     // and calls Seedance 2.5 (via Replicate) instead. Exists for a real

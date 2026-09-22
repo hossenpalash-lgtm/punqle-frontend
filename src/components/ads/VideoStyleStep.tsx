@@ -9,14 +9,18 @@ import { VIDEO_STYLES, type VideoStyle, type VideoStyleOption } from "@/lib/vide
 //
 // Regrouped 2026-09-08 per the approved nav wireframe, then again
 // 2026-09-23 after real market research (see video-style.ts's own
-// comment): "ai_ugc" now holds only Punqle's two real, owned pipelines
-// (Ready Actors, Cinematic UGC) — the actual differentiators — badged
+// comment): "ai_ugc" now holds only Punqle's own two pipelines (Ready
+// Actors, Cinematic UGC) — the actual differentiators — badged
 // Recommended; "product" is the plain Veo-prompt styles; "presenter"
 // (HeyGen's stock avatar) is its own small, deliberately un-badged
 // group at the end, so it stays available without reading as the
 // flagship choice. No change to routes, pricing, or generation logic.
+// Group subtitle deliberately doesn't claim "real footage" for both
+// members — Ready Actors is genuinely filmed, Cinematic UGC is fully
+// AI-generated (see video-style.ts). "Own" is the accurate shared claim:
+// both are Punqle's own pipelines, not a shared realism claim.
 const STYLE_GROUPS: { key: VideoStyleOption["group"]; title: string; subtitle: string }[] = [
-  { key: "ai_ugc", title: "AI UGC — Recommended", subtitle: "Punqle's own actors — real footage, real motion" },
+  { key: "ai_ugc", title: "AI UGC — Recommended", subtitle: "Punqle's own actors and product-in-hand video" },
   { key: "product", title: "Product Videos", subtitle: "Product-focused styles without a presenter" },
   { key: "presenter", title: "Also available", subtitle: "A stock AI avatar reads your script" },
 ];

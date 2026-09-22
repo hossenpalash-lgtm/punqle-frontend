@@ -764,7 +764,11 @@ export function AdVideoForm({
   const handleGenerateCinematicUgc = async (descriptionOverride: string) => {
     const cost = CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier];
     const finalDescription = descriptionOverride.trim();
-    if (!finalDescription || !cinematicUgcScenePrompt.trim() || generating || (credits !== null && credits < cost)) return;
+    // Scene direction is optional (2026-09-23) — the backend already
+    // falls back gracefully to just the item description when
+    // style_prompt is empty (main.py's prompt-join strips the trailing
+    // ", " for an empty scene, verified before making this optional).
+    if (!finalDescription || generating || (credits !== null && credits < cost)) return;
     setGenerating(true);
     setError(null);
     setVideoUrl(null);
@@ -1265,9 +1269,7 @@ export function AdVideoForm({
 
   const busy = inputFetching || anglesLoading || generating;
   const styleNeedsMoreInput =
-    (videoStyle === "avatar" && !selectedAvatarId) ||
-    (videoStyle === "cinematic_ugc" && !cinematicUgcScenePrompt.trim()) ||
-    (videoStyle === "ai_actor" && !selectedActorId);
+    (videoStyle === "avatar" && !selectedAvatarId) || (videoStyle === "ai_actor" && !selectedActorId);
   const currentCost =
     videoStyle === "avatar"
       ? avatarTier === "premium"
@@ -1401,13 +1403,13 @@ export function AdVideoForm({
                 })}
               </div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                What happens in the shot?
+                Scene direction <span className="normal-case text-muted-foreground/70">(optional)</span>
               </p>
               <textarea
                 value={cinematicUgcScenePrompt}
                 onChange={(e) => setCinematicUgcScenePrompt(e.target.value)}
                 rows={2}
-                placeholder="e.g. she laces up the sneakers and starts jogging down a sunny park path"
+                placeholder="Tell Punqle anything specific you want to happen, e.g. she laces up the sneakers and starts jogging down a sunny park path — leave blank and Punqle will decide"
                 className="mb-4 w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </>
@@ -1622,9 +1624,6 @@ export function AdVideoForm({
       )}
       {styleNeedsMoreInput && videoStyle === "avatar" && (
         <p className="mb-4 text-xs text-muted-foreground">Pick an AI presenter above first.</p>
-      )}
-      {styleNeedsMoreInput && videoStyle === "cinematic_ugc" && (
-        <p className="mb-4 text-xs text-muted-foreground">Describe what happens in the shot above first.</p>
       )}
       {styleNeedsMoreInput && videoStyle === "ai_actor" && (
         <p className="mb-4 text-xs text-muted-foreground">Pick an actor above first.</p>

@@ -20,6 +20,13 @@ export const ANGLES: { value: string | null; label: string }[] = [
   { value: "Offer", label: "Offer" },
   { value: "Social Proof", label: "Social Proof" },
   { value: "Comparison", label: "Comparison" },
+  // Added 2026-09-23 — was a Video Ad Style card (a dedicated Veo prompt
+  // asking for an actual before/after visual sequence); moved here since
+  // Style vs. Angle should mean "how it looks" vs. "what it says," and
+  // this is a narrative structure, not a visual technique. Shared with
+  // Image Ad too (ANGLES already is) — a before/after framing works for
+  // a still ad's copy just as well.
+  { value: "Before & After", label: "Before & After" },
 ];
 
 // Step 1 of Ad Creation — replaces Image Post's IdeaStep + AI-understanding

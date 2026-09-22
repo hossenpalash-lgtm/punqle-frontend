@@ -303,7 +303,15 @@ function RootComponent() {
               onOpenTikTokConnect={() => setTiktokConnectOpen(true)}
               onSignOut={() => signOut()}
             />
-            <div className="mx-auto flex w-full max-w-md flex-1 flex-col lg:max-w-3xl">
+            {/* lg:max-w-[850px] (was lg:max-w-3xl/768px) — 2026-09-23, founder
+                flagged real desktop screens (1440px+) showing a narrow,
+                mobile-width-looking column with huge empty margins on both
+                sides. Widened to the top of their requested 700-850px
+                range. Kept at the `lg:` breakpoint deliberately, not md: —
+                Sidebar.tsx's own desktop/mobile split is exactly `lg:`
+                (`hidden lg:flex` aside vs `lg:hidden` mobile header), so
+                content width and nav mode always change together. */}
+            <div className="mx-auto flex w-full max-w-md flex-1 flex-col lg:max-w-[850px]">
               <Outlet />
               <LegalFooter />
             </div>

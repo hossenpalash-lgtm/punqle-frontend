@@ -1,5 +1,4 @@
 import {
-  ArrowLeftRight,
   Clapperboard,
   Hand,
   Heart,
@@ -16,10 +15,20 @@ import {
 // needs for v1. Each style is just a short phrase appended client-side
 // to the offer description before it reaches Veo — the same
 // `${description}, ${modifier}` pattern used for image style.
+//
+// "before_after" removed 2026-09-23, folded into ANGLES (AdBriefStep.tsx)
+// instead, same call already made for "problem_solution" a day earlier.
+// Real trade-off, not a pure cleanup: its promptModifier ("clear
+// before-and-after contrast...") was a real instruction telling Veo to
+// visually render a before/after sequence — Angle never reaches Veo's
+// prompt at all (see AdVideoForm.tsx's finishCreate: Angle only feeds
+// generateAdCaptions/generateVideoScriptAngles, caption/narration text).
+// So a before/after ad now works through narration alone, not a
+// dedicated visual instruction — the same shape Problem → Solution
+// already settled into. Founder's explicit, twice-considered call.
 export type VideoStyle =
   | "product_showcase"
   | "lifestyle"
-  | "before_after"
   | "cinematic"
   | "avatar"
   | "cinematic_ugc"
@@ -79,15 +88,6 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     promptModifier: "warm lifestyle setting, the product in genuine everyday use",
     group: "product",
     icon: Heart,
-    creditHint: "10 credits",
-  },
-  {
-    id: "before_after",
-    label: "Before & After",
-    description: "A clear before/after contrast",
-    promptModifier: "clear before-and-after contrast showing the product's real effect",
-    group: "product",
-    icon: ArrowLeftRight,
     creditHint: "10 credits",
   },
   {

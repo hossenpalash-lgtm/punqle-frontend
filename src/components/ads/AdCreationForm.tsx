@@ -501,11 +501,10 @@ export function AdCreationForm({
     <>
       {step === "create" && (
         <div className="flex flex-col items-center text-center">
-          <h1 className="font-display mb-2 text-xl font-extrabold text-foreground">Create an ad</h1>
-          <p className="mb-6 text-sm text-muted-foreground">
-            Paste a product link, or just describe what you're advertising.
-          </p>
-
+          {/* No repeated "Create an ad" heading here (2026-09-22) — the
+              page-level "Ad Creation" title + tagline right above this
+              component already say the same thing; the textarea's own
+              placeholder covers "paste a link or describe it." */}
           <textarea
             value={mainInput}
             onChange={(e) => setMainInput(e.target.value)}

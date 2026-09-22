@@ -1293,17 +1293,6 @@ function HomeScreen() {
               <Package className="h-4 w-4" />
               Product
             </button>
-            <button
-              onClick={() => handleSwitchMode("show_app")}
-              className={[
-                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "show_app" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
-              ].join(" ")}
-              style={{ boxShadow: "var(--shadow-card)" }}
-            >
-              <Smartphone className="h-4 w-4" />
-              Show Your App
-            </button>
             <div className="relative">
               <button
                 onClick={() => setShowMoreMenu((v) => !v)}
@@ -1328,6 +1317,16 @@ function HomeScreen() {
                   >
                     <PackageOpen className="h-4 w-4" />
                     Unboxing
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      handleSwitchMode("show_app");
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-secondary"
+                  >
+                    <Smartphone className="h-4 w-4" />
+                    Show Your App
                   </button>
                   <button
                     onClick={() => {

@@ -1215,7 +1215,7 @@ function HomeScreen() {
               flow visibly separate from casual content generators, never
               folded into an overflow menu. Distinct accent styling (not
               just another pill in the row below) signals it's a different,
-              higher-intent action than Talking Actors/Video/Image/etc —
+              higher-intent action than Ready Actors/Video/Image/etc —
               those are quick one-shot generators with no Goal/CTA/Platform/
               batch-variant concept; Ad Creation (tab=ad) is the campaign-
               grade tool, and its own Image Ad/Video Ad toggle (AD_TYPES)
@@ -1258,7 +1258,7 @@ function HomeScreen() {
               style={{ boxShadow: "var(--shadow-card)" }}
             >
               <UserRound className="h-4 w-4" />
-              Talking Actors
+              Ready Actors
             </button>
             <button
               onClick={() => handleSwitchMode("video")}

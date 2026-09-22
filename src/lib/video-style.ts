@@ -128,8 +128,8 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
   },
   {
     id: "ai_actor",
-    label: "Punqle Actors",
-    description: "Your own AI actor reads your script",
+    label: "Ready Actors",
+    description: "Pick a ready-made actor — just add your script",
     // Unused — like Avatar, this bypasses Veo/promptModifier entirely;
     // finishCreate special-cases videoStyle === "ai_actor" and calls
     // OmniHuman (via Replicate) with one of Punqle's own _IMAGE_AD_ACTORS

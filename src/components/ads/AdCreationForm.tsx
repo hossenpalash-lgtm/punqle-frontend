@@ -147,6 +147,10 @@ export function AdCreationForm({
   const [actorsLoading, setActorsLoading] = useState(false);
   const [actorGenderFilter, setActorGenderFilter] = useState<"all" | "female" | "male">("all");
   const [actorId, setActorId] = useState<string | undefined>(undefined);
+  // "No person"/"Choose an actor" is the real first question (do I want a
+  // person at all?) — the gender filter only matters once you've said yes,
+  // so it's nested inside this, not a peer of it. 2026-09-23 simplification.
+  const [actorPickerOpen, setActorPickerOpen] = useState(false);
 
   // Platform + versions — versions defaults to 1 (fast, single result),
   // matching what Quick Create already silently used; the old full wizard's
@@ -475,6 +479,7 @@ export function AdCreationForm({
     handleFileChange(null);
     setActorId(undefined);
     setActorGenderFilter("all");
+    setActorPickerOpen(false);
     setPlatform("instagram");
     setVersions(1);
     setImageGenModel("nano_banana_pro");
@@ -535,86 +540,235 @@ export function AdCreationForm({
             ))}
           </div>
 
+          {/* Style/Angle/Platform/Variations/People & Product moved out of
+              a single collapsed "Settings" panel and onto the main screen
+              (2026-09-23, founder's own redesign) — these are creative
+              decisions that change the actual output, not implementation
+              detail, so they read the same way Goal already does: a plain
+              label + a row of choices, no box, no extra click. Only the
+              genuinely technical choice (which image model renders it)
+              moves to "Advanced" below, collapsed by default. */}
+          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Style
+          </label>
+          <div className="mb-2 grid w-full grid-cols-3 gap-1.5">
+            {allDirections.map((d) => {
+              const selected = visualDirection === d.id;
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => setVisualDirection(d.id)}
+                  className={[
+                    "rounded-xl px-2 py-2 text-left text-[11px] font-semibold leading-tight",
+                    selected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                  ].join(" ")}
+                >
+                  {selected && <Check className="mb-0.5 h-3 w-3" />}
+                  {d.label}
+                </button>
+              );
+            })}
+          </div>
+          {!showMoreStyles && (
+            <button
+              onClick={() => setShowMoreStyles(true)}
+              className="mb-4 self-start text-[11px] font-semibold text-muted-foreground underline"
+            >
+              Show more styles
+            </button>
+          )}
+
+          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            What should the ad say?
+          </label>
+          <div className="mb-4 flex w-full flex-wrap gap-1.5">
+            {ANGLES.map((a) => {
+              const selected = angle === a.value;
+              return (
+                <button
+                  key={a.label}
+                  onClick={() => setAngle(a.value)}
+                  className={[
+                    "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium",
+                    selected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                  ].join(" ")}
+                >
+                  {selected && a.value !== null && <Check className="h-3 w-3" />}
+                  {a.value === null && <Sparkles className="h-3 w-3" />}
+                  {a.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Platform
+          </label>
+          <div className="mb-4 grid w-full grid-cols-4 gap-1.5">
+            {PLATFORM_OPTIONS.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setPlatform(p.id)}
+                className={[
+                  "rounded-xl px-2 py-2 text-[11px] font-semibold",
+                  platform === p.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                ].join(" ")}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Variations
+          </label>
+          <div className="mb-4 flex w-full gap-1.5">
+            {VERSION_COUNTS.map((v) => (
+              <button
+                key={v}
+                onClick={() => setVersions(v)}
+                className={[
+                  "flex-1 rounded-xl px-2 py-2 text-sm font-semibold",
+                  versions === v ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                ].join(" ")}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+
+          {/* Product photo + actor grouped under one heading (2026-09-23)
+              — makes the actual relationship explicit: an actor is
+              someone who uses/holds THIS product photo (or Punqle's own
+              AI-generated one when none is uploaded). Works either way —
+              see fetchImageActors' own comment. */}
+          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            People &amp; Product
+          </label>
+          <div className="mb-4 w-full rounded-2xl bg-secondary/60 p-4 text-left">
+            <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
+              Product photo <span className="normal-case text-muted-foreground/70">— optional, Punqle can create one</span>
+            </p>
+            {!file ? (
+              <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-card px-3 py-2.5 text-xs font-semibold text-foreground">
+                <Upload className="h-3.5 w-3.5" />
+                Upload your own product photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+                />
+              </label>
+            ) : (
+              <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2.5">
+                <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                  {previewUrl && <img src={previewUrl} alt="" className="h-6 w-6 rounded-md object-cover" />}
+                  {file.name}
+                </span>
+                <button onClick={() => handleFileChange(null)} aria-label="Remove photo" className="text-muted-foreground">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+
+            <p className="mb-2 mt-4 text-[11px] font-semibold text-muted-foreground">Add a person</p>
+            <div className="mb-2 flex gap-1.5">
+              <button
+                onClick={() => {
+                  setActorId(undefined);
+                  setActorPickerOpen(false);
+                }}
+                className={[
+                  "flex-1 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
+                  !actorPickerOpen ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
+                ].join(" ")}
+              >
+                No person
+              </button>
+              <button
+                onClick={() => setActorPickerOpen(true)}
+                className={[
+                  "flex-1 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
+                  actorPickerOpen ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
+                ].join(" ")}
+              >
+                Choose an actor
+              </button>
+            </div>
+
+            {actorPickerOpen && (
+              <>
+                <div className="mb-2 mt-2 flex flex-wrap gap-1.5">
+                  {(["all", "female", "male"] as const).map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setActorGenderFilter(g)}
+                      className={[
+                        "rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors",
+                        actorGenderFilter === g ? "bg-primary text-primary-foreground" : "bg-card text-secondary-foreground",
+                      ].join(" ")}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+                {actorsLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {actors
+                      .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
+                      .map((a) => {
+                        const selected = actorId === a.id;
+                        return (
+                          <button
+                            key={a.id}
+                            onClick={() => setActorId(selected ? undefined : a.id)}
+                            className="flex flex-col items-center gap-1"
+                          >
+                            <span
+                              className={[
+                                "relative aspect-square w-full overflow-hidden rounded-xl",
+                                selected ? "ring-2 ring-primary" : "",
+                              ].join(" ")}
+                            >
+                              <img
+                                src={`data:image/jpeg;base64,${a.preview_image_base64}`}
+                                alt={a.name}
+                                className="h-full w-full object-cover"
+                              />
+                              {selected && (
+                                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                  <Check className="h-2.5 w-2.5" />
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-[10px] font-medium text-foreground">{a.name}</span>
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
           <button
             onClick={() => setSettingsOpen((v) => !v)}
             className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"
           >
             <Settings2 className="h-3.5 w-3.5" />
-            Settings
+            Advanced
             <ChevronDown className={["h-3.5 w-3.5 transition-transform", settingsOpen ? "rotate-180" : ""].join(" ")} />
           </button>
 
           {settingsOpen && (
             <div className="mb-4 w-full rounded-2xl bg-secondary/60 p-4 text-left">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Style</p>
-              <div className="mb-3 grid grid-cols-3 gap-1.5">
-                {allDirections.map((d) => {
-                  const selected = visualDirection === d.id;
-                  return (
-                    <button
-                      key={d.id}
-                      onClick={() => setVisualDirection(d.id)}
-                      className={[
-                        "rounded-xl px-2 py-2 text-left text-[11px] font-semibold leading-tight",
-                        selected ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
-                      ].join(" ")}
-                    >
-                      {selected && <Check className="mb-0.5 h-3 w-3" />}
-                      {d.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {!showMoreStyles && (
-                <button
-                  onClick={() => setShowMoreStyles(true)}
-                  className="mb-3 text-[11px] font-semibold text-muted-foreground underline"
-                >
-                  Show more styles
-                </button>
-              )}
-
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                What should the ad say?
-              </p>
-              <div className="mb-3 flex flex-wrap gap-1.5">
-                {ANGLES.map((a) => {
-                  const selected = angle === a.value;
-                  return (
-                    <button
-                      key={a.label}
-                      onClick={() => setAngle(a.value)}
-                      className={[
-                        "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium",
-                        selected ? "bg-primary text-primary-foreground" : "bg-card text-secondary-foreground",
-                      ].join(" ")}
-                    >
-                      {selected && a.value !== null && <Check className="h-3 w-3" />}
-                      {a.value === null && <Sparkles className="h-3 w-3" />}
-                      {a.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Platform</p>
-              <div className="mb-3 grid grid-cols-4 gap-1.5">
-                {PLATFORM_OPTIONS.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setPlatform(p.id)}
-                    className={[
-                      "rounded-xl px-2 py-2 text-[11px] font-semibold",
-                      platform === p.id ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
-                    ].join(" ")}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Image Model</p>
-              <div className="mb-3 grid grid-cols-3 gap-1.5">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Image model</p>
+              <div className="grid grid-cols-3 gap-1.5">
                 {IMAGE_MODEL_OPTIONS.map((m) => (
                   <button
                     key={m.id}
@@ -628,120 +782,6 @@ export function AdCreationForm({
                   </button>
                 ))}
               </div>
-
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Versions</p>
-              <div className="mb-3 flex gap-1.5">
-                {VERSION_COUNTS.map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setVersions(v)}
-                    className={[
-                      "flex-1 rounded-xl px-2 py-2 text-sm font-semibold",
-                      versions === v ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
-                    ].join(" ")}
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
-
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Photo</p>
-              {!file ? (
-                <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-card px-3 py-2.5 text-xs font-semibold text-foreground">
-                  <Upload className="h-3.5 w-3.5" />
-                  Upload your own (optional — AI creates one otherwise)
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
-                  />
-                </label>
-              ) : (
-                <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2.5">
-                  <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                    {previewUrl && <img src={previewUrl} alt="" className="h-6 w-6 rounded-md object-cover" />}
-                    {file.name}
-                  </span>
-                  <button onClick={() => handleFileChange(null)} aria-label="Remove photo" className="text-muted-foreground">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-
-              {/* Actor library — works whether or not a photo is uploaded
-                  above: with no photo, the persona is woven into the
-                  from-scratch generation prompt; with an uploaded photo,
-                  the backend composites the persona onto that exact
-                  product photo (real two-image Gemini call, validated
-                  via a live spike before shipping). */}
-              <div className="mt-4">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Actor <span className="normal-case text-muted-foreground/70">(optional — have someone use the product)</span>
-                </p>
-                  <div className="mb-2 flex flex-wrap gap-1.5">
-                    <button
-                      onClick={() => setActorId(undefined)}
-                      className={[
-                        "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                        !actorId ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                      ].join(" ")}
-                    >
-                      None
-                    </button>
-                    {(["all", "female", "male"] as const).map((g) => (
-                      <button
-                        key={g}
-                        onClick={() => setActorGenderFilter(g)}
-                        className={[
-                          "rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors",
-                          actorGenderFilter === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                        ].join(" ")}
-                      >
-                        {g}
-                      </button>
-                    ))}
-                  </div>
-                  {actorsLoading ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-4 gap-2">
-                      {actors
-                        .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
-                        .map((a) => {
-                          const selected = actorId === a.id;
-                          return (
-                            <button
-                              key={a.id}
-                              onClick={() => setActorId(selected ? undefined : a.id)}
-                              className="flex flex-col items-center gap-1"
-                            >
-                              <span
-                                className={[
-                                  "relative aspect-square w-full overflow-hidden rounded-xl",
-                                  selected ? "ring-2 ring-primary" : "",
-                                ].join(" ")}
-                              >
-                                <img
-                                  src={`data:image/jpeg;base64,${a.preview_image_base64}`}
-                                  alt={a.name}
-                                  className="h-full w-full object-cover"
-                                />
-                                {selected && (
-                                  <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                    <Check className="h-2.5 w-2.5" />
-                                  </span>
-                                )}
-                              </span>
-                              <span className="text-[10px] font-medium text-foreground">{a.name}</span>
-                            </button>
-                          );
-                        })}
-                    </div>
-                  )}
-                </div>
             </div>
           )}
 

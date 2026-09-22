@@ -1308,7 +1308,7 @@ export function AdVideoForm({
       <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Goal
       </label>
-      <div className="mb-4 grid w-full grid-cols-2 gap-2">
+      <div className="mb-4 grid w-full grid-cols-4 gap-2">
         {GOALS.map((g) => (
           <button
             key={g.value}

@@ -2,10 +2,12 @@ import { Check, Sparkles } from "lucide-react";
 import { VIDEO_STYLES, type VideoStyle, type VideoStyleOption } from "@/lib/video-style";
 
 // Step 2 of Video Ad — deliberately just chips, no rich preview cards
-// (unlike Image Ad's reused VisualDirectionStep). Nothing like that
-// exists for video today, and building it is real new scope beyond
-// what this feature needs; the description text under each chip does
-// the same "help them picture it" job at a fraction of the cost.
+// (unlike Image Ad's reused VisualDirectionStep). Compacted to a 2-col
+// grid (2026-09-23, founder's call) — icon + label + credit cost only,
+// no description line — matching how dense Image Ad's own Style grid
+// already is (VisualDirectionStep). Credit cost stays visible (unlike
+// Image Ad, where every style costs the same) since it varies 4-46
+// credits here and materially affects the choice.
 //
 // Regrouped 2026-09-08 per the approved nav wireframe, then again
 // 2026-09-23 after real market research (see video-style.ts's own
@@ -53,51 +55,35 @@ export function VideoStyleStep({
               <span className="text-xs font-semibold uppercase tracking-wide text-foreground">{group.title}</span>
             </div>
             <p className="px-1 text-left text-xs text-muted-foreground">{group.subtitle}</p>
-            {VIDEO_STYLES.filter((s) => s.group === group.key).map((style) => {
-              const isSelected = selected === style.id;
-              const Icon = style.icon;
-              return (
-                <button
-                  key={style.id}
-                  onClick={() => onSelect(style.id)}
-                  className={[
-                    "flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left transition-colors",
-                    isSelected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                  ].join(" ")}
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <Icon
-                      className={[
-                        "h-5 w-5 shrink-0",
-                        isSelected ? "text-primary-foreground/90" : "text-muted-foreground",
-                      ].join(" ")}
-                    />
-                    <span className="min-w-0">
-                      <span className="flex items-center gap-1.5 text-sm font-semibold">
-                        {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
-                        {style.label}
-                      </span>
-                      <span
-                        className={[
-                          "block text-xs",
-                          isSelected ? "text-primary-foreground/80" : "text-muted-foreground",
-                        ].join(" ")}
-                      >
-                        {style.description}
-                      </span>
-                    </span>
-                  </span>
-                  <span
+            <div className="grid grid-cols-2 gap-1.5">
+              {VIDEO_STYLES.filter((s) => s.group === group.key).map((style) => {
+                const isSelected = selected === style.id;
+                const Icon = style.icon;
+                return (
+                  <button
+                    key={style.id}
+                    onClick={() => onSelect(style.id)}
                     className={[
-                      "shrink-0 text-[11px] font-semibold",
-                      isSelected ? "text-primary-foreground/80" : "text-muted-foreground",
+                      "flex flex-col items-start gap-1 rounded-xl px-3 py-2.5 text-left transition-colors",
+                      isSelected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
                     ].join(" ")}
                   >
-                    {style.creditHint}
-                  </span>
-                </button>
-              );
-            })}
+                    <Icon
+                      className={["h-4 w-4 shrink-0", isSelected ? "text-primary-foreground/90" : "text-muted-foreground"].join(" ")}
+                    />
+                    <span className="flex items-center gap-1 text-xs font-semibold leading-tight">
+                      {isSelected && <Check className="h-3 w-3 shrink-0" />}
+                      {style.label}
+                    </span>
+                    <span
+                      className={["text-[10px] font-semibold", isSelected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}
+                    >
+                      {style.creditHint}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           );
         })}

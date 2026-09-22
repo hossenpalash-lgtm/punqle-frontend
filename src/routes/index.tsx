@@ -3,6 +3,7 @@ import {
   ArrowUp,
   Check,
   ChevronDown,
+  ChevronRight,
   Images,
   Layers,
   Loader2,
@@ -1208,13 +1209,45 @@ function HomeScreen() {
 
           <div className="flex-1" />
 
+          {/* Ad Creation, promoted out of "See more" (2026-09-22) — real
+              competitor research (AdCreative.ai, Creatify) found the
+              strongest ad-focused tools keep their goal/platform-driven ad
+              flow visibly separate from casual content generators, never
+              folded into an overflow menu. Distinct accent styling (not
+              just another pill in the row below) signals it's a different,
+              higher-intent action than Talking Actors/Video/Image/etc —
+              those are quick one-shot generators with no Goal/CTA/Platform/
+              batch-variant concept; Ad Creation (tab=ad) is the campaign-
+              grade tool, and its own Image Ad/Video Ad toggle (AD_TYPES)
+              already covers both formats from this one entry point. */}
+          <button
+            onClick={() => goTo("ad")}
+            className="mb-3 flex w-full items-center justify-between gap-3 self-center rounded-2xl border border-accent bg-accent/10 px-5 py-3.5 text-left transition-colors hover:bg-accent/15"
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground)" }}
+              >
+                <Megaphone className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">Ad Creation</p>
+                <p className="text-xs text-muted-foreground">
+                  Goal-driven ads, ready for Facebook &amp; Instagram — Image or Video
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-accent" />
+          </button>
+
           {/* Unified creation bar (2026-09-17, Arcads parity) — one
               persistent bar, mode pills switch its content in place. Only
               one homeMode block ever renders below, which is what makes
               the old videoPanel/productPanel double-render bug
-              structurally impossible now. Image Ad/Try-On/Carousel keep
-              their exact original goTo() handlers, unchanged, tucked
-              under "See more" instead of being permanent top-level pills. */}
+              structurally impossible now. Try-On/Carousel keep their
+              exact original goTo() handlers, unchanged, tucked under "See
+              more" instead of being permanent top-level pills. */}
           <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
             <button
               onClick={() => handleSwitchMode("talking_actors")}
@@ -1306,16 +1339,6 @@ function HomeScreen() {
                   >
                     <ZoomIn className="h-4 w-4" />
                     Upscale
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      goTo("ad");
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-secondary"
-                  >
-                    <Megaphone className="h-4 w-4" />
-                    Image Ad
                   </button>
                   <button
                     onClick={() => {

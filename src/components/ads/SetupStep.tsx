@@ -14,7 +14,7 @@ import {
 import { useState } from "react";
 import { base64ToFile, fetchProductLink } from "@/lib/api";
 import type { Platform } from "@/lib/social-wizard";
-import { PLATFORM_OPTIONS, VERSION_COUNTS } from "@/lib/social-wizard";
+import { CAROUSEL_SLIDE_COUNTS, PLATFORM_OPTIONS, VERSION_COUNTS } from "@/lib/social-wizard";
 import { ProductPicker } from "./ProductPicker";
 import { StockPhotoSearch } from "./StockPhotoSearch";
 
@@ -46,6 +46,7 @@ export function SetupStep({
   onGenerate,
   onBack,
   error,
+  entryHint,
 }: {
   file: File | null;
   previewUrl: string | null;
@@ -61,7 +62,13 @@ export function SetupStep({
   onGenerate: () => void;
   onBack: () => void;
   error: string | null;
+  // Carousel entry reuses "versions" as slide count — see
+  // CAROUSEL_SLIDE_COUNTS. Undefined/absent for every other caller,
+  // byte-identical to before this existed.
+  entryHint?: "carousel";
 }) {
+  const isCarousel = entryHint === "carousel";
+  const countOptions = isCarousel ? CAROUSEL_SLIDE_COUNTS : VERSION_COUNTS;
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [productUrl, setProductUrl] = useState("");
@@ -223,12 +230,12 @@ export function SetupStep({
         })}
       </div>
 
-      {/* Versions */}
+      {/* Versions / carousel slide count */}
       <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        How many versions?
+        {isCarousel ? "How many slides?" : "How many versions?"}
       </label>
       <div className="mb-2 flex w-full gap-2">
-        {VERSION_COUNTS.map((n) => (
+        {countOptions.map((n) => (
           <button
             key={n}
             onClick={() => onVersionsChange(n)}
@@ -242,13 +249,15 @@ export function SetupStep({
         ))}
       </div>
       <p className="mb-6 text-xs text-muted-foreground">
-        {versions} version{versions > 1 ? "s" : ""} = {versions} credit{versions > 1 ? "s" : ""}.
+        {isCarousel
+          ? `${versions} slides = ${versions} credits.`
+          : `${versions} version${versions > 1 ? "s" : ""} = ${versions} credit${versions > 1 ? "s" : ""}.`}
       </p>
 
       {insufficientCredits && (
         <div className="mb-4 w-full rounded-2xl border border-border bg-secondary/60 p-4 text-sm text-foreground">
-          You have {credits} credit{credits === 1 ? "" : "s"} left — not enough for {versions} versions. Pick fewer
-          versions or upgrade to keep generating.
+          You have {credits} credit{credits === 1 ? "" : "s"} left — not enough for {versions}{" "}
+          {isCarousel ? "slides" : "versions"}. Pick fewer or upgrade to keep generating.
         </div>
       )}
 
@@ -273,7 +282,7 @@ export function SetupStep({
           className="flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
           style={{ background: "var(--gradient-primary)" }}
         >
-          Generate {versions} variation{versions > 1 ? "s" : ""}
+          {isCarousel ? `Generate ${versions}-slide carousel` : `Generate ${versions} variation${versions > 1 ? "s" : ""}`}
           <Sparkles className="h-5 w-5" />
         </button>
       </div>

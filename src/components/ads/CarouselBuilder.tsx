@@ -21,6 +21,12 @@ interface PoolItem {
   // a full data: URL for an uploaded one — compositeImage tells the two
   // apart itself, so no extra plumbing is needed here.
   imageData: string;
+  // Set only for slides that came from the auto-design carousel plan
+  // (generateCarouselPlan) — each slide gets its OWN on-image headline
+  // instead of the whole carousel sharing the main post's single
+  // headline. Undefined for a manually curated/uploaded slide, which
+  // falls back to the shared `text.headline` at download time.
+  headline?: string;
 }
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB — generous for a phone photo, bounds memory/zip size
@@ -36,16 +42,34 @@ export function CarouselBuilder({
   brandKit,
   editOptions,
   visualDirection,
+  slideHeadlines,
+  autoExpand,
 }: {
   images: string[];
   text: CreativeText;
   brandKit?: BrandKit;
   editOptions?: EditOptions;
   visualDirection?: string;
+  // Parallel to `images` — set when these came from generateCarouselPlan
+  // (auto-design), giving each slide its own headline. Undefined/absent
+  // entries fall back to the shared `text.headline`, same as before this
+  // existed.
+  slideHeadlines?: (string | undefined)[];
+  // True when the caller already generated a real, sequenced carousel
+  // (auto-design flow) — opens already expanded with every generated
+  // slide pre-selected in order, instead of making the user discover
+  // and manually build up a 2+ selection from scratch.
+  autoExpand?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!!autoExpand);
   const [uploaded, setUploaded] = useState<PoolItem[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<string[]>([]);
+  // Only reads `autoExpand`/`images` at mount, same "read once" contract
+  // as every other initial-prop-derived state in this app (e.g.
+  // SinglePostForm's initialIdea) — CarouselBuilder is remounted whenever
+  // a fresh post/carousel is generated, so this never goes stale.
+  const [selectedOrder, setSelectedOrder] = useState<string[]>(() =>
+    autoExpand ? images.map((_, i) => `gen-${i}`) : [],
+  );
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [buildError, setBuildError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
@@ -55,7 +79,11 @@ export function CarouselBuilder({
   const itemRefs = useRef<Map<string, HTMLElement>>(new Map());
   const dragInfo = useRef<{ id: string; startX: number; moved: boolean } | null>(null);
 
-  const generatedItems: PoolItem[] = images.map((img, i) => ({ id: `gen-${i}`, imageData: img }));
+  const generatedItems: PoolItem[] = images.map((img, i) => ({
+    id: `gen-${i}`,
+    imageData: img,
+    headline: slideHeadlines?.[i],
+  }));
   const allItems = [...generatedItems, ...uploaded];
   const selectedSet = new Set(selectedOrder);
   // Selected-first ordering — the chosen slides, in the user's own
@@ -149,9 +177,11 @@ export function CarouselBuilder({
     try {
       const files: Record<string, Uint8Array> = {};
       for (let slot = 0; slot < orderedSelected.length; slot++) {
+        const slide = orderedSelected[slot];
+        const slideText: CreativeText = slide.headline ? { ...text, headline: slide.headline } : text;
         const dataUrl = await compositeImage(
-          orderedSelected[slot].imageData,
-          text,
+          slide.imageData,
+          slideText,
           brandKit,
           editOptions,
           visualDirection,
@@ -192,10 +222,14 @@ export function CarouselBuilder({
   return (
     <div className="mb-4 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
       <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Select 2 or more images for the carousel
+        {autoExpand ? "Your carousel" : "Select 2 or more images for the carousel"}
       </p>
       {orderedSelected.length >= 2 && (
-        <p className="mb-2 text-[11px] text-muted-foreground">Drag a selected slide to reorder it.</p>
+        <p className="mb-2 text-[11px] text-muted-foreground">
+          {autoExpand
+            ? "Each slide has its own headline. Drag to reorder, tap the pool below to swap one in."
+            : "Drag a selected slide to reorder it."}
+        </p>
       )}
       <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
         {orderedSelected.map((item, index) => (
@@ -205,6 +239,7 @@ export function CarouselBuilder({
             onPointerDown={handlePointerDown(item.id)}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp(item.id)}
+            title={item.headline}
             className={[
               "relative h-16 w-16 shrink-0 touch-none overflow-hidden rounded-lg border-2 border-primary transition-transform",
               draggingId === item.id ? "z-10 scale-105 shadow-lg" : "",

@@ -177,6 +177,29 @@ export function generateVideoScriptAngles(
   });
 }
 
+export interface ApiCarouselSlide {
+  visual: string;
+  headline: string;
+}
+
+export interface ApiCarouselPlanResponse {
+  slides: ApiCarouselSlide[];
+}
+
+// Free planning call, same shape/cost as generateVideoScriptAngles —
+// plans a real N-slide carousel narrative from one topic. Each
+// returned slide's `visual` still has to go through generateAd/
+// generateAdImageVariant (one real image call per slide, normal
+// per-image credit cost) to actually become a picture; this only
+// plans the sequence and each slide's on-image headline.
+export function generateCarouselPlan(description: string, slideCount = 4): Promise<ApiCarouselPlanResponse> {
+  return apiFetch<ApiCarouselPlanResponse>("/ads/generate-carousel-plan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ description, slide_count: slideCount }),
+  });
+}
+
 export interface ApiVideoStatusResponse {
   done: boolean;
   video_base64: string | null;

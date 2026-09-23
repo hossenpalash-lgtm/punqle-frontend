@@ -73,6 +73,8 @@ export function PostKit({
   // launch will live once that's built).
   showCaptionStyleControls = true,
   showLaunchCampaignPlaceholder = false,
+  carouselSlideHeadlines,
+  carouselAutoExpand = false,
 }: {
   compositedUrl: string | null;
   textBox: Box | undefined;
@@ -122,6 +124,12 @@ export function PostKit({
   onReset: () => void;
   showCaptionStyleControls?: boolean;
   showLaunchCampaignPlaceholder?: boolean;
+  // Set only by SinglePostForm's auto-design carousel flow — see
+  // CarouselBuilder's own props for what each does. Both default to
+  // "off", byte-identical to every other caller (Ad Creation, a normal
+  // Image Post) that doesn't pass them.
+  carouselSlideHeadlines?: (string | undefined)[];
+  carouselAutoExpand?: boolean;
 }) {
   const hashtagsAdded = editedCaption.includes("#");
   // Carousel slides mirror what's actually baked onto the main preview
@@ -228,6 +236,8 @@ export function PostKit({
           brandKit={brandKit}
           editOptions={editOptions}
           visualDirection={visualDirection}
+          slideHeadlines={carouselSlideHeadlines}
+          autoExpand={carouselAutoExpand}
         />
       </div>
 

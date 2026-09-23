@@ -6,6 +6,7 @@ import {
   generateAd,
   generateAdImageVariant,
   generateCaptions,
+  generateCarouselPlan,
   removeBackground,
   translateCaptions,
   type ApiAdCaptionVariant,
@@ -146,6 +147,11 @@ export function SinglePostForm({
   // Result
   const [captions, setCaptions] = useState<ApiAdCaptionVariant[]>([]);
   const [images, setImages] = useState<string[]>([]);
+  // Parallel to `images`, only populated by the carousel auto-design
+  // branch of handleGenerate below — each slide's own AI-written
+  // headline, fed into PostKit/CarouselBuilder so every slide gets its
+  // own on-image text instead of sharing the post's single headline.
+  const [carouselHeadlines, setCarouselHeadlines] = useState<string[]>([]);
   const [selectedCaptionIndex, setSelectedCaptionIndex] = useState(0);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [compositedUrl, setCompositedUrl] = useState<string | null>(null);
@@ -278,6 +284,40 @@ export function SinglePostForm({
       setCaptions(captionResult.captions);
       setGenerationStage(4);
 
+      if (entryHint === "carousel") {
+        // Auto-design carousel: one AI planning call turns the topic into
+        // `versions` distinct, sequenced slides (see generateCarouselPlan
+        // and CarouselBuilder.tsx's own comments for why this exists —
+        // real competitor research found every real carousel tool
+        // auto-designs the whole thing from one prompt, not just curates
+        // from images already on hand). Each slide then goes through the
+        // exact same per-image generation calls as every other image in
+        // this app — no new image-gen code, same credit cost as
+        // generating that many images normally.
+        const plan = await generateCarouselPlan(finalDescription, versions);
+        if (plan.slides.length === 0) throw new Error("Couldn't plan the carousel — please try again.");
+        const slideImages: string[] = [];
+        const slideHeadlines: string[] = [];
+        for (let i = 0; i < plan.slides.length; i++) {
+          const slide = plan.slides[i];
+          const slideStyledDescription = `${slide.visual}, ${direction.promptModifier}`;
+          const r =
+            i === 0
+              ? await generateAd(slideStyledDescription, sourceFile, aspectRatio)
+              : await generateAdImageVariant(slideStyledDescription, sourceFile, aspectRatio);
+          slideImages.push(r.banner_image_base64);
+          slideHeadlines.push(slide.headline);
+          setImages([...slideImages]);
+          setCredits(r.credits_remaining);
+          setGenerationStage(5);
+        }
+        setCarouselHeadlines(slideHeadlines);
+        setSelectedCaptionIndex(0);
+        setSelectedImageIndex(0);
+        setStep("result");
+        return;
+      }
+
       // The first image deliberately goes through /ads/generate (not
       // generate-image-variant) — it's the only endpoint that saves to
       // History (_save_generated_post server-side). Its own bundled
@@ -403,6 +443,7 @@ export function SinglePostForm({
     setVersions(3);
     setCaptions([]);
     setImages([]);
+    setCarouselHeadlines([]);
     setSelectedCaptionIndex(0);
     setSelectedImageIndex(0);
     setCompositedUrl(null);
@@ -462,6 +503,7 @@ export function SinglePostForm({
           onGenerate={handleGenerate}
           onBack={() => setStep("direction")}
           error={error}
+          entryHint={entryHint}
         />
       )}
 
@@ -526,6 +568,8 @@ export function SinglePostForm({
           visualDirection={visualDirection}
           error={error}
           onReset={handleReset}
+          carouselSlideHeadlines={entryHint === "carousel" ? carouselHeadlines : undefined}
+          carouselAutoExpand={entryHint === "carousel" && carouselHeadlines.length > 0}
         />
       )}
     </>

@@ -102,3 +102,9 @@ export const PLATFORM_OPTIONS: { id: Platform; label: string; aspectRatio: Aspec
 ];
 
 export const VERSION_COUNTS = [1, 3, 5] as const;
+
+// Carousel entry (entryHint="carousel") reuses this same "how many"
+// control instead of VERSION_COUNTS — a 1-slide carousel is meaningless,
+// and generateCarouselPlan's backend validator clamps to 3-6, so this is
+// that same range at a sensible picker granularity.
+export const CAROUSEL_SLIDE_COUNTS = [3, 4, 5, 6] as const;

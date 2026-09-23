@@ -2,7 +2,6 @@ import { useState } from "react";
 import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { signInWithPassword, signUpWithPassword } from "@/lib/supabase";
 import { useScrolled } from "@/lib/use-scrolled";
-import { RealAdShowcase } from "@/components/auth/RealAdShowcase";
 import { RealFilmstrip } from "@/components/auth/RealFilmstrip";
 import { FormatSwitcher } from "@/components/auth/FormatSwitcher";
 import { TechPartners } from "@/components/auth/TechPartners";
@@ -232,10 +231,24 @@ export function LoginScreen() {
       <BeyondTheAd />
       <PricingTeaser />
 
-      {/* RealAdShowcase ends with its own "Ready to make your own?" CTA —
-          deliberately the page's only closing CTA, not stacked with a
-          second near-identical one right after it. */}
-      <RealAdShowcase onCreateClick={openForm} />
+      {/* 2026-09-24 — founder asked to drop the real-ad gallery
+          (RealAdShowcase, "See what you can create with Punqle") and
+          everything below it; this closing CTA replaces the one that
+          section used to end on, so the page still has exactly one. */}
+      <div className="relative z-10 mt-4 flex flex-col items-center gap-5 text-center">
+        <h2 className="text-balance font-display text-[30px] font-extrabold sm:text-[44px]">
+          Your next ad is a few taps away.
+        </h2>
+        <button
+          type="button"
+          onClick={openForm}
+          className="flex items-center justify-center gap-2 rounded-full px-7 py-4 text-base font-semibold text-primary-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
+          style={{ background: "var(--gradient-primary)" }}
+        >
+          Create your first ad
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
 
       <p className="relative z-10 mt-10 text-center text-xs text-muted-foreground">
         Punqle is operated by HOSSEN, MD MOSHARRAF &middot; ABN 47 183 516 336

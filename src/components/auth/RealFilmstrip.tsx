@@ -65,7 +65,10 @@ function FilmRow({ cards, reverse, durationS }: { cards: FilmCard[]; reverse?: b
 export function RealFilmstrip() {
   return (
     <section className="relative left-1/2 z-10 mt-14 w-screen -translate-x-1/2 border-y border-border bg-secondary py-9">
-      <div className="flex flex-col gap-3.5">
+      {/* marquee-pausable: hover/focus pauses both rows — WCAG 2.2.2
+          (pause on moving content) plus it lets a visitor actually read a
+          caption instead of it sliding past. */}
+      <div className="marquee-pausable flex flex-col gap-3.5">
         <FilmRow cards={ROW_1} durationS={46} />
         <FilmRow cards={ROW_2} reverse durationS={40} />
       </div>

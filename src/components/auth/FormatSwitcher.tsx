@@ -12,7 +12,21 @@ type FormatKey = "actors" | "video" | "image" | "tryon" | "carousel";
 
 const FORMATS: Record<
   FormatKey,
-  { label: string; icon: typeof User; tag: string; headline: string; desc: string; credit: string; image: string }
+  {
+    label: string;
+    icon: typeof User;
+    tag: string;
+    headline: string;
+    desc: string;
+    credit: string;
+    image: string;
+    // object-position for the panel's photo — most images here are
+    // already landscape e-commerce shots, so plain "center" covers them
+    // fine. Maya's real headshot is a square photo forced into a very
+    // wide panel, and centering it cropped straight to her mouth/chin —
+    // biased up here so the visible band lands on her eyes instead.
+    focal?: string;
+  }
 > = {
   actors: {
     label: "Ready Actors",
@@ -22,6 +36,7 @@ const FORMATS: Record<
     desc: "Pick a filmed actor, write your script, and Punqle redubs it in their own voice.",
     credit: "30 credits",
     image: "/actors/maya.jpg",
+    focal: "50% 22%",
   },
   video: {
     label: "Video",
@@ -70,7 +85,10 @@ export function FormatSwitcher() {
   return (
     <div className="w-full max-w-[900px]">
       <div className="mb-5 flex justify-center">
-        <div className="inline-flex gap-1 rounded-full border border-border bg-secondary p-1.5">
+        <div
+          className="inline-flex gap-1 rounded-full border border-border p-1.5 backdrop-blur-xl"
+          style={{ background: "oklch(0.96 0.003 260 / 65%)" }}
+        >
           {ORDER.map((key) => {
             const opt = FORMATS[key];
             const Icon = opt.icon;
@@ -95,7 +113,12 @@ export function FormatSwitcher() {
       </div>
 
       <div className="relative overflow-hidden rounded-[26px]" style={{ boxShadow: "var(--shadow-card)", minHeight: "220px" }}>
-        <img src={f.image} alt="" className="absolute inset-0 h-full w-full scale-105 object-cover" />
+        <img
+          src={f.image}
+          alt=""
+          className="absolute inset-0 h-full w-full scale-105 object-cover"
+          style={{ objectPosition: f.focal ?? "center" }}
+        />
         <div
           className="absolute inset-0"
           style={{

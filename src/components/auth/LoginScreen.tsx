@@ -5,9 +5,11 @@ import { useScrolled } from "@/lib/use-scrolled";
 import { RealAdShowcase } from "@/components/auth/RealAdShowcase";
 import { RealFilmstrip } from "@/components/auth/RealFilmstrip";
 import { FormatSwitcher } from "@/components/auth/FormatSwitcher";
+import { TechPartners } from "@/components/auth/TechPartners";
 import { ReadyActorsSection } from "@/components/auth/ReadyActorsSection";
 import { FormatGrid } from "@/components/auth/FormatGrid";
 import { LanguageSection } from "@/components/auth/LanguageSection";
+import { PublishSection } from "@/components/auth/PublishSection";
 import { BeyondTheAd } from "@/components/auth/BeyondTheAd";
 import { PricingTeaser } from "@/components/auth/PricingTeaser";
 import { PunqleLogo } from "@/components/PunqleLogo";
@@ -217,12 +219,16 @@ export function LoginScreen() {
         <div className="mt-11 w-full">
           <FormatSwitcher />
         </div>
+        {/* Real tech-vendor row sits right under the hero, matching real
+            "powered by" placement convention. */}
+        <TechPartners />
       </div>
 
       <RealFilmstrip />
       <ReadyActorsSection />
       <FormatGrid />
       <LanguageSection />
+      <PublishSection />
       <BeyondTheAd />
       <PricingTeaser />
 

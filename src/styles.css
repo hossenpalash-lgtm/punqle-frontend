@@ -253,6 +253,17 @@
   animation-iteration-count: infinite;
   animation-direction: reverse;
 }
+/* Pause-on-hover/focus (RealFilmstrip.tsx) — real UX/accessibility
+   convention for auto-moving content (WCAG 2.2.2): lets a visitor
+   actually read a card's caption instead of it sliding past. Applied via
+   a wrapper class around the row rather than on the animated track
+   itself, since :hover on a translating element still fires correctly. */
+.marquee-pausable:hover .animate-marquee-left,
+.marquee-pausable:hover .animate-marquee-right,
+.marquee-pausable:focus-within .animate-marquee-left,
+.marquee-pausable:focus-within .animate-marquee-right {
+  animation-play-state: paused;
+}
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee-left,
   .animate-marquee-right {

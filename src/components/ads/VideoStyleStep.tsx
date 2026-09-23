@@ -55,35 +55,45 @@ export function VideoStyleStep({
               <span className="text-xs font-semibold uppercase tracking-wide text-foreground">{group.title}</span>
             </div>
             <p className="px-1 text-left text-xs text-muted-foreground">{group.subtitle}</p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {VIDEO_STYLES.filter((s) => s.group === group.key).map((style) => {
-                const isSelected = selected === style.id;
-                const Icon = style.icon;
-                return (
-                  <button
-                    key={style.id}
-                    onClick={() => onSelect(style.id)}
-                    className={[
-                      "flex flex-col items-start gap-1 rounded-xl px-3 py-2.5 text-left transition-colors",
-                      isSelected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                    ].join(" ")}
-                  >
-                    <Icon
-                      className={["h-4 w-4 shrink-0", isSelected ? "text-primary-foreground/90" : "text-muted-foreground"].join(" ")}
-                    />
-                    <span className="flex items-center gap-1 text-xs font-semibold leading-tight">
-                      {isSelected && <Check className="h-3 w-3 shrink-0" />}
-                      {style.label}
-                    </span>
-                    <span
-                      className={["text-[10px] font-semibold", isSelected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}
-                    >
-                      {style.creditHint}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {(() => {
+              const groupStyles = VIDEO_STYLES.filter((s) => s.group === group.key);
+              // One row per group instead of a fixed 2-col grid — a 3-card
+              // group (Product Videos) used to wrap to 2+1, which read as
+              // unbalanced next to the other groups' clean single rows.
+              const colsClass =
+                groupStyles.length >= 3 ? "grid-cols-3" : groupStyles.length === 2 ? "grid-cols-2" : "grid-cols-1";
+              return (
+                <div className={["grid gap-1.5", colsClass].join(" ")}>
+                  {groupStyles.map((style) => {
+                    const isSelected = selected === style.id;
+                    const Icon = style.icon;
+                    return (
+                      <button
+                        key={style.id}
+                        onClick={() => onSelect(style.id)}
+                        className={[
+                          "flex flex-col items-start gap-1 rounded-xl px-3 py-2.5 text-left transition-colors",
+                          isSelected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                        ].join(" ")}
+                      >
+                        <Icon
+                          className={["h-4 w-4 shrink-0", isSelected ? "text-primary-foreground/90" : "text-muted-foreground"].join(" ")}
+                        />
+                        <span className="flex items-center gap-1 text-xs font-semibold leading-tight">
+                          {isSelected && <Check className="h-3 w-3 shrink-0" />}
+                          {style.label}
+                        </span>
+                        <span
+                          className={["text-[10px] font-semibold", isSelected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}
+                        >
+                          {style.creditHint}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
           );
         })}

@@ -18,7 +18,7 @@
 const PARTNERS = [
   "Google Veo",
   "OpenAI",
-  "ByteDance Seedance",
+  "Seedance 2.5",
   "Kling AI",
   "Sync Labs",
   "FASHN",

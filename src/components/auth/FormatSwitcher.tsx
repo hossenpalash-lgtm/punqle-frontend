@@ -20,12 +20,21 @@ const FORMATS: Record<
     desc: string;
     credit: string;
     image: string;
+    // Set only for the Video panel — plays the real clip instead of a
+    // static poster, since a "Video Ad" format should actually show
+    // motion, not a still frame pretending to be one.
+    video?: string;
     // object-position for the panel's photo — most images here are
     // already landscape e-commerce shots, so plain "center" covers them
     // fine. Maya's real headshot is a square photo forced into a very
     // wide panel, and centering it cropped straight to her mouth/chin —
     // biased up here so the visible band lands on her eyes instead.
     focal?: string;
+    // Set only for Carousel — a fanned stack of real slides instead of
+    // one full-bleed photo, since a single background image doesn't
+    // read as "multiple slides" the way the actual feature produces.
+    // `image` still needs a value (used as the dark side's flat tint).
+    stack?: string[];
   }
 > = {
   actors: {
@@ -46,6 +55,7 @@ const FORMATS: Record<
     desc: "Product Showcase, Lifestyle, Cinematic UGC and AI Presenter styles, all from one prompt.",
     credit: "4–46 credits",
     image: "/showcase-ads/product-showcase-poster.jpg",
+    video: "/showcase-ads/product-showcase.mp4",
   },
   image: {
     label: "Image",
@@ -54,7 +64,10 @@ const FORMATS: Record<
     headline: "One product photo, a goal-driven ad.",
     desc: "Pick Sales, Leads, Traffic or Bookings — Punqle writes the copy and builds the creative to match.",
     credit: "1 credit",
-    image: "/showcase-ads/skincare.jpg",
+    // A real hands-holding-product shot reads as "real ad" far better
+    // than a product sitting alone on a surface — founder's own ask.
+    image: "/showcase-ads/product-in-hand.jpg",
+    focal: "70% 40%",
   },
   tryon: {
     label: "Try-On",
@@ -63,7 +76,9 @@ const FORMATS: Record<
     headline: "See it on a real person before you shoot.",
     desc: "Upload a photo and a garment — Punqle shows exactly how it looks worn, in seconds.",
     credit: "2 credits",
-    image: "/showcase-ads/fashion.jpg",
+    // A real Try-On OUTPUT (garment actually worn) instead of the bare
+    // garment alone — the feature's whole point is seeing it worn.
+    image: "/showcase-ads/tryon-result.jpg",
   },
   carousel: {
     label: "Carousel",
@@ -73,6 +88,7 @@ const FORMATS: Record<
     desc: "Punqle plans 3–6 sequenced slides — hook, feature, proof, offer — and generates every image.",
     credit: "3–6 credits",
     image: "/showcase-ads/food.jpg",
+    stack: ["/showcase-ads/food.jpg", "/showcase-ads/fashion.jpg", "/showcase-ads/skincare.jpg"],
   },
 };
 
@@ -113,19 +129,60 @@ export function FormatSwitcher() {
       </div>
 
       <div className="relative overflow-hidden rounded-[26px]" style={{ boxShadow: "var(--shadow-card)", minHeight: "220px" }}>
-        <img
-          src={f.image}
-          alt=""
-          className="absolute inset-0 h-full w-full scale-105 object-cover"
-          style={{ objectPosition: f.focal ?? "center" }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(100deg, oklch(0.08 0.01 260 / 82%) 0%, oklch(0.08 0.01 260 / 55%) 55%, oklch(0.08 0.01 260 / 25%) 100%)",
-          }}
-        />
+        {f.stack ? (
+          // Carousel — a fanned stack of real slides, not one photo, so
+          // it actually reads as "multiple slides" at a glance.
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(135deg, oklch(0.1 0.01 260), oklch(0.18 0.01 260))" }}
+          />
+        ) : f.video ? (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video
+            key={f.video}
+            src={f.video}
+            poster={f.image}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 h-full w-full scale-105 object-cover"
+          />
+        ) : (
+          <img
+            src={f.image}
+            alt=""
+            className="absolute inset-0 h-full w-full scale-105 object-cover"
+            style={{ objectPosition: f.focal ?? "center" }}
+          />
+        )}
+        {f.stack && (
+          <div className="absolute inset-y-0 right-6 hidden items-center sm:flex sm:right-10">
+            {f.stack.map((src, i) => (
+              <img
+                key={src}
+                src={src}
+                alt=""
+                className="h-[150px] w-[120px] shrink-0 rounded-2xl border-2 border-white/20 object-cover"
+                style={{
+                  marginLeft: i === 0 ? 0 : "-64px",
+                  transform: `rotate(${(i - 1) * 7}deg)`,
+                  boxShadow: "0 10px 24px oklch(0 0 0 / 35%)",
+                  zIndex: i,
+                }}
+              />
+            ))}
+          </div>
+        )}
+        {!f.stack && (
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(100deg, oklch(0.08 0.01 260 / 82%) 0%, oklch(0.08 0.01 260 / 55%) 55%, oklch(0.08 0.01 260 / 25%) 100%)",
+            }}
+          />
+        )}
         <div className="relative max-w-[540px] p-7 text-left sm:p-8">
           <div className="mb-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: "oklch(0.82 0.09 300)" }}>
             {f.tag}

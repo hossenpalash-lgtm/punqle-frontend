@@ -1334,23 +1334,22 @@ export function AdVideoForm({
           stays inline inside the Ready Actors panel below, since it's
           the one place it's relevant and already defaults sensibly. */}
       <div className="mb-4 w-full rounded-2xl bg-secondary/60 p-4 text-left">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Script language</p>
-          <div className="mb-4 flex gap-2">
-            {(["english", "bangla"] as AvatarLanguage[]).map((lang) => (
-              <button
-                key={lang}
-                onClick={() => setScriptLanguage(lang)}
-                className={[
-                  "flex-1 rounded-full px-4 py-2 text-sm font-semibold capitalize",
-                  scriptLanguage === lang ? "bg-primary text-primary-foreground" : "bg-card text-secondary-foreground",
-                ].join(" ")}
-              >
-                {lang === "bangla" ? "বাংলা" : "English"}
-              </button>
-            ))}
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Style</p>
+            {/* Script language demoted to a small select (2026-09-23) — it
+                was a full-width 50/50 toggle that gave Bangla equal visual
+                weight to English, overstating it; it's just one option
+                among the languages this could support, not a primary
+                either/or choice. */}
+            <select
+              value={scriptLanguage}
+              onChange={(e) => setScriptLanguage(e.target.value as AvatarLanguage)}
+              className="rounded-full border border-input bg-card px-3 py-1 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="english">English</option>
+              <option value="bangla">বাংলা</option>
+            </select>
           </div>
-
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Style</p>
           <div className="mb-4 rounded-2xl bg-card p-3">
             <VideoStyleStep selected={videoStyle} onSelect={setVideoStyle} />
           </div>

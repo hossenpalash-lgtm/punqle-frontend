@@ -36,18 +36,18 @@ export function VideoStyleStep({
 }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <h1 className="font-display mb-2 text-2xl font-extrabold text-foreground">How should it look?</h1>
-      <p className="mb-6 text-sm text-muted-foreground">Pick the style that fits your video best.</p>
-
-      <div className="mb-6 flex w-full flex-col gap-4">
+      {/* No own heading here (2026-09-23) — this only ever renders inline
+          under AdVideoForm's own "Style" label now, so a second "How
+          should it look?" title was pure duplication. */}
+      <div className="flex w-full flex-col gap-3">
         {STYLE_GROUPS.map((group) => {
           const isAiUgc = group.key === "ai_ugc";
           return (
           <div
             key={group.key}
             className={[
-              "flex flex-col gap-2",
-              isAiUgc ? "rounded-3xl border border-accent/25 bg-accent/5 p-3" : "",
+              "flex flex-col gap-1.5",
+              isAiUgc ? "rounded-3xl border border-accent/25 bg-accent/5 p-2.5" : "",
             ].join(" ")}
           >
             <div className="flex items-center gap-1.5 px-1 text-left">

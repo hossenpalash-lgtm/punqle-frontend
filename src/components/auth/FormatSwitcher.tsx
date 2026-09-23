@@ -35,7 +35,7 @@ const FORMATS: Record<
     headline: "A real actor says your words.",
     desc: "Pick a filmed actor, write your script, and Punqle redubs it in their own voice.",
     credit: "30 credits",
-    image: "/actors/maya.jpg",
+    image: "/actors/face1.jpg",
     focal: "50% 22%",
   },
   video: {

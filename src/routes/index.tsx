@@ -2528,6 +2528,20 @@ function HomeScreen() {
                   </div>
                 ) : (
                   <div className="space-y-3 px-4 py-3">
+                    {/* Heading added (2026-09-23) — competitor research
+                        (Arcads' own format picker labels each preset by
+                        name + a one-line description) showed a bare upload
+                        box with no heading doesn't communicate what the
+                        pill actually does. Copy is deliberately honest:
+                        this restyles the background around the real
+                        product photo, it doesn't animate an actual box
+                        being opened. */}
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Unboxing shot</p>
+                      <p className="text-xs text-muted-foreground">
+                        A fresh, styled background for your product photo — like it's just been unboxed.
+                      </p>
+                    </div>
                     {unboxingError && <p className="text-xs font-medium text-destructive">{unboxingError}</p>}
 
                     <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-4 text-center text-xs text-muted-foreground">
@@ -2815,6 +2829,16 @@ function HomeScreen() {
                   </div>
                 ) : (
                   <div className="space-y-3 px-4 py-3">
+                    {/* Heading added (2026-09-23) — competitor research
+                        (Topaz Labs' own upscale page leads with a plain-
+                        language heading before the upload box, not just a
+                        bare drop zone) — same fix as Unboxing above. */}
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Upscale</p>
+                      <p className="text-xs text-muted-foreground">
+                        Sharpen and enlarge a blurry photo (4x) or video (up to 4K).
+                      </p>
+                    </div>
                     {upscaleError && <p className="text-xs font-medium text-destructive">{upscaleError}</p>}
 
                     <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-border px-2 py-4 text-center text-xs text-muted-foreground">

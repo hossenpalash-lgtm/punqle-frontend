@@ -14,29 +14,71 @@
 // column (matching every other section here) instead of full-bleed, and
 // trimming each row to a smaller, more deliberately curated set — at
 // this width the two copies genuinely don't both fit on screen together.
-type FilmCard = { image: string; caption: string; tall?: boolean };
+//
+// 2026-09-24 (same day, later) — this row is the growing full-actor-
+// roster showcase (distinct from FormatSwitcher/ReadyActorsSection's
+// single featured pick, currently face3): founder asked to add the
+// other 2 locked "gents" faces here (face5/face6), on top of what was
+// already here, with more to be added as the roster grows. face1
+// stays too — she's not the featured hero anymore, but she's still a
+// real, locked actor worth showing in the roster.
+//
+// 2026-09-24 (same day, later still) — ROW_1 rebuilt per founder
+// feedback that the old set (5 flat product-on-a-surface photos) was
+// "boring" and repetitive. Two rounds of guidance converged on this:
+// rather than more generic lifestyle photos, each card should stand
+// for one of Punqle's actual formats — Try-On, Carousel, Video —
+// plus real, fascinating action shots (the founder's own example was
+// "a fisherman catching fish" — i.e. a real person mid-action, not a
+// product sitting still). video/stack let one card autoplay a real
+// clip or show a fanned mini-stack, same pattern FormatSwitcher.tsx
+// already uses for its own Video/Carousel panels.
+type FilmCard = { image: string; caption: string; tall?: boolean; video?: string; stack?: string[] };
 
 const ROW_1: FilmCard[] = [
-  { image: "/showcase-ads/skincare.jpg", caption: "Skincare — Image Ad" },
-  { image: "/showcase-ads/fashion.jpg", caption: "Fashion — Image Ad" },
-  { image: "/showcase-ads/product-showcase-poster.jpg", caption: "Product Showcase — Video" },
-  { image: "/showcase-ads/home.jpg", caption: "Home — Image Ad" },
-  { image: "/showcase-ads/fitness.jpg", caption: "Fitness — Image Ad" },
+  { image: "/showcase-ads/tryon-result.jpg", caption: "Try-On — Real result" },
+  {
+    image: "/showcase-ads/food.jpg",
+    stack: ["/showcase-ads/food.jpg", "/showcase-ads/fashion.jpg"],
+    caption: "Carousel — Auto-designed",
+  },
+  { image: "/showcase-ads/product-showcase-poster.jpg", video: "/showcase-ads/product-showcase.mp4", caption: "Video Ad" },
+  { image: "/showcase-ads/coffee-pour.jpg", caption: "Real, dynamic moments" },
+  { image: "/showcase-ads/sneaker-lace.jpg", caption: "Image Ad — real moment" },
 ];
 
 const ROW_2: FilmCard[] = [
   { image: "/actors/face1.jpg", caption: "Real, filmed actor", tall: true },
   { image: "/actors/liam.jpg", caption: "Liam — Car", tall: true },
   { image: "/actors/ethan.jpg", caption: "Ethan — Bedroom", tall: true },
+  { image: "/actors/face5.jpg", caption: "Real, filmed actor", tall: true },
+  { image: "/actors/face6.jpg", caption: "Real, filmed actor", tall: true },
 ];
 
-function FilmCardEl({ image, caption, tall }: FilmCard) {
+function FilmCardEl({ image, caption, tall, video, stack }: FilmCard) {
   return (
     <div
       className={["relative shrink-0 overflow-hidden rounded-2xl", tall ? "h-[138px] w-[110px]" : "h-[124px] w-[168px]"].join(" ")}
       style={{ boxShadow: "0 6px 18px oklch(0.2 0.01 260 / 10%)" }}
     >
-      <img src={image} alt="" className="h-full w-full object-cover" loading="lazy" />
+      {video ? (
+        // eslint-disable-next-line jsx-a11y/media-has-caption
+        <video src={video} poster={image} autoPlay muted loop playsInline className="h-full w-full object-cover" />
+      ) : stack ? (
+        <div className="flex h-full w-full items-center justify-center gap-1" style={{ background: "oklch(0.1 0.01 260)" }}>
+          {stack.map((src, i) => (
+            <img
+              key={src}
+              src={src}
+              alt=""
+              className="h-[92px] w-[58px] shrink-0 rounded-lg border border-white/15 object-cover"
+              style={{ marginLeft: i === 0 ? 0 : "-22px", transform: `rotate(${(i === 0 ? -6 : 6)}deg)`, zIndex: i }}
+            />
+          ))}
+        </div>
+      ) : (
+        <img src={image} alt="" className="h-full w-full object-cover" loading="lazy" />
+      )}
       <div
         className="absolute inset-x-0 bottom-0 border-t px-3 py-2 backdrop-blur-md"
         style={{ background: "oklch(0.1 0.01 260 / 42%)", borderColor: "oklch(1 0 0 / 14%)" }}

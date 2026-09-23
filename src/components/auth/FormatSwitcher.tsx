@@ -44,8 +44,13 @@ const FORMATS: Record<
     headline: "A real actor says your words.",
     desc: "Pick a filmed actor, write your script, and Punqle redubs it in their own voice.",
     credit: "30 credits",
-    image: "/actors/face1.jpg",
-    focal: "50% 22%",
+    // face3's own composition sits lower/closer than face1's did (more
+    // hair up top, face centered further down the frame) — re-measured
+    // for this panel's real ~4:1 crop window rather than reusing
+    // face1's tuned value, which landed on her hairline instead of her
+    // smile.
+    image: "/actors/face3.jpg",
+    focal: "50% 45%",
   },
   video: {
     label: "Video",

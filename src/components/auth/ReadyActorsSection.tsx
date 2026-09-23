@@ -7,9 +7,10 @@ import { BadgeCheck } from "lucide-react";
 // feedback to express features through real image/video/actor content
 // wherever possible. Photo is one of the 6 real, founder-locked actor
 // faces (actors_v2_approved_base_videos/_locked_faces_round2/
-// face_1_curly_woman.png, copied to public/actors/face1.jpg) — not yet
-// tied to a named/live situation the way Maya/Liam/Ethan are, so the
-// caption stays honest and doesn't invent a character name for her.
+// face_3_ponytail_woman.png, copied to public/actors/face3.jpg) — not
+// yet tied to a named/live situation the way Maya/Liam/Ethan are, so
+// the caption stays honest and doesn't invent a character name for
+// her. Founder's own pick, swapped in from face_1_curly_woman.
 const STEPS = [
   {
     n: "01",
@@ -46,7 +47,7 @@ export function ReadyActorsSection() {
 
       <div className="mx-auto mt-12 grid max-w-4xl grid-cols-1 items-center gap-10 sm:grid-cols-[280px_1fr]">
         <div className="relative aspect-[3/4] overflow-hidden rounded-[22px]" style={{ boxShadow: "var(--shadow-card)" }}>
-          <img src="/actors/face1.jpg" alt="A real filmed Punqle actor" className="h-full w-full object-cover" style={{ objectPosition: "50% 18%" }} />
+          <img src="/actors/face3.jpg" alt="A real filmed Punqle actor" className="h-full w-full object-cover" />
           <span
             className="absolute bottom-3 left-3 rounded-full border px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md"
             style={{ background: "oklch(0.1 0.01 260 / 45%)", borderColor: "oklch(1 0 0 / 16%)" }}

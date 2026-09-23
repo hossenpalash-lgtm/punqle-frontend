@@ -592,14 +592,14 @@ export function TryOnForm({
           />
           <button
             onClick={() => modelInputRef.current?.click()}
-            className="mb-6 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-card p-6 text-center transition-colors active:bg-secondary/40"
-            style={{ minHeight: modelPreviewUrl ? undefined : "10rem" }}
+            className="mb-4 flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-border bg-card p-4 text-center transition-colors active:bg-secondary/40"
+            style={{ minHeight: modelPreviewUrl ? undefined : "6.5rem" }}
           >
             {modelPreviewUrl ? (
-              <img src={modelPreviewUrl} alt="Your photo" className="max-h-56 rounded-xl object-contain" />
+              <img src={modelPreviewUrl} alt="Your photo" className="max-h-48 rounded-xl object-contain" />
             ) : (
               <>
-                <User className="h-7 w-7 text-muted-foreground" />
+                <User className="h-5 w-5 text-muted-foreground" />
                 <span className="text-sm font-semibold text-muted-foreground">Tap to upload a photo</span>
               </>
             )}
@@ -699,14 +699,14 @@ export function TryOnForm({
               />
               <button
                 onClick={() => garmentInputRef.current?.click()}
-                className="mb-6 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-card p-6 text-center transition-colors active:bg-secondary/40"
-                style={{ minHeight: garmentPreviewUrl ? undefined : "8rem" }}
+                className="mb-4 flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-border bg-card p-4 text-center transition-colors active:bg-secondary/40"
+                style={{ minHeight: garmentPreviewUrl ? undefined : "6rem" }}
               >
                 {garmentPreviewUrl ? (
-                  <img src={garmentPreviewUrl} alt="Garment" className="max-h-44 rounded-xl object-contain" />
+                  <img src={garmentPreviewUrl} alt="Garment" className="max-h-40 rounded-xl object-contain" />
                 ) : (
                   <>
-                    <Camera className="h-7 w-7 text-muted-foreground" />
+                    <Camera className="h-5 w-5 text-muted-foreground" />
                     <span className="text-sm font-semibold text-muted-foreground">Tap to upload a product photo</span>
                   </>
                 )}

@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ChevronRight,
   Images,
-  Layers,
   Loader2,
   Megaphone,
   MoreHorizontal,
@@ -2994,12 +2993,13 @@ function HomeScreen() {
         </>
       )}
 
-      {(tab === "bulk-creative" || tab === "tryon") && (
-        <h1 className="font-display mb-4 flex items-center gap-2 text-xl font-extrabold text-foreground">
-          <Layers className="h-4 w-4 text-accent" />
-          E-commerce — {tab === "bulk-creative" ? "Bulk Creative" : "Try-On"}
-        </h1>
-      )}
+      {/* No page-level heading here (2026-09-23) — this used to read
+          "E-commerce — Try-On" / "E-commerce — Bulk Creative", a category
+          prefix that doesn't mean much to the user and duplicated each
+          form's own first-step heading ("Your photo" / "Choose your
+          products") right below it. Removed rather than reworded, same
+          "only one heading, let the specific one carry it" principle
+          already applied to Video Ad's Style step. */}
 
       {(tab === "single" || tab === "home") && (
         <div className={tab === "home" ? "lg:hidden" : undefined}>

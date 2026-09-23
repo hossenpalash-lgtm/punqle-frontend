@@ -128,7 +128,13 @@ export function IdeaStep({
       </h1>
       <p className="mb-6 text-sm text-muted-foreground">
         {entryHint === "carousel"
-          ? "Tell Punqle what to feature — we'll turn it into a swipeable set of images."
+          ? // Reworded 2026-09-23 after competitor research (Predis/Canva
+            // Carousel Studio auto-design a full multi-slide carousel from
+            // one prompt) surfaced a real expectation mismatch: this old
+            // copy read the same way, but Punqle's carousel is actually
+            // built by generating images then picking favorites in
+            // CarouselBuilder — a curation step, not one-shot auto-design.
+            "Tell Punqle what to feature — you'll generate a few images, then pick your favorites to build a swipeable set."
           : "Tell Punqle what you want to create — no design experience needed."}
       </p>
 

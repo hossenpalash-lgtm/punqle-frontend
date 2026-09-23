@@ -1,80 +1,28 @@
-import { useEffect, useRef, useState } from "react";
-import {
-  Binoculars,
-  Calendar,
-  Clapperboard,
-  Clock,
-  Gift,
-  Loader2,
-  Megaphone,
-  Package,
-  Palette,
-  Sparkles,
-} from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { signInWithPassword, signUpWithPassword } from "@/lib/supabase";
 import { useScrolled } from "@/lib/use-scrolled";
-import { AIToolMarquee } from "@/components/ToolMarquee";
 import { RealAdShowcase } from "@/components/auth/RealAdShowcase";
+import { RealFilmstrip } from "@/components/auth/RealFilmstrip";
+import { FormatSwitcher } from "@/components/auth/FormatSwitcher";
+import { ReadyActorsSection } from "@/components/auth/ReadyActorsSection";
+import { FormatGrid } from "@/components/auth/FormatGrid";
+import { LanguageSection } from "@/components/auth/LanguageSection";
+import { BeyondTheAd } from "@/components/auth/BeyondTheAd";
+import { PricingTeaser } from "@/components/auth/PricingTeaser";
 import { PunqleLogo } from "@/components/PunqleLogo";
 import { LegalFooter } from "@/components/LegalFooter";
-import { WorkflowShowcase } from "@/components/auth/WorkflowShowcase";
 
-// Desktop-only floating photo cards around the login form — real
-// product-ad images generated once through Punqle's own /ads/generate
-// endpoint (genuine output, not stock photos or fake AI-photo
-// screenshots), each with a short feature caption overlaid at the
-// bottom like a real social post. Positions use calc() (not
-// translate-x-1/2) for the center-column/middle-row cards specifically
-// so the static placement doesn't fight with the animated `transform`
-// on the same element. Each spreadX/spreadY points back toward the
-// hero's center — that's where the radial burst-in animation starts.
-const FLOATING_CARDS: {
-  image: string;
-  icon: typeof Megaphone;
-  caption: string;
-  className: string;
-  rotate: number;
-  spreadX: string;
-  spreadY: string;
-}[] = [
-  { image: "/hero-cards/bakery.jpg", icon: Megaphone, caption: "New summer collection", className: "left-[4%] top-[110px]", rotate: -4, spreadX: "200px", spreadY: "150px" },
-  { image: "/hero-cards/florist.jpg", icon: Clapperboard, caption: "8-second video ad", className: "right-[4%] top-[110px]", rotate: -5, spreadX: "-200px", spreadY: "150px" },
-  { image: "/hero-cards/ceramic-mug.jpg", icon: Palette, caption: "Your brand, every time", className: "left-[2%] top-[calc(50%-70px)]", rotate: 4, spreadX: "200px", spreadY: "0px" },
-  { image: "/hero-cards/skincare.jpg", icon: Clock, caption: "Reuse your best posts", className: "right-[2%] top-[calc(50%-70px)]", rotate: -3, spreadX: "-200px", spreadY: "0px" },
-  { image: "/hero-cards/chocolate.jpg", icon: Binoculars, caption: "See what competitors do", className: "left-[4%] bottom-[8%]", rotate: 5, spreadX: "200px", spreadY: "-150px" },
-  { image: "/hero-cards/leather-wallet.jpg", icon: Gift, caption: "Earn free credits", className: "right-[4%] bottom-[8%]", rotate: 3, spreadX: "-200px", spreadY: "-150px" },
-];
-
-// Left-to-right character-decode reveal: characters past the "locked"
-// boundary cycle through random letters, boundary advances each tick,
-// settling on the real text — the scramble/glitch headline reveal.
-function ScrambleText({ text, className }: { text: string; className?: string }) {
-  const [display, setDisplay] = useState(text);
-  const ranRef = useRef(false);
-  useEffect(() => {
-    if (ranRef.current) return;
-    ranRef.current = true;
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    const steps = 16;
-    let step = 0;
-    const id = setInterval(() => {
-      step++;
-      const lockedCount = Math.ceil((step / steps) * text.length);
-      setDisplay(
-        text
-          .split("")
-          .map((ch, i) => (i < lockedCount || ch === " " ? ch : chars[Math.floor(Math.random() * chars.length)]))
-          .join(""),
-      );
-      if (step >= steps) {
-        setDisplay(text);
-        clearInterval(id);
-      }
-    }, 35);
-    return () => clearInterval(id);
-  }, [text]);
-  return <span className={className}>{display}</span>;
-}
+// 2026-09-23 redesign — replaces the earlier Arcads-referenced hero
+// (floating photo cards + "Go from idea to ad in minutes" 2-step mockup)
+// with a design grounded in Punqle's own real product: a headline that
+// names the real differentiator (real filmed actors, not a synthetic
+// avatar), an interactive proof panel built from the app's actual home
+// bar, a moving filmstrip of real generated ads + real actor photos, and
+// dedicated sections for the two claims research found most defensible —
+// the real-actor pipeline and Bangla/English support — before the
+// existing real-ad gallery and sign-up form. The sign-in/sign-up form
+// logic below is entirely unchanged from before this redesign.
 
 function GoogleIcon() {
   return (
@@ -125,8 +73,13 @@ export function LoginScreen() {
     }
   };
 
+  const openForm = () => {
+    setFormVisible(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 pb-10 pt-24">
+    <main className="relative flex min-h-screen flex-col items-center overflow-hidden px-6 pb-10 pt-24">
       {/* Floating frosted-glass top nav — logo left, single CTA right
           (mirrors Arcads' "Login or Sign up" pattern). Since this page
           already IS the sign-in/sign-up form, the CTA toggles mode
@@ -165,137 +118,118 @@ export function LoginScreen() {
         </div>
       </header>
 
-      {FLOATING_CARDS.map(({ image, icon: Icon, caption, className, rotate, spreadX, spreadY }, i) => (
-        <div
-          key={caption}
-          className={`animate-card-spread absolute z-0 hidden w-36 overflow-hidden rounded-2xl lg:block ${className}`}
-          style={
-            {
-              boxShadow: "var(--shadow-card)",
-              "--spread-x": spreadX,
-              "--spread-y": spreadY,
-              "--spread-rotate": `${rotate}deg`,
-              animationDelay: `${100 + i * 60}ms`,
-            } as React.CSSProperties
-          }
-        >
-          <img src={image} alt="" className="h-56 w-full object-cover" loading="lazy" />
-          <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-gradient-to-t from-black/70 to-transparent px-2.5 pb-2 pt-6">
-            <Icon className="h-3 w-3 shrink-0 text-white" />
-            <span className="text-[11px] font-medium leading-tight text-white">{caption}</span>
-          </div>
-        </div>
-      ))}
-
-      <div className="relative z-10 mb-8 flex flex-col items-center gap-2 text-center">
-        <span className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
+      {/* HERO */}
+      <div className="relative z-10 mt-6 flex w-full max-w-[820px] flex-col items-center gap-4 text-center">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
           <Sparkles className="h-3 w-3" />
-          AI ad creation, made simple
+          AI ads for small businesses
         </span>
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
-          <PunqleLogo className="h-7 w-7" />
-        </div>
-        <h1 className="font-display text-2xl font-extrabold text-foreground" aria-label="Punqle">
-          <ScrambleText text="Punqle" />
+        <h1 className="text-balance font-display text-[34px] font-extrabold leading-[1.05] sm:text-[52px]">
+          Ads that don't look <span className="italic text-accent">AI-made.</span>
         </h1>
-        <p className="text-sm text-muted-foreground">
-          AI-generated ads <span className="font-display italic">and content plans</span> for small businesses
+        <p className="max-w-xl text-[17px] leading-relaxed text-muted-foreground">
+          One real filmed actor, your own product photo, or a blank page — Punqle turns any of them into
+          ready-to-post ads for Facebook, Instagram, TikTok and YouTube. In English or বাংলা.
         </p>
-      </div>
 
-      {!formVisible ? (
-        // Default state: two buttons only, matching Arcads' own hero
-        // pattern — no form fields until the user actually commits to
-        // signing in. "Continue with Google" is present but disabled:
-        // real Google sign-in needs a Google Cloud OAuth app + Supabase
-        // provider setup that hasn't been done yet, so this stays
-        // honestly non-functional rather than faking it.
-        <div className="relative z-10 flex flex-col items-center gap-3 sm:flex-row">
-          <button
-            type="button"
-            onClick={() => setFormVisible(true)}
-            className="flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-base font-semibold text-primary-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
-            style={{ background: "var(--gradient-primary)" }}
-          >
-            Create Your AI Ad
-            <Sparkles className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            disabled
-            title="Coming soon"
-            className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-6 py-3.5 text-base font-semibold text-foreground opacity-60 disabled:cursor-not-allowed"
-          >
-            Continue with Google
-            <GoogleIcon />
-          </button>
-        </div>
-      ) : (
-      <form onSubmit={handleSubmit} className="relative z-10 w-full max-w-sm animate-splash-in">
-        <div className="mb-4">
-          <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Email
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            autoFocus
-            className="w-full rounded-xl border border-input bg-background px-4 py-3 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
+        {!formVisible ? (
+          // Default state: two buttons only — no form fields until the
+          // user actually commits to signing in. "Continue with Google"
+          // is present but disabled: real Google sign-in needs a Google
+          // Cloud OAuth app + Supabase provider setup that hasn't been
+          // done yet, so this stays honestly non-functional rather than
+          // faking it.
+          <div className="mt-1.5 flex flex-col items-center gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setFormVisible(true)}
+              className="flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-base font-semibold text-primary-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              Create your first ad
+              <ArrowRight className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              disabled
+              title="Coming soon"
+              className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-6 py-3.5 text-base font-semibold text-foreground opacity-60 disabled:cursor-not-allowed"
+            >
+              Continue with Google
+              <GoogleIcon />
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="animate-splash-in w-full max-w-sm">
+            <div className="mb-4 text-left">
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                autoFocus
+                className="w-full rounded-xl border border-input bg-background px-4 py-3 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
 
-        <div className="mb-6">
-          <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Password
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            className="w-full rounded-xl border border-input bg-background px-4 py-3 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
+            <div className="mb-6 text-left">
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                className="w-full rounded-xl border border-input bg-background px-4 py-3 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
 
-        {signupMessage && (
-          <p className="mb-4 rounded-xl bg-success/10 p-3 text-sm font-medium text-success">{signupMessage}</p>
+            {signupMessage && (
+              <p className="mb-4 rounded-xl bg-success/10 p-3 text-sm font-medium text-success">{signupMessage}</p>
+            )}
+            {error && <p className="mb-4 text-sm font-medium text-destructive">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={submitting || !email.trim() || !password}
+              className="flex w-full items-center justify-center gap-2 rounded-full px-5 py-3.5 text-base font-semibold text-primary-foreground disabled:opacity-60"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              {submitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : mode === "signin" ? (
+                "Sign in"
+              ) : (
+                "Create account"
+              )}
+            </button>
+          </form>
         )}
-        {error && <p className="mb-4 text-sm font-medium text-destructive">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={submitting || !email.trim() || !password}
-          className="flex w-full items-center justify-center gap-2 rounded-full px-5 py-3.5 text-base font-semibold text-primary-foreground disabled:opacity-60"
-          style={{ background: "var(--gradient-primary)" }}
-        >
-          {submitting ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : mode === "signin" ? (
-            "Sign in"
-          ) : (
-            "Create account"
-          )}
-        </button>
-      </form>
-      )}
-
-      <div className="relative z-10 mt-14 w-full">
-        <AIToolMarquee />
+        {/* Interactive proof panel — the real home bar, not a generic mockup. */}
+        <div className="mt-11 w-full">
+          <FormatSwitcher />
+        </div>
       </div>
 
-      <WorkflowShowcase />
+      <RealFilmstrip />
+      <ReadyActorsSection />
+      <FormatGrid />
+      <LanguageSection />
+      <BeyondTheAd />
+      <PricingTeaser />
 
-      <RealAdShowcase
-        onCreateClick={() => {
-          setFormVisible(true);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }}
-      />
+      {/* RealAdShowcase ends with its own "Ready to make your own?" CTA —
+          deliberately the page's only closing CTA, not stacked with a
+          second near-identical one right after it. */}
+      <RealAdShowcase onCreateClick={openForm} />
 
       <p className="relative z-10 mt-10 text-center text-xs text-muted-foreground">
         Punqle is operated by HOSSEN, MD MOSHARRAF &middot; ABN 47 183 516 336

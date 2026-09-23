@@ -2644,6 +2644,15 @@ function HomeScreen() {
                   </div>
                 ) : (
                   <div className="space-y-3 px-4 py-3">
+                    {/* Heading added (2026-09-23), same fix as Unboxing/
+                        Upscale above — a bare 2-upload grid with no
+                        heading didn't say what the pill makes. */}
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Show Your App</p>
+                      <p className="text-xs text-muted-foreground">
+                        Puts your app on an actor's phone screen — a real person showing it off.
+                      </p>
+                    </div>
                     {showAppError && <p className="text-xs font-medium text-destructive">{showAppError}</p>}
 
                     <div className="grid grid-cols-2 gap-2">

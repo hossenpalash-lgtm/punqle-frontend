@@ -49,12 +49,14 @@ import {
   fetchActorSituations,
   fetchAdCredits,
   fetchCurrentContentPlan,
+  fetchFeatureTrials,
   fetchImageActors,
   fetchMyCustomActors,
   generateImageDirect,
   generateImageVideo,
   generateTalkingVideo,
   generateUnboxingShot,
+  type ApiFeatureTrials,
   type ImageGenModel,
   type ImageVideoModel,
   refineActorPhoto,
@@ -414,6 +416,16 @@ function HomeScreen() {
     fetchAdCredits()
       .then((c) => setCredits(c.credits))
       .catch((err) => setCreditsError(err instanceof Error ? err.message : "Couldn't load your credits."));
+  }, []);
+
+  // This account's guaranteed-once-free tries (main.py's
+  // FEATURE_TRIAL_KEYS), for the home bar's "Try free" labels.
+  // Silently ignored on failure — buttons just show their normal state.
+  const [featureTrials, setFeatureTrials] = useState<ApiFeatureTrials | null>(null);
+  useEffect(() => {
+    fetchFeatureTrials()
+      .then(setFeatureTrials)
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -2330,7 +2342,7 @@ function HomeScreen() {
                       </div>
                     )}
                     <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => setHomeImageSettingsOpen((v) => !v)}
                           aria-label="Image settings"
@@ -2342,6 +2354,9 @@ function HomeScreen() {
                         >
                           <Settings2 className="h-4 w-4" />
                         </button>
+                        {featureTrials?.image && homeImageVersions === 1 && (
+                          <span className="text-xs font-semibold text-primary">✨ Try free — no credits</span>
+                        )}
                       </div>
                       <button
                         onClick={handleHomeGenerateImage}
@@ -2533,7 +2548,7 @@ function HomeScreen() {
                         disabled={!videoRefImage || !productFile || !productPrompt.trim()}
                         className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                       >
-                        Generate
+                        {featureTrials?.product ? "✨ Try free" : "Generate"}
                       </button>
                     </div>
                   </div>
@@ -2649,7 +2664,7 @@ function HomeScreen() {
                         disabled={!unboxingFile || !unboxingScene.trim()}
                         className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                       >
-                        Generate
+                        {featureTrials?.unboxing ? "✨ Try free" : "Generate"}
                       </button>
                     </div>
                   </div>
@@ -2826,7 +2841,7 @@ function HomeScreen() {
                         disabled={(!videoRefImage && !homeGeneratedImage) || !showAppFile}
                         className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                       >
-                        Generate
+                        {featureTrials?.show_app ? "✨ Try free" : "Generate"}
                       </button>
                     </div>
                   </div>
@@ -2953,7 +2968,9 @@ function HomeScreen() {
                         disabled={!upscaleFile}
                         className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                       >
-                        Generate
+                        {/* Trial only covers image upscale, not video —
+                            see FEATURE_TRIAL_KEYS' "upscale_image" key. */}
+                        {featureTrials?.upscale_image && !upscaleFile?.type.startsWith("video/") ? "✨ Try free" : "Generate"}
                       </button>
                     </div>
                   </div>

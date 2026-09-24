@@ -27,6 +27,7 @@ import {
   fetchAvatarOptions,
   fetchAvatarVoices,
   fetchBusinessProfile,
+  fetchFeatureTrials,
   fetchImageActors,
   generateAdCaptions,
   generateVideoScriptAngles,
@@ -39,6 +40,7 @@ import {
   type AdGoal,
   type ApiAvatarOption,
   type ApiAvatarVoicesResponse,
+  type ApiFeatureTrials,
   type ApiImageActor,
   type ApiVideoOperation,
   type ApiVideoScriptAngle,
@@ -277,6 +279,17 @@ export function AdVideoForm({
         setHasLogo(!!profile.logo_base64);
         setHasBrandColor(!!profile.brand_color);
       })
+      .catch(() => {});
+  }, []);
+
+  // One guaranteed-once-free try for this account's "video_ad" flow
+  // (the plain Veo product-video styles below — not Avatar/Cinematic
+  // UGC/Punqle Actors, which stay credit-gated only). Silently ignored
+  // on failure — the button just shows its normal credit cost.
+  const [featureTrials, setFeatureTrials] = useState<ApiFeatureTrials | null>(null);
+  useEffect(() => {
+    fetchFeatureTrials()
+      .then(setFeatureTrials)
       .catch(() => {});
   }, []);
 
@@ -938,7 +951,11 @@ export function AdVideoForm({
 
   const minutes = Math.floor(elapsedSeconds / 60);
   const seconds = elapsedSeconds % 60;
-  const insufficientCredits = credits !== null && credits < VIDEO_CREDIT_COST;
+  // "video_ad" trial only covers the plain Veo product-video styles —
+  // Avatar/Cinematic UGC/Punqle Actors have their own separate (excluded)
+  // scope, see FEATURE_TRIAL_KEYS in main.py.
+  const videoAdTrialAvailable = featureTrials?.video_ad === true;
+  const insufficientCredits = !videoAdTrialAvailable && credits !== null && credits < VIDEO_CREDIT_COST;
   const avatarInsufficientCredits =
     credits !== null && credits < (avatarTier === "premium" ? VIDEO_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST);
   const cinematicUgcInsufficientCredits = credits !== null && credits < CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier];
@@ -1612,7 +1629,12 @@ export function AdVideoForm({
       </div>
 
       <div className="mb-4 w-full rounded-2xl border border-dashed border-border bg-secondary/60 p-3 text-center text-xs font-semibold text-foreground">
-        1 video · {currentCost} credits ·{" "}
+        {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && videoAdTrialAvailable ? (
+          <span className="text-primary">✨ Try free — no credits</span>
+        ) : (
+          <>1 video · {currentCost} credits</>
+        )}{" "}
+        ·{" "}
         {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" ? "about 1-2 min" : "usually a few minutes"}
       </div>
 
@@ -1645,7 +1667,9 @@ export function AdVideoForm({
         style={{ background: "var(--gradient-primary)" }}
       >
         {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Video className="h-5 w-5" />}
-        Generate video
+        {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && videoAdTrialAvailable
+          ? "Try free"
+          : "Generate video"}
       </button>
     </div>
   );

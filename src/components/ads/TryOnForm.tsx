@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import {
   checkTryOnAnimationStatus,
   checkTryOnStatus,
+  fetchFeatureTrials,
   fetchProducts,
   startTryOn,
   startTryOnAnimation,
   type AdGoal,
+  type ApiFeatureTrials,
   type ApiImportedProduct,
   type ApiVideoOperation,
 } from "@/lib/api";
@@ -119,6 +121,13 @@ export function TryOnForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [featureTrials, setFeatureTrials] = useState<ApiFeatureTrials | null>(null);
+  useEffect(() => {
+    fetchFeatureTrials()
+      .then(setFeatureTrials)
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (step !== "garment" || garmentSource !== "catalog" || productsLoaded) return;
     setLoadingProducts(true);
@@ -150,7 +159,8 @@ export function TryOnForm({
   };
 
   const hasGarment = garmentSource === "catalog" ? !!selectedProduct : !!garmentFile;
-  const insufficientCredits = credits !== null && credits < TRYON_CREDIT_COST;
+  const tryonTrialAvailable = featureTrials?.tryon === true;
+  const insufficientCredits = !tryonTrialAvailable && credits !== null && credits < TRYON_CREDIT_COST;
   const insufficientVideoCredits = credits !== null && credits < VIDEO_CREDIT_COST;
 
   const poll = async (id: string) => {
@@ -753,7 +763,12 @@ export function TryOnForm({
           </div>
 
           <div className="mb-5 rounded-2xl border border-dashed border-border bg-secondary/60 p-4 text-center text-sm font-semibold text-foreground">
-            1 try-on · {TRYON_CREDIT_COST} credits · about 15-30 sec
+            {tryonTrialAvailable ? (
+              <span className="text-primary">✨ Try free — no credits</span>
+            ) : (
+              <>1 try-on · {TRYON_CREDIT_COST} credits</>
+            )}{" "}
+            · about 15-30 sec
           </div>
 
           {insufficientCredits && (
@@ -783,7 +798,7 @@ export function TryOnForm({
               className="flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
               style={{ background: "var(--gradient-primary)" }}
             >
-              Generate try-on
+              {tryonTrialAvailable ? "Try free" : "Generate try-on"}
             </button>
           </div>
         </div>

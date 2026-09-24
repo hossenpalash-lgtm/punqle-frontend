@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   enhanceImage,
   fetchBusinessProfile,
+  fetchFeatureTrials,
   generateAd,
   generateAdImageVariant,
   generateCaptions,
@@ -11,6 +12,7 @@ import {
   removeBackground,
   translateCaptions,
   type ApiAdCaptionVariant,
+  type ApiFeatureTrials,
   type ApiUnderstandIdeaResponse,
   type AspectRatio,
   type CaptionLength,
@@ -170,6 +172,16 @@ export function SinglePostForm({
 
   const editOptions: EditOptions = { fontScale, barColorOverride, showLogo, textBox, logoBox };
   const outOfCredits = credits !== null && credits <= 0;
+
+  // This account's guaranteed-once-free "image" try (shared across Ad
+  // Creation, Social Content, and the home bar — same main.py key).
+  const [featureTrials, setFeatureTrials] = useState<ApiFeatureTrials | null>(null);
+  useEffect(() => {
+    fetchFeatureTrials()
+      .then(setFeatureTrials)
+      .catch(() => {});
+  }, []);
+  const imageTrialAvailable = featureTrials?.image === true;
 
   useEffect(() => {
     fetchBusinessProfile()
@@ -505,6 +517,7 @@ export function SinglePostForm({
           onBack={() => setStep("direction")}
           error={error}
           entryHint={entryHint}
+          imageTrialAvailable={imageTrialAvailable}
         />
       )}
 

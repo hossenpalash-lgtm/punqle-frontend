@@ -4,6 +4,7 @@ import {
   base64ToFile,
   enhanceImage,
   fetchBusinessProfile,
+  fetchFeatureTrials,
   fetchImageActors,
   generateAd,
   generateAdCaptions,
@@ -13,6 +14,7 @@ import {
   translateCaptions,
   understandProductLink,
   type ApiAdCaptionVariantWithAngle,
+  type ApiFeatureTrials,
   type ApiImageActor,
   type AdGoal,
   type AspectRatio,
@@ -196,6 +198,17 @@ export function AdCreationForm({
 
   const editOptions: EditOptions = { fontScale, barColorOverride, showLogo, textBox, logoBox };
   const outOfCredits = credits !== null && credits <= 0;
+
+  // One guaranteed-once-free "image" try (shared across Ad Creation,
+  // Social Content, and the home bar's Image mode — same key,
+  // main.py's FEATURE_TRIAL_KEYS). Silently ignored on failure.
+  const [featureTrials, setFeatureTrials] = useState<ApiFeatureTrials | null>(null);
+  useEffect(() => {
+    fetchFeatureTrials()
+      .then(setFeatureTrials)
+      .catch(() => {});
+  }, []);
+  const imageTrialAvailable = featureTrials?.image === true;
 
   useEffect(() => {
     fetchBusinessProfile()
@@ -788,6 +801,10 @@ export function AdCreationForm({
 
           {(inputError || error) && <p className="mb-4 text-sm font-medium text-destructive">{inputError || error}</p>}
 
+          {imageTrialAvailable && (
+            <p className="mb-2 text-center text-xs font-semibold text-primary">✨ Your first ad is free — no credits</p>
+          )}
+
           <button
             onClick={handleMainSubmit}
             disabled={!mainInput.trim() || inputFetching || outOfCredits}
@@ -795,7 +812,7 @@ export function AdCreationForm({
             style={{ background: "var(--gradient-primary)" }}
           >
             {inputFetching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-            Create My Ad
+            {imageTrialAvailable ? "Try free" : "Create My Ad"}
           </button>
         </div>
       )}

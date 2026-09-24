@@ -47,6 +47,7 @@ export function SetupStep({
   onBack,
   error,
   entryHint,
+  imageTrialAvailable,
 }: {
   file: File | null;
   previewUrl: string | null;
@@ -66,6 +67,13 @@ export function SetupStep({
   // CAROUSEL_SLIDE_COUNTS. Undefined/absent for every other caller,
   // byte-identical to before this existed.
   entryHint?: "carousel";
+  // This account's guaranteed-once-free "image" try (main.py's
+  // FEATURE_TRIAL_KEYS) — only covers the FIRST version/slide; the
+  // rest of a multi-version batch still costs credits normally.
+  // Undefined for callers that don't generate images (e.g. Social
+  // Video's reuse of this step for photo upload only) — behaves
+  // exactly as before this existed.
+  imageTrialAvailable?: boolean;
 }) {
   const isCarousel = entryHint === "carousel";
   const countOptions = isCarousel ? CAROUSEL_SLIDE_COUNTS : VERSION_COUNTS;
@@ -76,7 +84,12 @@ export function SetupStep({
   const [linkError, setLinkError] = useState<string | null>(null);
 
   const hasSource = !!file || useAiImage;
-  const insufficientCredits = credits !== null && credits < versions;
+  // The trial only waives the first version's credit, so a multi-version
+  // request still needs credits for versions-1 — only skip the gate
+  // entirely when requesting just 1 (the common case: Quick-Create-style
+  // single generation).
+  const insufficientCredits =
+    !(imageTrialAvailable && versions === 1) && credits !== null && credits < versions;
 
   const handleFetchProductLink = async () => {
     if (!productUrl.trim() || fetchingLink) return;
@@ -249,9 +262,17 @@ export function SetupStep({
         ))}
       </div>
       <p className="mb-6 text-xs text-muted-foreground">
-        {isCarousel
-          ? `${versions} slides = ${versions} credits.`
-          : `${versions} version${versions > 1 ? "s" : ""} = ${versions} credit${versions > 1 ? "s" : ""}.`}
+        {imageTrialAvailable && versions === 1 ? (
+          <span className="font-semibold text-primary">✨ Your first one's free — no credits</span>
+        ) : imageTrialAvailable ? (
+          isCarousel
+            ? `First slide free, then ${versions - 1} more slide${versions - 1 > 1 ? "s" : ""} = ${versions - 1} credit${versions - 1 > 1 ? "s" : ""}.`
+            : `First version free, then ${versions - 1} more = ${versions - 1} credit${versions - 1 > 1 ? "s" : ""}.`
+        ) : isCarousel ? (
+          `${versions} slides = ${versions} credits.`
+        ) : (
+          `${versions} version${versions > 1 ? "s" : ""} = ${versions} credit${versions > 1 ? "s" : ""}.`
+        )}
       </p>
 
       {insufficientCredits && (
@@ -282,7 +303,11 @@ export function SetupStep({
           className="flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
           style={{ background: "var(--gradient-primary)" }}
         >
-          {isCarousel ? `Generate ${versions}-slide carousel` : `Generate ${versions} variation${versions > 1 ? "s" : ""}`}
+          {imageTrialAvailable && versions === 1
+            ? "Try free"
+            : isCarousel
+              ? `Generate ${versions}-slide carousel`
+              : `Generate ${versions} variation${versions > 1 ? "s" : ""}`}
           <Sparkles className="h-5 w-5" />
         </button>
       </div>

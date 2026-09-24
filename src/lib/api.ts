@@ -55,6 +55,23 @@ export function fetchAdCredits(): Promise<ApiAdCredits> {
   return apiFetch<ApiAdCredits>("/ads/credits");
 }
 
+// One bool per guaranteed-once-free feature (2026-09-25) — True means
+// still available, so a button can show "Try free" instead of a flat
+// credit cost. Fields match FEATURE_TRIAL_KEYS/FeatureTrialsOut exactly.
+export interface ApiFeatureTrials {
+  image: boolean;
+  product: boolean;
+  unboxing: boolean;
+  show_app: boolean;
+  upscale_image: boolean;
+  tryon: boolean;
+  video_ad: boolean;
+}
+
+export function fetchFeatureTrials(): Promise<ApiFeatureTrials> {
+  return apiFetch<ApiFeatureTrials>("/ads/feature-trials");
+}
+
 export interface ApiProject {
   id: string;
   name: string;

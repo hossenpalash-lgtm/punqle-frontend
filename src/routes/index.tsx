@@ -1461,7 +1461,7 @@ function HomeScreen() {
                           disabled={!createActorPrompt.trim() || createActorGenerating}
                           className="w-full rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
                         >
-                          {createActorGenerating ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Generate (3 credits)"}
+                          {createActorGenerating ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Generate (9 credits)"}
                         </button>
                       </div>
                     )}

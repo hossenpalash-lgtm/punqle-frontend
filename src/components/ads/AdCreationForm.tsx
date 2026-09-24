@@ -8,6 +8,7 @@ import {
   generateAd,
   generateAdCaptions,
   generateAdImageVariant,
+  imageGenerateCreditCost,
   removeBackground,
   translateCaptions,
   understandProductLink,
@@ -832,6 +833,7 @@ export function AdCreationForm({
           selectedImageIndex={selectedImageIndex}
           onSelectImage={setSelectedImageIndex}
           onGenerateMoreImages={handleGenerateMoreImages}
+          generateMoreCreditCost={imageGenerateCreditCost(!!file, imageGenModel)}
           onRemoveBackground={handleRemoveBackground}
           onEnhance={handleEnhance}
           generatingImage={generatingImage}

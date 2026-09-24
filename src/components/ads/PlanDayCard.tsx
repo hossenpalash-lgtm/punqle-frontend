@@ -3,6 +3,7 @@ import { Camera, Check, CheckCircle2, ChevronDown, Download, Loader2, Megaphone,
 import {
   generateAdImageVariant,
   generateContentPlanPost,
+  imageGenerateCreditCost,
   selectContentPlanPost,
   type ApiAdCaptionVariant,
   type ApiAdGenerateResponse,
@@ -238,6 +239,7 @@ export function PlanDayCard({
                 selectedIndex={selectedImageIndex}
                 onSelect={handleSelectImage}
                 onGenerateMore={handleGenerateMoreImages}
+                generateMoreCreditCost={imageGenerateCreditCost(!useAiImage && !!file, "nano_banana_pro")}
                 generating={generatingImage}
                 disabled={credits !== null && credits <= 0}
               />
@@ -324,7 +326,7 @@ export function PlanDayCard({
                 ) : (
                   <>
                     <Megaphone className="h-4 w-4" />
-                    Generate (1 credit)
+                    Generate ({imageGenerateCreditCost(!useAiImage && !!file, "nano_banana_pro")} credit{imageGenerateCreditCost(!useAiImage && !!file, "nano_banana_pro") === 1 ? "" : "s"})
                   </>
                 )}
               </button>

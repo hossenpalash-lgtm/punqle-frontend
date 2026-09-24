@@ -717,6 +717,22 @@ export type AspectRatio = "square" | "feed" | "story";
 // actor voice-engine picker).
 export type ImageGenModel = "nano_banana_pro" | "nano_banana_2" | "gpt_image";
 
+// Mirrors the backend's IMAGE_GEN_CREDIT_COST (main.py) — real per-image
+// provider cost differs a lot across these three (Nano Banana Pro is
+// ~3.2x GPT Image's cost), so they're no longer flat-priced. Only
+// applies to the no-photo/AI-generates-everything path; a real uploaded
+// photo always costs 1 credit regardless of `model` (see
+// imageGenerateCreditCost below).
+export const IMAGE_GEN_CREDIT_COST: Record<ImageGenModel, number> = {
+  nano_banana_pro: 3,
+  nano_banana_2: 2,
+  gpt_image: 1,
+};
+
+export function imageGenerateCreditCost(hasPhoto: boolean, model: ImageGenModel): number {
+  return hasPhoto ? 1 : IMAGE_GEN_CREDIT_COST[model];
+}
+
 export function generateAd(
   itemDescription: string,
   file: File | null,

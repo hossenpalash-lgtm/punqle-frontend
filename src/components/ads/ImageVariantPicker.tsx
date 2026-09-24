@@ -12,6 +12,7 @@ export function ImageVariantPicker({
   selectedIndex,
   onSelect,
   onGenerateMore,
+  generateMoreCreditCost,
   onRemoveBackground,
   onEnhance,
   generating,
@@ -23,6 +24,12 @@ export function ImageVariantPicker({
   selectedIndex: number;
   onSelect: (i: number) => void;
   onGenerateMore: () => void;
+  // Real cost varies by which image model the next generation will use
+  // (Nano Banana Pro/2 vs. GPT Image vs. the fixed cheap photo-edit path)
+  // — the caller always knows this at render time, so it's a required
+  // prop rather than a hardcoded "(1 credit)" that would be wrong most
+  // of the time. See IMAGE_GEN_CREDIT_COST in api.ts.
+  generateMoreCreditCost: number;
   onRemoveBackground?: () => void;
   onEnhance?: () => void;
   generating: boolean;
@@ -67,7 +74,7 @@ export function ImageVariantPicker({
           ) : (
             <Sparkles className="h-3.5 w-3.5" />
           )}
-          Generate another image (1 credit)
+          Generate another image ({generateMoreCreditCost} credit{generateMoreCreditCost === 1 ? "" : "s"})
         </button>
         {hasEditTools && !showMore && (
           <button

@@ -7,6 +7,7 @@ import {
   generateAdImageVariant,
   generateCaptions,
   generateCarouselPlan,
+  imageGenerateCreditCost,
   removeBackground,
   translateCaptions,
   type ApiAdCaptionVariant,
@@ -534,6 +535,7 @@ export function SinglePostForm({
           selectedImageIndex={selectedImageIndex}
           onSelectImage={setSelectedImageIndex}
           onGenerateMoreImages={handleGenerateMoreImages}
+          generateMoreCreditCost={imageGenerateCreditCost(!useAiImage && !!file, "nano_banana_pro")}
           onRemoveBackground={handleRemoveBackground}
           onEnhance={handleEnhance}
           generatingImage={generatingImage}

@@ -32,6 +32,7 @@ export function PostKit({
   selectedImageIndex,
   onSelectImage,
   onGenerateMoreImages,
+  generateMoreCreditCost,
   onRemoveBackground,
   onEnhance,
   generatingImage,
@@ -88,6 +89,7 @@ export function PostKit({
   selectedImageIndex: number;
   onSelectImage: (i: number) => void;
   onGenerateMoreImages: () => void;
+  generateMoreCreditCost: number;
   onRemoveBackground: () => void;
   onEnhance: () => void;
   generatingImage: boolean;
@@ -222,6 +224,7 @@ export function PostKit({
           selectedIndex={selectedImageIndex}
           onSelect={onSelectImage}
           onGenerateMore={onGenerateMoreImages}
+          generateMoreCreditCost={generateMoreCreditCost}
           onRemoveBackground={onRemoveBackground}
           onEnhance={onEnhance}
           generating={generatingImage}

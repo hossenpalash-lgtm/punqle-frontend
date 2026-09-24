@@ -1755,6 +1755,19 @@ export function createPortalSession(): Promise<{ portal_url: string }> {
   return apiFetch<{ portal_url: string }>("/billing/portal", { method: "POST" });
 }
 
+// One-time credit top-up, independent of subscription status — see
+// CREDIT_PACKS in main.py. Same Stripe Checkout redirect pattern as
+// createCheckoutSession, just mode="payment" on the backend.
+export type CreditPack = "pack_100" | "pack_500" | "pack_1000";
+
+export function createCreditPackCheckoutSession(pack: CreditPack): Promise<{ checkout_url: string }> {
+  return apiFetch<{ checkout_url: string }>("/billing/checkout-credit-pack", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pack }),
+  });
+}
+
 // Rewritten 2026-09-19 -- see the backend's own _generate_competitor_analysis
 // docstring for why (real web-search-grounded analysis, replacing a
 // single-static-page fetch that silently broke on Facebook/Instagram URLs).

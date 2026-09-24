@@ -1,10 +1,12 @@
-import { Check, Loader2, Sparkles, X } from "lucide-react";
+import { Check, Loader2, Sparkles, X, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   createCheckoutSession,
+  createCreditPackCheckoutSession,
   createPortalSession,
   fetchSubscriptionStatus,
   type ApiSubscriptionStatus,
+  type CreditPack,
   type SubscriptionTier,
 } from "@/lib/api";
 
@@ -12,6 +14,17 @@ const TIERS: { tier: SubscriptionTier; label: string; price: string; credits: nu
   { tier: "starter", label: "Starter", price: "A$5.99", credits: 30, blurb: "Try it out with a steady monthly supply." },
   { tier: "growth", label: "Growth", price: "A$19", credits: 110, blurb: "For posting regularly across your channels." },
   { tier: "pro", label: "Pro", price: "A$44.99", credits: 300, blurb: "For agencies or a high volume of ads." },
+];
+
+// One-off top-ups, independent of plan — for a month where the included
+// allotment just isn't enough, without upgrading. Priced from the real
+// 2026-09-24 cost audit's worst-case-protected math, not a flat multiple
+// of any plan's own per-credit rate — no bulk discount, since there's no
+// ongoing commitment behind a one-time purchase.
+const CREDIT_PACKS: { pack: CreditPack; label: string; price: string; credits: number }[] = [
+  { pack: "pack_100", label: "100 credits", price: "A$14.99", credits: 100 },
+  { pack: "pack_500", label: "500 credits", price: "A$71.99", credits: 500 },
+  { pack: "pack_1000", label: "1,000 credits", price: "A$142.99", credits: 1000 },
 ];
 
 // Checkout and the customer portal are both hosted by Stripe — this panel
@@ -24,6 +37,7 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
   const [notice, setNotice] = useState<string | null>(null);
   const [status, setStatus] = useState<ApiSubscriptionStatus | null>(null);
   const [pendingTier, setPendingTier] = useState<SubscriptionTier | null>(null);
+  const [pendingPack, setPendingPack] = useState<CreditPack | null>(null);
   const [openingPortal, setOpeningPortal] = useState(false);
   // Captured once at the panel's true first mount (a lazy initializer runs
   // during render, before any effect) — reading window.location.search
@@ -70,6 +84,18 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't start checkout.");
       setPendingTier(null);
+    }
+  };
+
+  const handleBuyPack = async (pack: CreditPack) => {
+    setPendingPack(pack);
+    setError(null);
+    try {
+      const { checkout_url } = await createCreditPackCheckoutSession(pack);
+      window.location.href = checkout_url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't start checkout.");
+      setPendingPack(null);
     }
   };
 
@@ -162,6 +188,35 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {!loading && (
+          <div className="mt-6 border-t border-input pt-5">
+            <div className="mb-3 flex items-center gap-1.5">
+              <Zap className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold text-foreground">Need more credits this month?</p>
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">
+              A one-time top-up, on top of whatever plan you're already on — no commitment.
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {CREDIT_PACKS.map(({ pack, label, price, credits }) => (
+                <button
+                  key={pack}
+                  onClick={() => handleBuyPack(pack)}
+                  disabled={pendingPack !== null}
+                  className="flex flex-col items-start rounded-2xl border border-input bg-background p-4 text-left disabled:opacity-60"
+                >
+                  <p className="text-sm font-semibold text-foreground">{label}</p>
+                  <p className="mt-1 font-display text-lg font-extrabold text-foreground">{price}</p>
+                  <span className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-primary">
+                    {pendingPack === pack ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+                    Buy {credits.toLocaleString()} credits
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

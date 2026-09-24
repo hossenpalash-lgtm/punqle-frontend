@@ -427,6 +427,10 @@ function HomeScreen() {
       .then(setFeatureTrials)
       .catch(() => {});
   }, []);
+  // Drives the hero's "try every core tool free" banner — null while
+  // loading (banner stays hidden), 0 once every trial's been claimed
+  // (banner disappears, no point advertising something used up).
+  const remainingTrialsCount = featureTrials ? Object.values(featureTrials).filter(Boolean).length : null;
 
   useEffect(() => {
     return () => {
@@ -1242,6 +1246,18 @@ function HomeScreen() {
             <p className="text-sm text-muted-foreground">
               Turn your ideas into scroll-stopping content, in minutes.
             </p>
+            {/* "Try every core tool free" banner (2026-09-25) — the
+                per-button "Try free" labels below only announce
+                themselves one mode/pill at a time, so a brand-new user
+                landing here has no upfront signal that 7 core tools each
+                carry one guaranteed-free generation. Hidden once every
+                trial's claimed (remainingTrialsCount === 0) — advertising
+                a free try that no longer exists would just be confusing. */}
+            {remainingTrialsCount !== null && remainingTrialsCount > 0 && (
+              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary">
+                🎁 Try every core tool free — once each
+              </div>
+            )}
             {/* Multi-platform native publish visibility (2026-09-25) —
                 real, live capability (connect once, publish straight to
                 each platform, no download-then-repost step), but the

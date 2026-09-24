@@ -1,10 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowUp,
+  Calendar,
   Check,
   ChevronDown,
   ChevronRight,
+  Facebook,
   Images,
+  Instagram,
   Loader2,
   Megaphone,
   MoreHorizontal,
@@ -21,6 +24,7 @@ import {
   UserRound,
   Video,
   X,
+  Youtube,
   ZoomIn,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -44,6 +48,7 @@ import {
   fetchActorPreviewVideoUrl,
   fetchActorSituations,
   fetchAdCredits,
+  fetchCurrentContentPlan,
   fetchImageActors,
   fetchMyCustomActors,
   generateImageDirect,
@@ -69,6 +74,7 @@ import { CompetitorAnalysis } from "@/components/ads/CompetitorAnalysis";
 import { HistoryTab } from "@/components/ads/HistoryTab";
 import { PerformanceView } from "@/components/ads/PerformanceView";
 import { SinglePostForm } from "@/components/ads/SinglePostForm";
+import { TikTokIcon } from "@/components/TikTokIcon";
 import {
   TryOnForm,
   type TryOnImageAdHandoff,
@@ -226,6 +232,26 @@ function HomeScreen() {
   type HomeMode = "talking_actors" | "video" | "image" | "product" | "unboxing" | "show_app" | "upscale";
   const [homeMode, setHomeMode] = useState<HomeMode>("talking_actors");
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+
+  // Weekly Plan nudge (2026-09-25) — a real retention gap: the plan sits
+  // wherever the user left it until they happen to open that tab again,
+  // with nothing surfacing it back to them. No email/push infra exists
+  // in this app yet (confirmed — no SMTP/SendGrid-type integration
+  // anywhere), so this is the buildable version: an in-app banner on the
+  // home screen itself, counting days still in "idea" status (not yet
+  // generated) on the user's one active plan. Mirrors CalendarView's own
+  // fetchCurrentContentPlan-on-mount pattern, but counts the opposite
+  // status ("idea", not "generated") — that banner nudges toward
+  // scheduling already-made content; this one nudges toward making it
+  // in the first place.
+  const [weeklyPlanIdeaCount, setWeeklyPlanIdeaCount] = useState(0);
+  useEffect(() => {
+    fetchCurrentContentPlan()
+      .then((plan) => setWeeklyPlanIdeaCount(plan?.posts.filter((p) => p.status === "idea").length ?? 0))
+      .catch(() => {
+        // A quiet home-screen nudge isn't worth surfacing a loud error over.
+      });
+  }, []);
 
   const [homeIdea, setHomeIdea] = useState("");
   // Standalone quick-image tool living right in the home prompt box —
@@ -1204,6 +1230,22 @@ function HomeScreen() {
             <p className="text-sm text-muted-foreground">
               Turn your ideas into scroll-stopping content, in minutes.
             </p>
+            {/* Multi-platform native publish visibility (2026-09-25) —
+                real, live capability (connect once, publish straight to
+                each platform, no download-then-repost step), but the
+                logged-out landing page's own spotlight (PublishSection)
+                is the only place it was ever shown — a brand-new signed-
+                in user landing here never saw it mentioned at all. Quiet
+                by design (icons + one line, not a banner) since this is
+                a supporting fact about the product, not a call to action
+                the way Ad Creation/Weekly Plan above are. */}
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>Publish straight to</span>
+              <Facebook className="h-3.5 w-3.5" />
+              <Instagram className="h-3.5 w-3.5" />
+              <TikTokIcon className="h-3.5 w-3.5" />
+              <Youtube className="h-3.5 w-3.5" />
+            </div>
           </div>
 
           <div className="flex-1" />
@@ -1239,6 +1281,25 @@ function HomeScreen() {
             </div>
             <ChevronRight className="h-4 w-4 shrink-0 text-accent" />
           </button>
+
+          {weeklyPlanIdeaCount > 0 && (
+            <button
+              onClick={() => goTo("plan")}
+              className="mb-3 flex w-full items-center justify-between gap-3 self-center rounded-2xl border border-border bg-secondary/60 px-5 py-3 text-left transition-colors hover:bg-secondary"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+                  <Calendar className="h-4 w-4" />
+                </div>
+                <p className="text-sm font-semibold text-foreground">
+                  {weeklyPlanIdeaCount === 1
+                    ? "1 day in your Weekly Plan is ready to generate"
+                    : `${weeklyPlanIdeaCount} days in your Weekly Plan are ready to generate`}
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            </button>
+          )}
 
           {/* Unified creation bar (2026-09-17, Arcads parity) — one
               persistent bar, mode pills switch its content in place. Only

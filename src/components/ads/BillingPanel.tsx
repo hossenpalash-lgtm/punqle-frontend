@@ -17,14 +17,18 @@ const TIERS: { tier: SubscriptionTier; label: string; price: string; credits: nu
 ];
 
 // One-off top-ups, independent of plan — for a month where the included
-// allotment just isn't enough, without upgrading. Priced from the real
-// 2026-09-24 cost audit's worst-case-protected math, not a flat multiple
-// of any plan's own per-credit rate — no bulk discount, since there's no
-// ongoing commitment behind a one-time purchase.
+// allotment just isn't enough, without upgrading. Repriced 2026-09-25:
+// the first pass priced these below even Pro's own $/credit rate (a
+// real bug — it meant stacking one-time packs was always cheaper than
+// any subscription, undercutting the whole reason to subscribe). Now
+// priced above every plan's own rate (100-pack ≈ Starter's rate, the
+// least-commitment option; 1,000-pack still above Growth's) — a pack
+// is deliberately never the cheapest way to get credits, subscribing
+// always is.
 const CREDIT_PACKS: { pack: CreditPack; label: string; price: string; credits: number }[] = [
-  { pack: "pack_100", label: "100 credits", price: "A$14.99", credits: 100 },
-  { pack: "pack_500", label: "500 credits", price: "A$71.99", credits: 500 },
-  { pack: "pack_1000", label: "1,000 credits", price: "A$142.99", credits: 1000 },
+  { pack: "pack_100", label: "100 credits", price: "A$19.99", credits: 100 },
+  { pack: "pack_500", label: "500 credits", price: "A$89.99", credits: 500 },
+  { pack: "pack_1000", label: "1,000 credits", price: "A$174.99", credits: 1000 },
 ];
 
 // Checkout and the customer portal are both hosted by Stripe — this panel

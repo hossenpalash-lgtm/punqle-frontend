@@ -34,7 +34,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-display: "Playfair Display", "Inter", system-ui, serif;
+  --font-display: "Lora", "Inter", system-ui, serif;
   --font-sans: "Inter", "Plus Jakarta Sans", system-ui, sans-serif;
   --gradient-primary: linear-gradient(135deg, var(--primary), var(--primary-glow));
   --gradient-destructive: linear-gradient(135deg, var(--destructive), var(--destructive-glow));
@@ -51,31 +51,29 @@
 }
 
 :root {
-  /* Punqle palette v2 (2026-08-18, Arcads-inspired premium pass):
-     switched the primary accent from an indigo-blue gradient to a
-     near-black "ink" — Arcads' own real site (verified from live
-     screenshots, not assumed) is white/black/gray with black CTAs,
-     not the dark-neon look an earlier brief mistakenly described.
-     Kept `--primary`/`--primary-glow`/`--gradient-primary` as the
-     same variable names so every existing component that already
-     references them (buttons, badges, the logo mark) picks up the
-     new look automatically with zero component-level changes —
-     just a subtle charcoal-to-black diagonal sheen instead of flat
-     black, so buttons keep a touch of premium depth. */
-  --radius: 0.85rem;
-  --background: oklch(0.99 0.002 260);
-  --foreground: oklch(0.2 0.005 260);
+  /* Punqle palette v3 (2026-10-01, warm editorial pass): replaced the
+     v2 cool-neutral/near-black-CTA palette with a warm cream/terracotta
+     one, chosen after the founder reviewed 8 side-by-side mockup
+     directions and picked "Warm + Minimal hybrid" (Lora headline +
+     tight Inter body + terracotta accent) as the final direction.
+     Kept every variable name the same so existing components pick up
+     the new look with zero component-level changes. --radius also
+     shrunk (0.85rem -> 0.6rem) to match that direction's tighter,
+     hairline-bordered card/button feel. */
+  --radius: 0.6rem;
+  --background: oklch(0.978 0.008 73.7);
+  --foreground: oklch(0.266 0.016 67);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.005 260);
+  --card-foreground: oklch(0.266 0.016 67);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.005 260);
-  --primary: oklch(0.16 0.005 260);
+  --popover-foreground: oklch(0.266 0.016 67);
+  --primary: oklch(0.655 0.117 50.8);
   --primary-foreground: oklch(1 0 0);
-  --primary-glow: oklch(0.29 0.008 260);
-  --secondary: oklch(0.96 0.003 260);
-  --secondary-foreground: oklch(0.24 0.005 260);
-  --muted: oklch(0.96 0.003 260);
-  --muted-foreground: oklch(0.53 0.006 260);
+  --primary-glow: oklch(0.743 0.105 53.4);
+  --secondary: oklch(0.951 0.014 78.3);
+  --secondary-foreground: oklch(0.266 0.016 67);
+  --muted: oklch(0.951 0.014 78.3);
+  --muted-foreground: oklch(0.59 0.039 79.4);
   /* The one restrained "AI accent" — a muted violet, reserved for
      recommendation badges, sparkle/AI icons, and progress-indicator
      active states (see the Social Content master-refinement pass,
@@ -92,9 +90,9 @@
   --success-foreground: oklch(1 0 0);
   --warning: oklch(0.75 0.16 75);
   --warning-foreground: oklch(0.22 0.05 75);
-  --border: oklch(0.91 0.003 260);
-  --input: oklch(0.91 0.003 260);
-  --ring: oklch(0.16 0.005 260);
+  --border: oklch(0.911 0.022 76.5);
+  --input: oklch(0.911 0.022 76.5);
+  --ring: oklch(0.655 0.117 50.8);
 }
 
 .dark {

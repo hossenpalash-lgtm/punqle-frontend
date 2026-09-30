@@ -102,15 +102,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
-        // Lora 400/500 only (Regular/Medium) — the ad-creative canvas
-        // engine's new editorial headline font (see canvas-text.ts's
-        // warm_lifestyle/minimal_editorial configs), deliberately never
-        // loaded past Medium since that pairing's whole point is a
-        // restrained weight, unlike Playfair Display's 700/800 (which
-        // stays app-chrome-only — no ad-creative style references it
-        // anymore).
+        // Lora 400-700 — used both by the ad-creative canvas engine's
+        // editorial headline font (canvas-text.ts's warm_lifestyle/
+        // minimal_editorial configs, Regular/Medium only) and, as of
+        // the 2026-10-01 warm-editorial palette pass, the app chrome's
+        // own --font-display (styles.css), which pairs it with
+        // font-extrabold (800) headings — 700 is the heaviest real
+        // Lora weight, so the browser's font matching resolves those
+        // to true Lora Bold rather than a synthesized fake-bold.
+        // Playfair Display removed — no longer referenced anywhere
+        // now that --font-display is Lora.
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&family=Lora:wght@400;500&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap",
       },
       { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" },
       { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },

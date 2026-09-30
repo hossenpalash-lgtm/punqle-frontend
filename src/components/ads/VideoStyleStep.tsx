@@ -45,14 +45,14 @@ export function VideoStyleStep({
           return (
           <div
             key={group.key}
-            className={[
-              "flex flex-col gap-1.5",
-              isAiUgc ? "rounded-3xl border border-accent/25 bg-accent/5 p-2.5" : "",
-            ].join(" ")}
+            className={["flex flex-col gap-1.5", isAiUgc ? "rounded-3xl border border-[#F0CBE3] p-2.5" : ""].join(" ")}
+            style={isAiUgc ? { background: "linear-gradient(135deg, #FDF0F5 0%, #FBEAF4 50%, #F3EAFB 100%)" } : undefined}
           >
             <div className="flex items-center gap-1.5 px-1 text-left">
-              {isAiUgc && <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent" />}
-              <span className="text-xs font-semibold uppercase tracking-wide text-foreground">{group.title}</span>
+              {isAiUgc && <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#C13584]" />}
+              <span className={["text-xs font-semibold uppercase tracking-wide", isAiUgc ? "text-[#C13584]" : "text-foreground"].join(" ")}>
+                {group.title}
+              </span>
             </div>
             <p className="px-1 text-left text-xs text-muted-foreground">{group.subtitle}</p>
             {(() => {
@@ -73,18 +73,22 @@ export function VideoStyleStep({
                         onClick={() => onSelect(style.id)}
                         className={[
                           "flex flex-col items-start gap-1 rounded-xl px-3 py-2.5 text-left transition-colors",
-                          isSelected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                          isSelected
+                            ? "bg-foreground text-background"
+                            : isAiUgc
+                              ? "bg-white/70 text-foreground"
+                              : "bg-secondary text-secondary-foreground",
                         ].join(" ")}
                       >
                         <Icon
-                          className={["h-4 w-4 shrink-0", isSelected ? "text-primary-foreground/90" : "text-muted-foreground"].join(" ")}
+                          className={["h-4 w-4 shrink-0", isSelected ? "text-background/90" : "text-muted-foreground"].join(" ")}
                         />
                         <span className="flex items-center gap-1 text-xs font-semibold leading-tight">
                           {isSelected && <Check className="h-3 w-3 shrink-0" />}
                           {style.label}
                         </span>
                         <span
-                          className={["text-[10px] font-semibold", isSelected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}
+                          className={["text-[10px] font-semibold", isSelected ? "text-background/80" : "text-muted-foreground"].join(" ")}
                         >
                           {style.creditHint}
                         </span>

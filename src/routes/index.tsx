@@ -1212,14 +1212,14 @@ function HomeScreen() {
   return (
     <main className="flex flex-1 flex-col px-6 py-6">
       <div
-        className="mb-5 flex items-center justify-between rounded-2xl bg-card p-4"
-        style={{ boxShadow: "var(--shadow-card)" }}
+        className="mb-5 flex items-center justify-between rounded-full border border-border/60 px-4 py-2 backdrop-blur-md"
+        style={{ background: "oklch(1 0 0 / 55%)" }}
       >
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-accent" />
           <span className="text-sm font-semibold text-foreground">Your credits</span>
         </div>
-        <span className="text-lg font-extrabold text-primary">
+        <span className="text-base font-extrabold text-primary">
           {credits === null ? "..." : credits}
         </span>
       </div>
@@ -1254,8 +1254,9 @@ function HomeScreen() {
                 trial's claimed (remainingTrialsCount === 0) — advertising
                 a free try that no longer exists would just be confusing. */}
             {remainingTrialsCount !== null && remainingTrialsCount > 0 && (
-              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary">
-                🎁 Try every core tool free — once each
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span>🎁</span>
+                Try every core tool free — once each
               </div>
             )}
             {/* Multi-platform native publish visibility (2026-09-25) —
@@ -1291,7 +1292,8 @@ function HomeScreen() {
               already covers both formats from this one entry point. */}
           <button
             onClick={() => goTo("ad")}
-            className="mb-3 flex w-full items-center justify-between gap-3 self-center rounded-2xl border border-accent bg-accent/10 px-5 py-3.5 text-left transition-colors hover:bg-accent/15"
+            className="mb-3 flex w-full items-center justify-between gap-3 self-center rounded-2xl border border-accent/40 px-5 py-3.5 text-left backdrop-blur-md transition-colors hover:bg-accent/10"
+            style={{ background: "oklch(1 0 0 / 55%)", boxShadow: "var(--shadow-card)" }}
           >
             <div className="flex items-center gap-3">
               <div
@@ -1313,7 +1315,8 @@ function HomeScreen() {
           {weeklyPlanIdeaCount > 0 && (
             <button
               onClick={() => goTo("plan")}
-              className="mb-3 flex w-full items-center justify-between gap-3 self-center rounded-2xl border border-border bg-secondary/60 px-5 py-3 text-left transition-colors hover:bg-secondary"
+              className="mb-3 flex w-full items-center justify-between gap-3 self-center rounded-2xl border border-border/60 px-5 py-3 text-left backdrop-blur-md transition-colors hover:bg-white/30"
+              style={{ background: "oklch(1 0 0 / 40%)" }}
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
@@ -1341,7 +1344,7 @@ function HomeScreen() {
               onClick={() => handleSwitchMode("talking_actors")}
               className={[
                 "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "talking_actors" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
+                homeMode === "talking_actors" ? "border-primary/50 bg-primary/15 text-primary backdrop-blur-md" : "border-border bg-card text-foreground",
               ].join(" ")}
               style={{ boxShadow: "var(--shadow-card)" }}
             >
@@ -1352,7 +1355,7 @@ function HomeScreen() {
               onClick={() => handleSwitchMode("video")}
               className={[
                 "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "video" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
+                homeMode === "video" ? "border-primary/50 bg-primary/15 text-primary backdrop-blur-md" : "border-border bg-card text-foreground",
               ].join(" ")}
               style={{ boxShadow: "var(--shadow-card)" }}
             >
@@ -1363,7 +1366,7 @@ function HomeScreen() {
               onClick={() => handleSwitchMode("image")}
               className={[
                 "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "image" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
+                homeMode === "image" ? "border-primary/50 bg-primary/15 text-primary backdrop-blur-md" : "border-border bg-card text-foreground",
               ].join(" ")}
               style={{ boxShadow: "var(--shadow-card)" }}
             >
@@ -1374,7 +1377,7 @@ function HomeScreen() {
               onClick={() => handleSwitchMode("product")}
               className={[
                 "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "product" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
+                homeMode === "product" ? "border-primary/50 bg-primary/15 text-primary backdrop-blur-md" : "border-border bg-card text-foreground",
               ].join(" ")}
               style={{ boxShadow: "var(--shadow-card)" }}
             >
@@ -1923,15 +1926,16 @@ function HomeScreen() {
                       </div>
                     )}
 
-                    <textarea
-                      value={actorNarration}
-                      onChange={(e) => setActorNarration(e.target.value)}
-                      placeholder="What should your actor say?…"
-                      rows={2}
-                      className="mt-3 w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
-                    />
+                    <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-card">
+                      <textarea
+                        value={actorNarration}
+                        onChange={(e) => setActorNarration(e.target.value)}
+                        placeholder="What should your actor say?…"
+                        rows={2}
+                        className="w-full resize-none bg-transparent px-3 py-2.5 text-sm text-foreground focus:outline-none"
+                      />
 
-                    <div className="mt-3 flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">
                       <button
                         onClick={handleGenerateActorVideo}
                         disabled={
@@ -1951,6 +1955,7 @@ function HomeScreen() {
                           `Generate (${ACTOR_VIDEO_V2_CREDIT_COST} credits)`
                         )}
                       </button>
+                      </div>
                     </div>
 
                     {actorPanel === "generating" && (

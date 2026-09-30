@@ -270,11 +270,8 @@ export function Sidebar({
               live against real screenshots, not arbitrary. */}
           <button
             onClick={() => setPlanPublishOpen((v) => !v)}
-            className="mt-[58px] flex items-center justify-between rounded-xl border px-2 py-1.5"
-            style={{
-              background: "oklch(0.56 0.14 300 / 8%)",
-              borderColor: "oklch(0.56 0.14 300 / 22%)",
-            }}
+            className="mt-[58px] flex items-center justify-between rounded-xl border border-border bg-card px-2 py-1.5"
+            style={{ boxShadow: "var(--shadow-card)" }}
           >
             <span className="flex items-center gap-1.5 text-[13px] font-bold text-foreground">
               <span
@@ -286,8 +283,10 @@ export function Sidebar({
               Plan &amp; Publish
             </span>
             <ChevronDown
-              className={["h-3.5 w-3.5 shrink-0 transition-transform", planPublishOpen ? "rotate-180" : ""].join(" ")}
-              style={{ color: "oklch(0.5 0.13 300)" }}
+              className={[
+                "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
+                planPublishOpen ? "rotate-180" : "",
+              ].join(" ")}
             />
           </button>
           {planPublishOpen && (
@@ -307,34 +306,44 @@ export function Sidebar({
               ))}
             </div>
           )}
+          {/* Real per-platform brand colors (2026-10-01) — these were
+              flat bg-card/text-secondary-foreground outline icons,
+              basically invisible as a "which platform is this" row.
+              Each badge now uses that platform's actual brand fill so
+              the row reads at a glance, same idea as every other real
+              social-icon row on the web. */}
           <div className="mt-1.5 flex justify-between px-1">
             <button
               onClick={onOpenMetaConnect}
               aria-label="Facebook"
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-secondary-foreground"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-white"
+              style={{ background: "#1877F2" }}
             >
-              <Facebook className="h-3.5 w-3.5" />
+              <Facebook className="h-3.5 w-3.5" fill="currentColor" />
             </button>
             <button
               onClick={onOpenMetaConnect}
               aria-label="Instagram"
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-secondary-foreground"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-white"
+              style={{ background: "linear-gradient(45deg, #FEDA75, #FA7E1E, #D62976, #962FBF, #4F5BD5)" }}
             >
               <Instagram className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={onOpenTikTokConnect}
               aria-label="TikTok"
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-secondary-foreground"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-white"
+              style={{ background: "#000000" }}
             >
               <TikTokIcon className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={onOpenYouTubeConnect}
               aria-label="YouTube"
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-secondary-foreground"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-white"
+              style={{ background: "#FF0000" }}
             >
-              <Youtube className="h-3.5 w-3.5" />
+              <Youtube className="h-3.5 w-3.5" fill="currentColor" />
             </button>
           </div>
 
@@ -344,7 +353,8 @@ export function Sidebar({
               item — nothing invented, nothing dropped from today's nav. */}
           <button
             onClick={() => setDesktopMoreOpen((v) => !v)}
-            className="mt-[68px] flex items-center justify-between rounded-xl px-2 py-1.5"
+            className="mt-[68px] flex items-center justify-between rounded-xl border border-border bg-card px-2 py-1.5"
+            style={{ boxShadow: "var(--shadow-card)" }}
           >
             <span className="text-[13px] font-bold text-foreground">More</span>
             <ChevronDown

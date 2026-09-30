@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowUp,
-  Calendar,
   Check,
   ChevronDown,
   ChevronRight,
@@ -24,7 +23,6 @@ import {
   UserRound,
   Video,
   X,
-  Youtube,
   ZoomIn,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -48,7 +46,6 @@ import {
   fetchActorPreviewVideoUrl,
   fetchActorSituations,
   fetchAdCredits,
-  fetchCurrentContentPlan,
   fetchFeatureTrials,
   fetchImageActors,
   fetchMyCustomActors,
@@ -76,7 +73,6 @@ import { CompetitorAnalysis } from "@/components/ads/CompetitorAnalysis";
 import { HistoryTab } from "@/components/ads/HistoryTab";
 import { PerformanceView } from "@/components/ads/PerformanceView";
 import { SinglePostForm } from "@/components/ads/SinglePostForm";
-import { TikTokIcon } from "@/components/TikTokIcon";
 import {
   TryOnForm,
   type TryOnImageAdHandoff,
@@ -234,26 +230,6 @@ function HomeScreen() {
   type HomeMode = "talking_actors" | "video" | "image" | "product" | "unboxing" | "show_app" | "upscale";
   const [homeMode, setHomeMode] = useState<HomeMode>("talking_actors");
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-
-  // Weekly Plan nudge (2026-09-25) — a real retention gap: the plan sits
-  // wherever the user left it until they happen to open that tab again,
-  // with nothing surfacing it back to them. No email/push infra exists
-  // in this app yet (confirmed — no SMTP/SendGrid-type integration
-  // anywhere), so this is the buildable version: an in-app banner on the
-  // home screen itself, counting days still in "idea" status (not yet
-  // generated) on the user's one active plan. Mirrors CalendarView's own
-  // fetchCurrentContentPlan-on-mount pattern, but counts the opposite
-  // status ("idea", not "generated") — that banner nudges toward
-  // scheduling already-made content; this one nudges toward making it
-  // in the first place.
-  const [weeklyPlanIdeaCount, setWeeklyPlanIdeaCount] = useState(0);
-  useEffect(() => {
-    fetchCurrentContentPlan()
-      .then((plan) => setWeeklyPlanIdeaCount(plan?.posts.filter((p) => p.status === "idea").length ?? 0))
-      .catch(() => {
-        // A quiet home-screen nudge isn't worth surfacing a loud error over.
-      });
-  }, []);
 
   const [homeIdea, setHomeIdea] = useState("");
   // Standalone quick-image tool living right in the home prompt box —
@@ -1243,9 +1219,6 @@ function HomeScreen() {
             <h1 className="mb-2 text-3xl font-extrabold tracking-tight text-foreground">
               What are we creating today?
             </h1>
-            <p className="text-sm text-muted-foreground">
-              Turn your ideas into scroll-stopping content, in minutes.
-            </p>
             {/* "Try every core tool free" banner (2026-09-25) — the
                 per-button "Try free" labels below only announce
                 themselves one mode/pill at a time, so a brand-new user
@@ -1259,22 +1232,6 @@ function HomeScreen() {
                 Try every core tool free — once each
               </div>
             )}
-            {/* Multi-platform native publish visibility (2026-09-25) —
-                real, live capability (connect once, publish straight to
-                each platform, no download-then-repost step), but the
-                logged-out landing page's own spotlight (PublishSection)
-                is the only place it was ever shown — a brand-new signed-
-                in user landing here never saw it mentioned at all. Quiet
-                by design (icons + one line, not a banner) since this is
-                a supporting fact about the product, not a call to action
-                the way Ad Creation/Weekly Plan above are. */}
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span>Publish straight to</span>
-              <Facebook className="h-3.5 w-3.5" />
-              <Instagram className="h-3.5 w-3.5" />
-              <TikTokIcon className="h-3.5 w-3.5" />
-              <Youtube className="h-3.5 w-3.5" />
-            </div>
           </div>
 
           <div className="flex-1" />
@@ -1312,26 +1269,6 @@ function HomeScreen() {
             <ChevronRight className="h-4 w-4 shrink-0 text-accent" />
           </button>
 
-          {weeklyPlanIdeaCount > 0 && (
-            <button
-              onClick={() => goTo("plan")}
-              className="mb-3 flex w-full items-center justify-between gap-3 self-center rounded-2xl border border-border/60 px-5 py-3 text-left backdrop-blur-md transition-colors hover:bg-white/30"
-              style={{ background: "oklch(1 0 0 / 40%)" }}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-                  <Calendar className="h-4 w-4" />
-                </div>
-                <p className="text-sm font-semibold text-foreground">
-                  {weeklyPlanIdeaCount === 1
-                    ? "1 day in your Weekly Plan is ready to generate"
-                    : `${weeklyPlanIdeaCount} days in your Weekly Plan are ready to generate`}
-                </p>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </button>
-          )}
-
           {/* Unified creation bar (2026-09-17, Arcads parity) — one
               persistent bar, mode pills switch its content in place. Only
               one homeMode block ever renders below, which is what makes
@@ -1344,7 +1281,7 @@ function HomeScreen() {
               onClick={() => handleSwitchMode("talking_actors")}
               className={[
                 "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "talking_actors" ? "border-primary/50 bg-primary/15 text-primary backdrop-blur-md" : "border-border bg-card text-foreground",
+                homeMode === "talking_actors" ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground",
               ].join(" ")}
               style={{ boxShadow: "var(--shadow-card)" }}
             >
@@ -1355,7 +1292,7 @@ function HomeScreen() {
               onClick={() => handleSwitchMode("video")}
               className={[
                 "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "video" ? "border-primary/50 bg-primary/15 text-primary backdrop-blur-md" : "border-border bg-card text-foreground",
+                homeMode === "video" ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground",
               ].join(" ")}
               style={{ boxShadow: "var(--shadow-card)" }}
             >
@@ -1366,7 +1303,7 @@ function HomeScreen() {
               onClick={() => handleSwitchMode("image")}
               className={[
                 "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "image" ? "border-primary/50 bg-primary/15 text-primary backdrop-blur-md" : "border-border bg-card text-foreground",
+                homeMode === "image" ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground",
               ].join(" ")}
               style={{ boxShadow: "var(--shadow-card)" }}
             >
@@ -1377,7 +1314,7 @@ function HomeScreen() {
               onClick={() => handleSwitchMode("product")}
               className={[
                 "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "product" ? "border-primary/50 bg-primary/15 text-primary backdrop-blur-md" : "border-border bg-card text-foreground",
+                homeMode === "product" ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground",
               ].join(" ")}
               style={{ boxShadow: "var(--shadow-card)" }}
             >

@@ -297,7 +297,7 @@ export function Sidebar({
                   onClick={() => onNavigate(t)}
                   className={[
                     "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                    tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+                    tab === t ? "bg-primary text-primary-foreground" : "text-foreground/75 hover:bg-secondary hover:text-foreground",
                   ].join(" ")}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -372,7 +372,7 @@ export function Sidebar({
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
                   tab === "bulk-creative"
                     ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-secondary",
+                    : "text-foreground/75 hover:bg-secondary hover:text-foreground",
                 ].join(" ")}
               >
                 <Layers className="h-3.5 w-3.5" />
@@ -384,7 +384,7 @@ export function Sidebar({
                   onClick={() => onNavigate(t)}
                   className={[
                     "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                    tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+                    tab === t ? "bg-primary text-primary-foreground" : "text-foreground/75 hover:bg-secondary hover:text-foreground",
                   ].join(" ")}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -395,7 +395,7 @@ export function Sidebar({
                 onClick={onOpenBrandKit}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  brandKitOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+                  brandKitOpen ? "bg-primary text-primary-foreground" : "text-foreground/75 hover:bg-secondary hover:text-foreground",
                 ].join(" ")}
               >
                 <Palette className="h-3.5 w-3.5" />
@@ -405,7 +405,7 @@ export function Sidebar({
                 onClick={onOpenProductCatalog}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  productCatalogOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+                  productCatalogOpen ? "bg-primary text-primary-foreground" : "text-foreground/75 hover:bg-secondary hover:text-foreground",
                 ].join(" ")}
               >
                 <Package className="h-3.5 w-3.5" />
@@ -415,7 +415,7 @@ export function Sidebar({
                 onClick={() => onNavigate("history")}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  tab === "history" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+                  tab === "history" ? "bg-primary text-primary-foreground" : "text-foreground/75 hover:bg-secondary hover:text-foreground",
                 ].join(" ")}
               >
                 <Clock className="h-3.5 w-3.5" />
@@ -423,14 +423,14 @@ export function Sidebar({
               </button>
               <button
                 onClick={onOpenReferral}
-                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-secondary"
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-foreground/75 hover:bg-secondary hover:text-foreground"
               >
                 <Gift className="h-3.5 w-3.5" />
                 Invite &amp; Earn
               </button>
               <button
                 onClick={onOpenBilling}
-                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-secondary"
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-foreground/75 hover:bg-secondary hover:text-foreground"
               >
                 <CreditCard className="h-3.5 w-3.5" />
                 Plans &amp; Billing

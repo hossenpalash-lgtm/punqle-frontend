@@ -536,22 +536,24 @@ export function AdCreationForm({
             <ProductPicker onSelect={handleQuickCreateFromCatalog} />
           </div>
 
-          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Goal
-          </label>
-          <div className="mb-4 grid w-full grid-cols-4 gap-2">
-            {GOALS.map((g) => (
-              <button
-                key={g.value}
-                onClick={() => setGoal(g.value)}
-                className={[
-                  "rounded-full px-3 py-2.5 text-sm font-semibold",
-                  goal === g.value ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                ].join(" ")}
-              >
-                {g.label}
-              </button>
-            ))}
+          <div className="mb-4 w-full rounded-2xl border border-border bg-card p-4 text-left">
+            <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Goal
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {GOALS.map((g) => (
+                <button
+                  key={g.value}
+                  onClick={() => setGoal(g.value)}
+                  className={[
+                    "rounded-full px-3 py-2.5 text-sm font-semibold transition-colors",
+                    goal === g.value ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                  ].join(" ")}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Style/Angle/Platform/Variations/People & Product moved out of
@@ -562,93 +564,103 @@ export function AdCreationForm({
               label + a row of choices, no box, no extra click. Only the
               genuinely technical choice (which image model renders it)
               moves to "Advanced" below, collapsed by default. */}
-          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Style
-          </label>
-          <div className="mb-2 grid w-full grid-cols-3 gap-1.5">
-            {allDirections.map((d) => {
-              const selected = visualDirection === d.id;
-              return (
-                <button
-                  key={d.id}
-                  onClick={() => setVisualDirection(d.id)}
-                  className={[
-                    "rounded-xl px-2 py-2 text-left text-[11px] font-semibold leading-tight",
-                    selected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                  ].join(" ")}
-                >
-                  {selected && <Check className="mb-0.5 h-3 w-3" />}
-                  {d.label}
-                </button>
-              );
-            })}
-          </div>
-          {!showMoreStyles && (
-            <button
-              onClick={() => setShowMoreStyles(true)}
-              className="mb-4 self-start text-[11px] font-semibold text-muted-foreground underline"
-            >
-              Show more styles
-            </button>
-          )}
-
-          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            What should the ad say?
-          </label>
-          <div className="mb-4 flex w-full flex-wrap gap-1.5">
-            {ANGLES.map((a) => {
-              const selected = angle === a.value;
-              return (
-                <button
-                  key={a.label}
-                  onClick={() => setAngle(a.value)}
-                  className={[
-                    "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium",
-                    selected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                  ].join(" ")}
-                >
-                  {selected && a.value !== null && <Check className="h-3 w-3" />}
-                  {a.value === null && <Sparkles className="h-3 w-3" />}
-                  {a.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Platform
-          </label>
-          <div className="mb-4 grid w-full grid-cols-4 gap-1.5">
-            {PLATFORM_OPTIONS.map((p) => (
+          <div className="mb-4 w-full rounded-2xl border border-border bg-card p-4 text-left">
+            <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Style
+            </label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {allDirections.map((d) => {
+                const selected = visualDirection === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    onClick={() => setVisualDirection(d.id)}
+                    className={[
+                      "rounded-xl px-2 py-2 text-left text-[11px] font-semibold leading-tight transition-colors",
+                      selected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                    ].join(" ")}
+                  >
+                    {selected && <Check className="mb-0.5 h-3 w-3" />}
+                    {d.label}
+                  </button>
+                );
+              })}
+            </div>
+            {!showMoreStyles && (
               <button
-                key={p.id}
-                onClick={() => setPlatform(p.id)}
-                className={[
-                  "rounded-xl px-2 py-2 text-[11px] font-semibold",
-                  platform === p.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                ].join(" ")}
+                onClick={() => setShowMoreStyles(true)}
+                className="mt-2 text-[11px] font-semibold text-muted-foreground underline"
               >
-                {p.label}
+                Show more styles
               </button>
-            ))}
+            )}
           </div>
 
-          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Variations
-          </label>
-          <div className="mb-4 flex w-full gap-1.5">
-            {VERSION_COUNTS.map((v) => (
-              <button
-                key={v}
-                onClick={() => setVersions(v)}
-                className={[
-                  "flex-1 rounded-xl px-2 py-2 text-sm font-semibold",
-                  versions === v ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                ].join(" ")}
-              >
-                {v}
-              </button>
-            ))}
+          <div className="mb-4 w-full rounded-2xl border border-border bg-card p-4 text-left">
+            <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              What should the ad say?
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {ANGLES.map((a) => {
+                const selected = angle === a.value;
+                return (
+                  <button
+                    key={a.label}
+                    onClick={() => setAngle(a.value)}
+                    className={[
+                      "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                      selected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                    ].join(" ")}
+                  >
+                    {selected && a.value !== null && <Check className="h-3 w-3" />}
+                    {a.value === null && <Sparkles className="h-3 w-3" />}
+                    {a.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mb-4 flex w-full gap-3">
+            <div className="flex-[2] rounded-2xl border border-border bg-card p-4 text-left">
+              <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Platform
+              </label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {PLATFORM_OPTIONS.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setPlatform(p.id)}
+                    className={[
+                      "rounded-xl px-2 py-2 text-[11px] font-semibold transition-colors",
+                      platform === p.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                    ].join(" ")}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1 rounded-2xl border border-border bg-card p-4 text-left">
+              <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Variations
+              </label>
+              <div className="flex gap-1.5">
+                {VERSION_COUNTS.map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setVersions(v)}
+                    className={[
+                      "flex-1 rounded-xl px-2 py-2 text-sm font-semibold transition-colors",
+                      versions === v ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                    ].join(" ")}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Product photo + actor grouped under one heading (2026-09-23)
@@ -659,12 +671,12 @@ export function AdCreationForm({
           <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             People &amp; Product
           </label>
-          <div className="mb-4 w-full rounded-2xl bg-secondary/60 p-4 text-left">
+          <div className="mb-4 w-full rounded-2xl border border-border bg-card p-4 text-left">
             <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
               Product photo <span className="normal-case text-muted-foreground/70">— optional, Punqle can create one</span>
             </p>
             {!file ? (
-              <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-card px-3 py-2.5 text-xs font-semibold text-foreground">
+              <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-secondary px-3 py-2.5 text-xs font-semibold text-secondary-foreground">
                 <Upload className="h-3.5 w-3.5" />
                 Upload your own product photo
                 <input
@@ -675,8 +687,8 @@ export function AdCreationForm({
                 />
               </label>
             ) : (
-              <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2.5">
-                <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+              <div className="flex items-center justify-between rounded-xl bg-secondary px-3 py-2.5">
+                <span className="flex items-center gap-2 text-xs font-semibold text-secondary-foreground">
                   {previewUrl && <img src={previewUrl} alt="" className="h-6 w-6 rounded-md object-cover" />}
                   {file.name}
                 </span>
@@ -695,7 +707,7 @@ export function AdCreationForm({
                 }}
                 className={[
                   "flex-1 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
-                  !actorPickerOpen ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
+                  !actorPickerOpen ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
                 ].join(" ")}
               >
                 No person
@@ -704,7 +716,7 @@ export function AdCreationForm({
                 onClick={() => setActorPickerOpen(true)}
                 className={[
                   "flex-1 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
-                  actorPickerOpen ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
+                  actorPickerOpen ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
                 ].join(" ")}
               >
                 Choose an actor
@@ -720,7 +732,7 @@ export function AdCreationForm({
                       onClick={() => setActorGenderFilter(g)}
                       className={[
                         "rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors",
-                        actorGenderFilter === g ? "bg-primary text-primary-foreground" : "bg-card text-secondary-foreground",
+                        actorGenderFilter === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
                       ].join(" ")}
                     >
                       {g}
@@ -780,7 +792,7 @@ export function AdCreationForm({
           </button>
 
           {settingsOpen && (
-            <div className="mb-4 w-full rounded-2xl bg-secondary/60 p-4 text-left">
+            <div className="mb-4 w-full rounded-2xl border border-border bg-card p-4 text-left">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Image model</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {IMAGE_MODEL_OPTIONS.map((m) => (
@@ -788,8 +800,8 @@ export function AdCreationForm({
                     key={m.id}
                     onClick={() => setImageGenModel(m.id)}
                     className={[
-                      "rounded-xl px-2 py-2 text-[11px] font-semibold",
-                      imageGenModel === m.id ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
+                      "rounded-xl px-2 py-2 text-[11px] font-semibold transition-colors",
+                      imageGenModel === m.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
                     ].join(" ")}
                   >
                     {m.label}

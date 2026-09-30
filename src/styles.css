@@ -59,7 +59,18 @@
      Kept every variable name the same so existing components pick up
      the new look with zero component-level changes. --radius also
      shrunk (0.85rem -> 0.6rem) to match that direction's tighter,
-     hairline-bordered card/button feel. */
+     hairline-bordered card/button feel.
+
+     --primary re-tuned same day, after the terracotta read "off" once
+     seen at scale across real pills/buttons: the original #C97A4A only
+     hit a 3.30:1 contrast ratio for white text on it — below WCAG AA's
+     4.5:1 for normal text, which is exactly the kind of thing that
+     reads as "washed out"/"weird" without anyone naming it as a
+     contrast problem. Researched real terracotta/clay palettes (a
+     muted orange-red "sun-baked clay" tone, not a bright fruit-orange)
+     and picked a deeper, richer shade in the same family: #B5573F,
+     4.77:1 against white, 4.47:1 against the cream background — both
+     pass. --primary-glow (the diagonal CTA sheen) darkened to match. */
   --radius: 0.6rem;
   --background: oklch(0.978 0.008 73.7);
   --foreground: oklch(0.266 0.016 67);
@@ -67,9 +78,9 @@
   --card-foreground: oklch(0.266 0.016 67);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.266 0.016 67);
-  --primary: oklch(0.655 0.117 50.8);
+  --primary: oklch(0.568 0.128 35.4);
   --primary-foreground: oklch(1 0 0);
-  --primary-glow: oklch(0.743 0.105 53.4);
+  --primary-glow: oklch(0.704 0.104 43.5);
   --secondary: oklch(0.951 0.014 78.3);
   --secondary-foreground: oklch(0.266 0.016 67);
   --muted: oklch(0.951 0.014 78.3);
@@ -92,7 +103,7 @@
   --warning-foreground: oklch(0.22 0.05 75);
   --border: oklch(0.911 0.022 76.5);
   --input: oklch(0.911 0.022 76.5);
-  --ring: oklch(0.655 0.117 50.8);
+  --ring: oklch(0.568 0.128 35.4);
 }
 
 .dark {

@@ -296,6 +296,8 @@ function RootComponent() {
               onNavigate={(t) => navigate({ to: "/", search: { tab: t } })}
               onOpenBrandKit={() => setBrandKitOpen(true)}
               onOpenProductCatalog={() => setProductCatalogOpen(true)}
+              brandKitOpen={brandKitOpen}
+              productCatalogOpen={productCatalogOpen}
               onOpenReferral={() => setReferralOpen(true)}
               onOpenBilling={() => setBillingOpen(true)}
               onOpenMetaConnect={() => setMetaConnectOpen(true)}

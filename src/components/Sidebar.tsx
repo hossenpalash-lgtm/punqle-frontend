@@ -124,6 +124,8 @@ export function Sidebar({
   onOpenYouTubeConnect,
   onOpenTikTokConnect,
   onSignOut,
+  brandKitOpen = false,
+  productCatalogOpen = false,
 }: {
   tab: NavTab;
   onNavigate: (tab: NavTab) => void;
@@ -135,6 +137,12 @@ export function Sidebar({
   onOpenYouTubeConnect: () => void;
   onOpenTikTokConnect: () => void;
   onSignOut: () => void;
+  // Brand Kit / Product Catalog are panels, not routed tabs, so `tab`
+  // alone can't tell these buttons whether they're the active one —
+  // unlike every other More-menu item. Optional + defaulted to false
+  // so this doesn't become a required prop everywhere Sidebar is used.
+  brandKitOpen?: boolean;
+  productCatalogOpen?: boolean;
 }) {
   const scrolled = useScrolled();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -375,14 +383,20 @@ export function Sidebar({
               ))}
               <button
                 onClick={onOpenBrandKit}
-                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-secondary"
+                className={[
+                  "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
+                  brandKitOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+                ].join(" ")}
               >
                 <Palette className="h-3.5 w-3.5" />
                 Brand Kit
               </button>
               <button
                 onClick={onOpenProductCatalog}
-                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-secondary"
+                className={[
+                  "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
+                  productCatalogOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+                ].join(" ")}
               >
                 <Package className="h-3.5 w-3.5" />
                 Product Catalog
@@ -605,7 +619,10 @@ export function Sidebar({
                   onOpenProductCatalog();
                   setMoreOpen(false);
                 }}
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary"
+                className={[
+                  "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
+                  productCatalogOpen ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+                ].join(" ")}
               >
                 <Package className="h-4 w-4" />
                 Product Catalog
@@ -619,7 +636,10 @@ export function Sidebar({
                   onOpenBrandKit();
                   setMoreOpen(false);
                 }}
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary"
+                className={[
+                  "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
+                  brandKitOpen ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+                ].join(" ")}
               >
                 <Palette className="h-4 w-4" />
                 Brand Kit

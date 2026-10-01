@@ -262,6 +262,54 @@
   animation-iteration-count: infinite;
   animation-direction: reverse;
 }
+
+/* GeneratingGlow.tsx's dark "generating" screen (2026-10-01) — approved
+   from a design exploration: 15 uniform dots evenly spaced on a ring,
+   empty in the middle, orbiting as one group, swept across Punqle's own
+   gradient. Deliberately not a ring of discrete ovals/petals, which read
+   too close to Meta's own mark in an earlier draft — this is a plain,
+   generic "orbiting dots" loader shape. */
+@keyframes generating-bloom-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.08);
+  }
+}
+@keyframes generating-ring-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes generating-dot-twinkle {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+@keyframes generating-loader-slide {
+  0% {
+    left: -40%;
+  }
+  50% {
+    left: 60%;
+  }
+  100% {
+    left: 100%;
+  }
+}
 /* Pause-on-hover/focus (RealFilmstrip.tsx) — real UX/accessibility
    convention for auto-moving content (WCAG 2.2.2): lets a visitor
    actually read a card's caption instead of it sliding past. Applied via

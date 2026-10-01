@@ -81,6 +81,7 @@ import {
 } from "@/components/ads/TryOnForm";
 import { VideoPostForm } from "@/components/ads/VideoPostForm";
 import { WeeklyPlanForm } from "@/components/ads/WeeklyPlanForm";
+import { GeneratingGlow } from "@/components/GeneratingGlow";
 
 type Tab = "home" | "single" | "plan" | "calendar" | "performance" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative" | "tryon";
 
@@ -1569,6 +1570,8 @@ function HomeScreen() {
                       </div>
                     )}
                   </div>
+                ) : actorPanel === "generating" ? (
+                  <GeneratingGlow label="Creating your actor's video… usually a few minutes." />
                 ) : (
                   <div className="p-4">
                     {actorError && <p className="mb-2 text-xs font-medium text-destructive">{actorError}</p>}
@@ -1892,30 +1895,16 @@ function HomeScreen() {
                         disabled={
                           (!selectedActorId && !selectedCustomActorId) ||
                           !actorNarration.trim() ||
-                          actorPanel === "generating" ||
                           taggingEmotions ||
                           (credits !== null && credits < ACTOR_VIDEO_V2_CREDIT_COST)
                         }
                         className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
                         style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                       >
-                        {actorPanel === "generating" ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : taggingEmotions ? (
-                          "Adding emotions…"
-                        ) : (
-                          `Generate (${ACTOR_VIDEO_V2_CREDIT_COST} credits)`
-                        )}
+                        {taggingEmotions ? "Adding emotions…" : `Generate (${ACTOR_VIDEO_V2_CREDIT_COST} credits)`}
                       </button>
                       </div>
                     </div>
-
-                    {actorPanel === "generating" && (
-                      <div className="mt-3 flex flex-col items-center gap-2 border-t border-border pt-3">
-                        <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                        <p className="text-xs text-muted-foreground">Creating your actor's video… usually a few minutes.</p>
-                      </div>
-                    )}
                   </div>
                 )}
               </>
@@ -1988,6 +1977,16 @@ function HomeScreen() {
                       <input type="file" accept="image/*" className="hidden" onChange={handleUploadOwnImageForVideo} />
                     </label>
                   </div>
+                ) : videoPanel === "generating" ? (
+                  <GeneratingGlow
+                    label={
+                      videoNarrationEnabled
+                        ? videoStage === "animating"
+                          ? "Animating your video…"
+                          : "Adding the voice…"
+                        : "Generating your video… this can take a minute or two."
+                    }
+                  />
                 ) : (
                   <div className="space-y-3 px-4 py-3">
                     {videoError && <p className="text-xs font-medium text-destructive">{videoError}</p>}
@@ -2157,19 +2156,6 @@ function HomeScreen() {
                         Generate ({(Math.ceil(videoDuration * IMAGE_VIDEO_CREDIT_PER_SECOND[videoModel]) + (videoNarrationEnabled ? TALKING_VIDEO_REDUB_SURCHARGE : 0)) * videoVersions} credits)
                       </button>
                     </div>
-
-                    {videoPanel === "generating" && (
-                      <div className="flex flex-col items-center gap-2 border-t border-border pt-3">
-                        <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                        <p className="text-xs text-muted-foreground">
-                          {videoNarrationEnabled
-                            ? videoStage === "animating"
-                              ? "Animating your video…"
-                              : "Adding the voice…"
-                            : "Generating your video… this can take a minute or two."}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 )}
               </>
@@ -2388,17 +2374,9 @@ function HomeScreen() {
                     </div>
                   </>
                 ) : productPanel === "generating" ? (
-                  <div className="flex flex-col items-center gap-2 px-4 py-10">
-                    <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                    <p className="text-xs text-muted-foreground">Creating your image…</p>
-                  </div>
+                  <GeneratingGlow label="Creating your image…" />
                 ) : videoPanel === "generating" ? (
-                  <div className="flex flex-col items-center gap-2 px-4 py-10">
-                    <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                    <p className="text-xs text-muted-foreground">
-                      {videoStage === "animating" ? "Animating your video…" : "Adding the voice…"}
-                    </p>
-                  </div>
+                  <GeneratingGlow label={videoStage === "animating" ? "Animating your video…" : "Adding the voice…"} />
                 ) : (
                   <div className="space-y-3 px-4 py-3">
                     {productError && <p className="text-xs font-medium text-destructive">{productError}</p>}
@@ -2572,10 +2550,7 @@ function HomeScreen() {
                     </div>
                   </>
                 ) : unboxingPanel === "generating" ? (
-                  <div className="flex flex-col items-center gap-2 px-4 py-10">
-                    <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                    <p className="text-xs text-muted-foreground">Creating your shot…</p>
-                  </div>
+                  <GeneratingGlow label="Creating your shot…" />
                 ) : (
                   <div className="space-y-3 px-4 py-3">
                     {/* Heading added (2026-09-23) — competitor research
@@ -2689,10 +2664,7 @@ function HomeScreen() {
                     </div>
                   </>
                 ) : showAppPanel === "generating" ? (
-                  <div className="flex flex-col items-center gap-2 px-4 py-10">
-                    <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                    <p className="text-xs text-muted-foreground">Creating your shot…</p>
-                  </div>
+                  <GeneratingGlow label="Creating your shot…" />
                 ) : (
                   <div className="space-y-3 px-4 py-3">
                     {/* Heading added (2026-09-23), same fix as Unboxing/
@@ -2880,14 +2852,13 @@ function HomeScreen() {
                     </div>
                   </>
                 ) : upscalePanel === "generating" ? (
-                  <div className="flex flex-col items-center gap-2 px-4 py-10">
-                    <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                    <p className="text-xs text-muted-foreground">
-                      {upscaleFile?.type.startsWith("video/")
+                  <GeneratingGlow
+                    label={
+                      upscaleFile?.type.startsWith("video/")
                         ? "Upscaling your video… this can take several minutes. You can browse other tabs while you wait — just don't switch away from Upscale here."
-                        : "Upscaling your image…"}
-                    </p>
-                  </div>
+                        : "Upscaling your image…"
+                    }
+                  />
                 ) : (
                   <div className="space-y-3 px-4 py-3">
                     {/* Heading added (2026-09-23) — competitor research

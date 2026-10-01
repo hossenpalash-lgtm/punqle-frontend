@@ -167,7 +167,9 @@ export function Sidebar({
   const [creatingProject, setCreatingProject] = useState(false);
   const [planPublishOpen, setPlanPublishOpen] = useState(() => PLAN_PUBLISH_ITEMS.some((i) => i.tab === tab));
   const [desktopMoreOpen, setDesktopMoreOpen] = useState(
-    () => tab === "bulk-creative" || INSIGHTS_ITEMS.some((i) => i.tab === tab) || tab === "history",
+    // Performance/Competitive Edge (INSIGHTS_ITEMS) no longer live inside
+    // More (2026-10-01) — only Bulk Creative/History still do.
+    () => tab === "bulk-creative" || tab === "history",
   );
 
   useEffect(() => {
@@ -320,44 +322,16 @@ export function Sidebar({
               ))}
             </div>
           )}
-          {/* Bulk Creative/Performance/Competitive Edge promoted out of
-              "More" (2026-10-01, founder's call) — used often enough to
-              earn a visible spot instead of an extra click, but kept
-              plain/black (not the Ad Creation/Plan & Publish gradient)
-              so those two keep reading as the two real "hero" actions,
-              not diluted by 3 more same-styled pills. */}
-          <div className="mt-1.5 flex flex-col gap-0.5">
-            <button
-              onClick={() => onNavigate("bulk-creative")}
-              className={[
-                "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                tab === "bulk-creative" ? "bg-foreground text-background" : "text-foreground hover:bg-secondary",
-              ].join(" ")}
-            >
-              <Layers className="h-3.5 w-3.5" />
-              Bulk Creative
-            </button>
-            {INSIGHTS_ITEMS.map(({ tab: t, label, icon: Icon }) => (
-              <button
-                key={t}
-                onClick={() => onNavigate(t)}
-                className={[
-                  "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  tab === t ? "bg-foreground text-background" : "text-foreground hover:bg-secondary",
-                ].join(" ")}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-
           {/* Real per-platform brand colors (2026-10-01) — these were
               flat bg-card/text-secondary-foreground outline icons,
               basically invisible as a "which platform is this" row.
               Each badge now uses that platform's actual brand fill so
               the row reads at a glance, same idea as every other real
-              social-icon row on the web. */}
+              social-icon row on the web. Kept directly under Plan &
+              Publish (2026-10-01, founder's call) — these icons are
+              that section's own connect/manage row, not a divider
+              between it and Bulk Creative/Performance/Competitive Edge
+              below. */}
           <div className="mt-1.5 flex gap-2 px-1">
             <button
               onClick={onOpenMetaConnect}
@@ -393,10 +367,48 @@ export function Sidebar({
             </button>
           </div>
 
-          {/* More — Bulk Creative moved here (2026-09-09 decision, doesn't
-              fit the "3 lucrative differentiators" logic the pill row
-              earns its spot with) alongside every remaining real nav
-              item — nothing invented, nothing dropped from today's nav. */}
+          {/* Insights — Performance + Competitive Edge only (2026-10-01,
+              founder's call): these two are real differentiators, more so
+              once Instagram Insights approval lands and Performance gets
+              real reach/impressions data — worth a visible, elevated spot.
+              Bulk Creative moved back into More below; it hasn't earned
+              the same priority yet. Styled with the violet AI-accent
+              (same token used for Punqle's other AI-driven surfaces) on a
+              soft tinted chip + bold label — enough visual priority to
+              read as "elevated" over a plain More item, deliberately
+              short of the saturated Ad Creation/Plan & Publish gradient,
+              which stays reserved for those two hero actions. */}
+          <div className="mb-1 mt-2.5 px-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            Insights
+          </div>
+          <div className="flex flex-col gap-0.5">
+            {INSIGHTS_ITEMS.map(({ tab: t, label, icon: Icon }) => (
+              <button
+                key={t}
+                onClick={() => onNavigate(t)}
+                className={[
+                  "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-bold transition-colors",
+                  tab === t ? "bg-foreground text-background" : "text-foreground hover:bg-accent/10",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md",
+                    tab === t ? "bg-white/20" : "bg-accent/15 text-accent",
+                  ].join(" ")}
+                >
+                  <Icon className="h-2.5 w-2.5" />
+                </span>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* More — Bulk Creative lives here (moved back 2026-10-01, same
+              founder's call as above: it hasn't earned the promoted spot
+              Performance/Competitive Edge now have) alongside every
+              remaining real nav item — nothing invented, nothing dropped
+              from today's nav. */}
           <button
             onClick={() => setDesktopMoreOpen((v) => !v)}
             className="mt-[68px] flex items-center justify-between rounded-xl border border-border bg-card px-2 py-1.5"
@@ -412,6 +424,16 @@ export function Sidebar({
           </button>
           {desktopMoreOpen && (
             <div className="mt-1 flex flex-col gap-0.5">
+              <button
+                onClick={() => onNavigate("bulk-creative")}
+                className={[
+                  "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
+                  tab === "bulk-creative" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
+                ].join(" ")}
+              >
+                <Layers className="h-3.5 w-3.5" />
+                Bulk Creative
+              </button>
               <button
                 onClick={onOpenBrandKit}
                 className={[

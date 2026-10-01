@@ -1008,7 +1008,7 @@ export function AdVideoForm({
                   disabled={addingMusic}
                   className={[
                     "rounded-full px-2 py-2 text-xs font-semibold capitalize disabled:opacity-60",
-                    musicMood === mood ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                    musicMood === mood ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                   ].join(" ")}
                 >
                   {addingMusic && musicMood !== mood ? "" : mood}
@@ -1035,8 +1035,7 @@ export function AdVideoForm({
             <button
               onClick={handleAddProductScene}
               disabled={addingScene || (credits !== null && credits < VIDEO_CREDIT_COST)}
-              className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-              style={{ background: "var(--gradient-primary)" }}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-4 py-3 text-sm font-semibold text-background disabled:opacity-60"
             >
               {addingScene ? (
                 <>
@@ -1074,7 +1073,7 @@ export function AdVideoForm({
                   disabled={addingCaptions}
                   className={[
                     "rounded-full px-2 py-1.5 text-xs font-semibold capitalize disabled:opacity-60",
-                    captionStyle === s ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                    captionStyle === s ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                   ].join(" ")}
                 >
                   {s}
@@ -1116,8 +1115,7 @@ export function AdVideoForm({
         <a
           href={videoUrl}
           download="ad-video.mp4"
-          className="mb-3 flex w-full items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground"
-          style={{ background: "var(--gradient-primary)" }}
+          className="mb-3 flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-4 text-base font-semibold text-background"
         >
           <Download className="h-5 w-5" />
           Download video
@@ -1145,7 +1143,7 @@ export function AdVideoForm({
     return (
       <div className="rounded-2xl bg-card p-6" style={{ boxShadow: "var(--shadow-card)" }}>
         <div className="flex flex-col items-center justify-center gap-3 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-foreground" />
           <p className="text-sm font-semibold text-foreground">
             {videoStyle === "avatar"
               ? "Generating your AI presenter video..."
@@ -1246,7 +1244,7 @@ export function AdVideoForm({
             type="button"
             onClick={handleConfirmActorScript}
             disabled={!actorNarrationDraft.trim() || generating}
-            className="flex-1 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            className="flex-1 rounded-full bg-foreground px-4 py-2.5 text-sm font-semibold text-background disabled:opacity-50"
           >
             Generate video
           </button>
@@ -1259,7 +1257,7 @@ export function AdVideoForm({
     return (
       <div className="rounded-2xl bg-card p-6" style={{ boxShadow: "var(--shadow-card)" }}>
         <div className="mb-6 flex flex-col items-center justify-center gap-3 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-foreground" />
           <p className="text-sm font-semibold text-foreground">Generating your video ad...</p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
@@ -1334,7 +1332,7 @@ export function AdVideoForm({
             onClick={() => setGoal(g.value)}
             className={[
               "rounded-full px-3 py-2.5 text-sm font-semibold",
-              goal === g.value ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+              goal === g.value ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
             ].join(" ")}
           >
             {g.label}
@@ -1404,14 +1402,14 @@ export function AdVideoForm({
                       onClick={() => setCinematicUgcTier(t)}
                       className={[
                         "rounded-xl px-3 py-2.5 text-left transition-colors capitalize",
-                        selected ? "bg-primary text-primary-foreground" : "bg-card text-foreground",
+                        selected ? "bg-foreground text-background" : "bg-card text-foreground",
                       ].join(" ")}
                     >
                       <span className="flex items-center gap-1.5 text-sm font-semibold">
                         {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
                         {t}
                       </span>
-                      <span className={["block text-xs normal-case", selected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}>
+                      <span className={["block text-xs normal-case", selected ? "text-background/80" : "text-muted-foreground"].join(" ")}>
                         {CINEMATIC_UGC_CREDIT_COST[t]} credits · {t === "premium" ? "720p" : "480p"}
                       </span>
                     </button>
@@ -1443,7 +1441,7 @@ export function AdVideoForm({
                     onClick={() => setActorGenderFilter(g)}
                     className={[
                       "flex-1 rounded-full px-3 py-2 text-xs font-semibold capitalize",
-                      actorGenderFilter === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                      actorGenderFilter === g ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                     ].join(" ")}
                   >
                     {g}
@@ -1504,7 +1502,7 @@ export function AdVideoForm({
                           <span
                             className={[
                               "relative aspect-square w-full overflow-hidden rounded-xl",
-                              selected ? "ring-2 ring-primary" : "",
+                              selected ? "ring-2 ring-foreground" : "",
                             ].join(" ")}
                           >
                             <img
@@ -1523,7 +1521,7 @@ export function AdVideoForm({
                               />
                             )}
                             {selected && (
-                              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background">
                                 <Check className="h-2.5 w-2.5" />
                               </span>
                             )}
@@ -1564,7 +1562,7 @@ export function AdVideoForm({
                       onClick={() => setAngle(a.value)}
                       className={[
                         "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium",
-                        selected ? "bg-primary text-primary-foreground" : "bg-card text-secondary-foreground",
+                        selected ? "bg-foreground text-background" : "bg-card text-secondary-foreground",
                       ].join(" ")}
                     >
                       {selected && a.value !== null && <Check className="h-3 w-3" />}
@@ -1611,7 +1609,7 @@ export function AdVideoForm({
               onClick={() => setAspectRatio("16:9")}
               className={[
                 "flex-1 rounded-full px-4 py-2.5 text-sm font-semibold",
-                aspectRatio === "16:9" ? "bg-primary text-primary-foreground" : "bg-card text-secondary-foreground",
+                aspectRatio === "16:9" ? "bg-foreground text-background" : "bg-card text-secondary-foreground",
               ].join(" ")}
             >
               Landscape (16:9)
@@ -1620,7 +1618,7 @@ export function AdVideoForm({
               onClick={() => setAspectRatio("9:16")}
               className={[
                 "flex-1 rounded-full px-4 py-2.5 text-sm font-semibold",
-                aspectRatio === "9:16" ? "bg-primary text-primary-foreground" : "bg-card text-secondary-foreground",
+                aspectRatio === "9:16" ? "bg-foreground text-background" : "bg-card text-secondary-foreground",
               ].join(" ")}
             >
               Vertical (9:16)
@@ -1630,7 +1628,7 @@ export function AdVideoForm({
 
       <div className="mb-4 w-full rounded-2xl border border-dashed border-border bg-secondary/60 p-3 text-center text-xs font-semibold text-foreground">
         {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && videoAdTrialAvailable ? (
-          <span className="text-primary">✨ Try free — no credits</span>
+          <span className="text-foreground">✨ Try free — no credits</span>
         ) : (
           <>1 video · {currentCost} credits</>
         )}{" "}
@@ -1663,8 +1661,7 @@ export function AdVideoForm({
       <button
         onClick={handleMainSubmit}
         disabled={!mainInput.trim() || busy || currentInsufficientCredits || styleNeedsMoreInput}
-        className="flex w-full items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
-        style={{ background: "var(--gradient-primary)" }}
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-4 text-base font-semibold text-background disabled:opacity-60"
       >
         {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Video className="h-5 w-5" />}
         {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && videoAdTrialAvailable

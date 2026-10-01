@@ -3016,8 +3016,16 @@ function HomeScreen() {
                   onClick={() => goTo(t)}
                   className={[
                     "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                    tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground",
+                    tab === t ? "text-white" : "text-secondary-foreground",
                   ].join(" ")}
+                  style={
+                    tab === t
+                      ? {
+                          background: "linear-gradient(135deg, #E2693F 0%, #C13E7A 55%, #6D3FA0 100%)",
+                          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22)",
+                        }
+                      : undefined
+                  }
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {label}

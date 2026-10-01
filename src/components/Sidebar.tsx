@@ -311,7 +311,7 @@ export function Sidebar({
                   onClick={() => onNavigate(t)}
                   className={[
                     "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                    tab === t ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
+                    tab === t ? "bg-foreground text-background" : "text-foreground hover:bg-secondary",
                   ].join(" ")}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -320,6 +320,38 @@ export function Sidebar({
               ))}
             </div>
           )}
+          {/* Bulk Creative/Performance/Competitive Edge promoted out of
+              "More" (2026-10-01, founder's call) — used often enough to
+              earn a visible spot instead of an extra click, but kept
+              plain/black (not the Ad Creation/Plan & Publish gradient)
+              so those two keep reading as the two real "hero" actions,
+              not diluted by 3 more same-styled pills. */}
+          <div className="mt-1.5 flex flex-col gap-0.5">
+            <button
+              onClick={() => onNavigate("bulk-creative")}
+              className={[
+                "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
+                tab === "bulk-creative" ? "bg-foreground text-background" : "text-foreground hover:bg-secondary",
+              ].join(" ")}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              Bulk Creative
+            </button>
+            {INSIGHTS_ITEMS.map(({ tab: t, label, icon: Icon }) => (
+              <button
+                key={t}
+                onClick={() => onNavigate(t)}
+                className={[
+                  "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
+                  tab === t ? "bg-foreground text-background" : "text-foreground hover:bg-secondary",
+                ].join(" ")}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+
           {/* Real per-platform brand colors (2026-10-01) — these were
               flat bg-card/text-secondary-foreground outline icons,
               basically invisible as a "which platform is this" row.
@@ -380,31 +412,6 @@ export function Sidebar({
           </button>
           {desktopMoreOpen && (
             <div className="mt-1 flex flex-col gap-0.5">
-              <button
-                onClick={() => onNavigate("bulk-creative")}
-                className={[
-                  "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  tab === "bulk-creative"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-secondary",
-                ].join(" ")}
-              >
-                <Layers className="h-3.5 w-3.5" />
-                Bulk Creative
-              </button>
-              {INSIGHTS_ITEMS.map(({ tab: t, label, icon: Icon }) => (
-                <button
-                  key={t}
-                  onClick={() => onNavigate(t)}
-                  className={[
-                    "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                    tab === t ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
-                  ].join(" ")}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {label}
-                </button>
-              ))}
               <button
                 onClick={onOpenBrandKit}
                 className={[

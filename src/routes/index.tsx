@@ -114,6 +114,15 @@ export const Route = createFileRoute("/")({
   }),
 });
 
+// Shared Instagram-gradient accent (2026-10-01) — same deep coral->magenta
+// ->violet stops used on the Ad Creation page and its Image Ad/Video Ad
+// toggle, reused here for the home screen's own selected-state surfaces
+// (gender filter, every mode's Generate button, the sidebar's Ad Creation/
+// Plan & Publish items) so the "premium gradient" treatment reads as one
+// consistent accent across the app, not a one-off on a single page.
+const HOME_GRADIENT = "linear-gradient(135deg, #E2693F 0%, #C13E7A 55%, #6D3FA0 100%)";
+const HOME_GRADIENT_SHEEN = "inset 0 1px 0 rgba(255,255,255,0.22)";
+
 // Image Post and Video are the two formats inside the ✨ Social Content
 // creation category — Punqle's product architecture is 3 categories
 // (Social Content / Ad Creation / E-commerce, see Sidebar.tsx), all now
@@ -1236,38 +1245,10 @@ function HomeScreen() {
 
           <div className="flex-1" />
 
-          {/* Ad Creation, promoted out of "See more" (2026-09-22) — real
-              competitor research (AdCreative.ai, Creatify) found the
-              strongest ad-focused tools keep their goal/platform-driven ad
-              flow visibly separate from casual content generators, never
-              folded into an overflow menu. Distinct accent styling (not
-              just another pill in the row below) signals it's a different,
-              higher-intent action than Ready Actors/Video/Image/etc —
-              those are quick one-shot generators with no Goal/CTA/Platform/
-              batch-variant concept; Ad Creation (tab=ad) is the campaign-
-              grade tool, and its own Image Ad/Video Ad toggle (AD_TYPES)
-              already covers both formats from this one entry point. */}
-          <button
-            onClick={() => goTo("ad")}
-            className="mb-3 flex w-full items-center justify-between gap-3 self-center rounded-2xl border border-accent/40 px-5 py-3.5 text-left backdrop-blur-md transition-colors hover:bg-accent/10"
-            style={{ background: "oklch(1 0 0 / 55%)", boxShadow: "var(--shadow-card)" }}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground)" }}
-              >
-                <Megaphone className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-foreground">Ad Creation</p>
-                <p className="text-xs text-muted-foreground">
-                  Goal-driven ads, ready for Facebook &amp; Instagram — Image or Video
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-accent" />
-          </button>
+          {/* Ad Creation moved into the left sidebar (2026-10-01, just
+              above Plan & Publish) — see Sidebar.tsx. Was a banner here;
+              removed rather than duplicated so there's one entry point,
+              not two. */}
 
           {/* Unified creation bar (2026-09-17, Arcads parity) — one
               persistent bar, mode pills switch its content in place. Only
@@ -1488,7 +1469,8 @@ function HomeScreen() {
                         <button
                           onClick={handleGenerateActorPhoto}
                           disabled={!createActorPrompt.trim() || createActorGenerating}
-                          className="w-full rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                          className="w-full rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
+                          style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                         >
                           {createActorGenerating ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Generate (9 credits)"}
                         </button>
@@ -1590,7 +1572,8 @@ function HomeScreen() {
                             createActorSaving ||
                             (createActorSource === "upload" && !createActorConsent)
                           }
-                          className="w-full rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                          className="w-full rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
+                          style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                         >
                           {createActorSaving ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Save actor"}
                         </button>
@@ -1613,8 +1596,9 @@ function HomeScreen() {
                           }}
                           className={[
                             "flex-1 rounded-full px-3 py-2 text-xs font-semibold capitalize",
-                            actorGenderFilter === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                            actorGenderFilter === g ? "text-white" : "bg-secondary text-secondary-foreground",
                           ].join(" ")}
+                          style={actorGenderFilter === g ? { background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN } : undefined}
                         >
                           {g}
                         </button>
@@ -1882,7 +1866,8 @@ function HomeScreen() {
                           taggingEmotions ||
                           (credits !== null && credits < ACTOR_VIDEO_V2_CREDIT_COST)
                         }
-                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                        className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
+                        style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                       >
                         {actorPanel === "generating" ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -2136,7 +2121,8 @@ function HomeScreen() {
                           !videoRefImage ||
                           (videoNarrationEnabled ? !videoNarration.trim() : !videoPrompt.trim())
                         }
-                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                        className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
+                        style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                       >
                         Generate ({(Math.ceil(videoDuration * IMAGE_VIDEO_CREDIT_PER_SECOND[videoModel]) + (videoNarrationEnabled ? TALKING_VIDEO_REDUB_SURCHARGE : 0)) * videoVersions} credits)
                       </button>
@@ -2504,7 +2490,8 @@ function HomeScreen() {
                       <button
                         onClick={handleGenerateProduct}
                         disabled={!videoRefImage || !productFile || !productPrompt.trim()}
-                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                        className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
+                        style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                       >
                         {featureTrials?.product ? "✨ Try free" : "Generate"}
                       </button>
@@ -2620,7 +2607,8 @@ function HomeScreen() {
                       <button
                         onClick={handleGenerateUnboxing}
                         disabled={!unboxingFile || !unboxingScene.trim()}
-                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                        className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
+                        style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                       >
                         {featureTrials?.unboxing ? "✨ Try free" : "Generate"}
                       </button>
@@ -2797,7 +2785,8 @@ function HomeScreen() {
                       <button
                         onClick={handleGenerateShowApp}
                         disabled={(!videoRefImage && !homeGeneratedImage) || !showAppFile}
-                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                        className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
+                        style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                       >
                         {featureTrials?.show_app ? "✨ Try free" : "Generate"}
                       </button>
@@ -2924,7 +2913,8 @@ function HomeScreen() {
                       <button
                         onClick={handleGenerateUpscale}
                         disabled={!upscaleFile}
-                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                        className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
+                        style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                       >
                         {/* Trial only covers image upscale, not video —
                             see FEATURE_TRIAL_KEYS' "upscale_image" key. */}

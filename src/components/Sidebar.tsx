@@ -82,6 +82,13 @@ export const ALL_NAV_TABS: NavTab[] = [
 // a real differentiator (not a generic utility), gets the same
 // accent-icon-box treatment as Social Content/Ad Creation below instead
 // of a plain link, so it visually reads as equally primary.
+// Same deep coral->magenta->violet gradient used on the Ad Creation page
+// and home screen (2026-10-01) — reused here for the sidebar's own
+// Ad Creation link and Plan & Publish header, per the founder's explicit
+// ask to keep those two visually matched.
+const SIDEBAR_GRADIENT = "linear-gradient(135deg, #E2693F 0%, #C13E7A 55%, #6D3FA0 100%)";
+const SIDEBAR_GRADIENT_SHEEN = "inset 0 1px 0 rgba(255,255,255,0.22)";
+
 const SOCIAL_CONTENT_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "single", label: "Image Post", icon: ImageIcon },
   { tab: "video", label: "Video", icon: Video },
@@ -262,6 +269,22 @@ export function Sidebar({
           )}
           {projectsError && <p className="mb-1 px-1.5 text-[11px] text-destructive">{projectsError}</p>}
 
+          {/* Ad Creation — moved here from the home screen (2026-10-01,
+              founder's call) to sit directly above Plan & Publish, same
+              gradient treatment as that header so the two read as a
+              matched pair. Direct nav link (no collapse), unlike Plan &
+              Publish below. */}
+          <button
+            onClick={() => onNavigate("ad")}
+            className="mt-[58px] flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-[13px] font-bold text-white"
+            style={{ background: SIDEBAR_GRADIENT, boxShadow: `${SIDEBAR_GRADIENT_SHEEN}, var(--shadow-card)` }}
+          >
+            <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md bg-white/20">
+              <Megaphone className="h-2.5 w-2.5" />
+            </span>
+            Ad Creation
+          </button>
+
           {/* Plan & Publish — collapsed by default, matching More below;
               the FB/IG/TikTok/YouTube row stays visible regardless (status
               at a glance + click to connect/manage), only Weekly
@@ -270,23 +293,17 @@ export function Sidebar({
               live against real screenshots, not arbitrary. */}
           <button
             onClick={() => setPlanPublishOpen((v) => !v)}
-            className="mt-[58px] flex items-center justify-between rounded-xl border border-border bg-card px-2 py-1.5"
-            style={{ boxShadow: "var(--shadow-card)" }}
+            className="mt-1.5 flex items-center justify-between rounded-xl px-2 py-1.5 text-white"
+            style={{ background: SIDEBAR_GRADIENT, boxShadow: `${SIDEBAR_GRADIENT_SHEEN}, var(--shadow-card)` }}
           >
-            <span className="flex items-center gap-1.5 text-[13px] font-bold text-foreground">
-              <span
-                className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md"
-                style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground)" }}
-              >
+            <span className="flex items-center gap-1.5 text-[13px] font-bold text-white">
+              <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md bg-white/20">
                 <Zap className="h-2.5 w-2.5" />
               </span>
               Plan &amp; Publish
             </span>
             <ChevronDown
-              className={[
-                "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
-                planPublishOpen ? "rotate-180" : "",
-              ].join(" ")}
+              className={["h-3.5 w-3.5 shrink-0 text-white/80 transition-transform", planPublishOpen ? "rotate-180" : ""].join(" ")}
             />
           </button>
           {planPublishOpen && (

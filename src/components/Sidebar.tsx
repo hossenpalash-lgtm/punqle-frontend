@@ -371,17 +371,13 @@ export function Sidebar({
             </button>
           </div>
 
-          {/* Insights — Performance + Competitive Edge only (2026-10-01,
-              founder's call): these two are real differentiators, more so
-              once Instagram Insights approval lands and Performance gets
-              real reach/impressions data — worth a visible, elevated spot.
-              Bulk Creative moved back into More below; it hasn't earned
-              the same priority yet. Styled with the violet AI-accent
-              (same token used for Punqle's other AI-driven surfaces) on a
-              soft tinted chip + bold label — enough visual priority to
-              read as "elevated" over a plain More item, deliberately
-              short of the saturated Ad Creation/Plan & Publish gradient,
-              which stays reserved for those two hero actions. */}
+          {/* Insights — Performance + Competitive Edge only. Icon chips
+              moved from the flat violet accent tint to the same
+              Ad Creation/Plan & Publish gradient (2026-10-02, founder's
+              call, after seeing it on the home bar's "See more" menu) —
+              a deliberate reversal of the original 2026-10-01 call to
+              keep gradient reserved for exactly two "hero" items; founder
+              decided the richer treatment reads better here too. */}
           <div className="mb-1 mt-2.5 px-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             Insights
           </div>
@@ -392,14 +388,12 @@ export function Sidebar({
                 onClick={() => onNavigate(t)}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-bold transition-colors",
-                  tab === t ? "bg-foreground text-background" : "text-foreground hover:bg-accent/10",
+                  tab === t ? "bg-foreground text-background" : "text-foreground hover:bg-secondary",
                 ].join(" ")}
               >
                 <span
-                  className={[
-                    "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md",
-                    tab === t ? "bg-white/20" : "bg-accent/15 text-accent",
-                  ].join(" ")}
+                  className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md text-white"
+                  style={{ background: SIDEBAR_GRADIENT, boxShadow: SIDEBAR_GRADIENT_SHEEN }}
                 >
                   <Icon className="h-2.5 w-2.5" />
                 </span>

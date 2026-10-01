@@ -1329,10 +1329,16 @@ function HomeScreen() {
                   attention, unlike Insights (sidebar), which deliberately
                   stays off the gradient to keep it a two-item "hero" set. */}
               {showMoreMenu && (
-                <div
-                  className="absolute right-0 bottom-full z-10 mb-2 w-52 overflow-hidden rounded-2xl border border-border bg-card p-1.5"
-                  style={{ boxShadow: "0 16px 40px -12px rgba(0,0,0,0.22), var(--shadow-card)" }}
-                >
+                <>
+                  {/* Full-screen tap-to-close backdrop — same pattern as
+                      the mobile nav's own "More" menu (Sidebar.tsx) — a
+                      real gap found live 2026-10-02: clicking outside
+                      this dropdown previously did nothing at all. */}
+                  <div className="fixed inset-0 z-30" onClick={() => setShowMoreMenu(false)} />
+                  <div
+                    className="absolute right-0 bottom-full z-40 mb-2 w-52 overflow-hidden rounded-2xl border border-border bg-card p-1.5"
+                    style={{ boxShadow: "0 16px 40px -12px rgba(0,0,0,0.22), var(--shadow-card)" }}
+                  >
                   {[
                     { icon: PackageOpen, label: "Unboxing", onClick: () => handleSwitchMode("unboxing") },
                     { icon: Smartphone, label: "Show Your App", onClick: () => handleSwitchMode("show_app") },
@@ -1364,7 +1370,8 @@ function HomeScreen() {
                       {label}
                     </button>
                   ))}
-                </div>
+                  </div>
+                </>
               )}
             </div>
           </div>

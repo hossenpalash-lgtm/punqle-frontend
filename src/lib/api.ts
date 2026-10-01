@@ -788,12 +788,21 @@ export function generateAdImageVariant(
 // Settings (model picker), matching a real competitor's own simple "type a
 // prompt, pick a model, generate" tool. No caption/goal/platform framing —
 // just a prompt and a picture, unlike generateAd above.
+// forActor: set only by "Create your own actor"'s "Generate with AI" step
+// — constrains the generated photo to a single person, no one else in
+// frame, regardless of what scene the description implies (e.g. "riding
+// a rickshaw"). Needed because OmniHuman later lip-syncs EVERY face it
+// detects in the photo to the one narration track — a real bug found
+// live 2026-10-01 where a generated actor photo included a second person
+// (a rickshaw driver) who ended up mouthing the actor's own narration.
 export function generateImageDirect(
   prompt: string,
   aspectRatio: AspectRatio = "square",
   model: ImageGenModel = "nano_banana_pro",
+  forActor = false,
 ): Promise<ApiAdImageVariantResponse> {
   const params = new URLSearchParams({ prompt, aspect_ratio: aspectRatio, model });
+  if (forActor) params.set("for_actor", "true");
   return apiFetch<ApiAdImageVariantResponse>(`/ads/generate-image?${params}`, {
     method: "POST",
   });

@@ -494,7 +494,7 @@ function HomeScreen() {
     setCreateActorCandidates([]);
     try {
       for (let i = 0; i < 3; i++) {
-        const r = await generateImageDirect(createActorPrompt.trim(), "square", "nano_banana_pro");
+        const r = await generateImageDirect(createActorPrompt.trim(), "square", "nano_banana_pro", true);
         setCreateActorCandidates((prev) => [...prev, { base64: r.banner_image_base64, mimeType: "image/png" }]);
         setCredits(r.credits_remaining);
       }
@@ -1322,9 +1322,12 @@ function HomeScreen() {
               {/* Opens upward (2026-10-01, founder's call) — this row sits
                   near the bottom of the bar, so a downward menu used to
                   overlap the actor/image/video panel right below it.
-                  Also restyled with per-item accent-tinted icon chips
-                  (same visual language as the sidebar's "Insights"
-                  section) instead of plain icons, for a bit more polish. */}
+                  Icon chips use the same home-gradient as Ad Creation/Plan
+                  & Publish (2026-10-01, founder's call) — safe to do here
+                  specifically because this menu is tucked behind a click,
+                  not a persistent pill competing with those two for
+                  attention, unlike Insights (sidebar), which deliberately
+                  stays off the gradient to keep it a two-item "hero" set. */}
               {showMoreMenu && (
                 <div
                   className="absolute right-0 bottom-full z-10 mb-2 w-52 overflow-hidden rounded-2xl border border-border bg-card p-1.5"
@@ -1350,9 +1353,12 @@ function HomeScreen() {
                         setShowMoreMenu(false);
                         onClick();
                       }}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-foreground transition-colors hover:bg-accent/10"
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
                     >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
+                      <span
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white"
+                        style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
+                      >
                         <Icon className="h-3.5 w-3.5" />
                       </span>
                       {label}
@@ -1456,6 +1462,17 @@ function HomeScreen() {
                           rows={2}
                           className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                         />
+                        {/* 2026-10-01 — a real generated photo once came back
+                            with a second person in frame (a rickshaw driver,
+                            from a "riding a rickshaw" description), and both
+                            faces ended up speaking the narration in the final
+                            video. The backend now constrains every generation
+                            here to one person regardless of scene, but this
+                            sets the right expectation upfront too. */}
+                        <p className="text-[11px] text-muted-foreground">
+                          One person only — if your description implies a setting with other people
+                          (a driver, a crowd), we'll keep just your actor in frame.
+                        </p>
                         <button
                           onClick={handleGenerateActorPhoto}
                           disabled={!createActorPrompt.trim() || createActorGenerating}

@@ -86,7 +86,7 @@ export const ALL_NAV_TABS: NavTab[] = [
 // and home screen (2026-10-01) — reused here for the sidebar's own
 // Ad Creation link and Plan & Publish header, per the founder's explicit
 // ask to keep those two visually matched.
-const SIDEBAR_GRADIENT = "linear-gradient(135deg, #E2693F 0%, #C13E7A 55%, #6D3FA0 100%)";
+const SIDEBAR_GRADIENT = "linear-gradient(135deg, #E4754E 0%, #C64D85 55%, #794EA8 100%)";
 const SIDEBAR_GRADIENT_SHEEN = "inset 0 1px 0 rgba(255,255,255,0.22)";
 
 const SOCIAL_CONTENT_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
@@ -208,10 +208,7 @@ export function Sidebar({
           onClick={() => onNavigate("home")}
           className="mb-6 flex shrink-0 items-center gap-2 px-1.5"
         >
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-primary-foreground"
-            style={{ background: "var(--gradient-primary)" }}
-          >
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background">
             <PunqleLogo className="h-3.5 w-3.5" />
           </div>
           <span className="font-display text-base font-extrabold text-foreground">Punqle</span>
@@ -314,7 +311,7 @@ export function Sidebar({
                   onClick={() => onNavigate(t)}
                   className={[
                     "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                    tab === t ? "bg-primary text-primary-foreground" : "text-foreground/75 hover:bg-secondary hover:text-foreground",
+                    tab === t ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
                   ].join(" ")}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -329,11 +326,11 @@ export function Sidebar({
               Each badge now uses that platform's actual brand fill so
               the row reads at a glance, same idea as every other real
               social-icon row on the web. */}
-          <div className="mt-1.5 flex justify-between px-1">
+          <div className="mt-1.5 flex gap-2 px-1">
             <button
               onClick={onOpenMetaConnect}
               aria-label="Facebook"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-white"
               style={{ background: "#1877F2" }}
             >
               <Facebook className="h-3.5 w-3.5" fill="currentColor" />
@@ -341,7 +338,7 @@ export function Sidebar({
             <button
               onClick={onOpenMetaConnect}
               aria-label="Instagram"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-white"
               style={{ background: "linear-gradient(45deg, #FEDA75, #FA7E1E, #D62976, #962FBF, #4F5BD5)" }}
             >
               <Instagram className="h-3.5 w-3.5" />
@@ -349,7 +346,7 @@ export function Sidebar({
             <button
               onClick={onOpenTikTokConnect}
               aria-label="TikTok"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-white"
               style={{ background: "#000000" }}
             >
               <TikTokIcon className="h-3.5 w-3.5" />
@@ -357,7 +354,7 @@ export function Sidebar({
             <button
               onClick={onOpenYouTubeConnect}
               aria-label="YouTube"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-white"
               style={{ background: "#FF0000" }}
             >
               <Youtube className="h-3.5 w-3.5" fill="currentColor" />
@@ -389,7 +386,7 @@ export function Sidebar({
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
                   tab === "bulk-creative"
                     ? "bg-primary text-primary-foreground"
-                    : "text-foreground/75 hover:bg-secondary hover:text-foreground",
+                    : "text-foreground hover:bg-secondary",
                 ].join(" ")}
               >
                 <Layers className="h-3.5 w-3.5" />
@@ -401,7 +398,7 @@ export function Sidebar({
                   onClick={() => onNavigate(t)}
                   className={[
                     "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                    tab === t ? "bg-primary text-primary-foreground" : "text-foreground/75 hover:bg-secondary hover:text-foreground",
+                    tab === t ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
                   ].join(" ")}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -412,7 +409,7 @@ export function Sidebar({
                 onClick={onOpenBrandKit}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  brandKitOpen ? "bg-primary text-primary-foreground" : "text-foreground/75 hover:bg-secondary hover:text-foreground",
+                  brandKitOpen ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
                 ].join(" ")}
               >
                 <Palette className="h-3.5 w-3.5" />
@@ -422,7 +419,7 @@ export function Sidebar({
                 onClick={onOpenProductCatalog}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  productCatalogOpen ? "bg-primary text-primary-foreground" : "text-foreground/75 hover:bg-secondary hover:text-foreground",
+                  productCatalogOpen ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
                 ].join(" ")}
               >
                 <Package className="h-3.5 w-3.5" />
@@ -432,7 +429,7 @@ export function Sidebar({
                 onClick={() => onNavigate("history")}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  tab === "history" ? "bg-primary text-primary-foreground" : "text-foreground/75 hover:bg-secondary hover:text-foreground",
+                  tab === "history" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
                 ].join(" ")}
               >
                 <Clock className="h-3.5 w-3.5" />
@@ -440,14 +437,14 @@ export function Sidebar({
               </button>
               <button
                 onClick={onOpenReferral}
-                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-foreground/75 hover:bg-secondary hover:text-foreground"
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-foreground hover:bg-secondary"
               >
                 <Gift className="h-3.5 w-3.5" />
                 Invite &amp; Earn
               </button>
               <button
                 onClick={onOpenBilling}
-                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-foreground/75 hover:bg-secondary hover:text-foreground"
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-foreground hover:bg-secondary"
               >
                 <CreditCard className="h-3.5 w-3.5" />
                 Plans &amp; Billing
@@ -512,10 +509,7 @@ export function Sidebar({
           style={{ boxShadow: "var(--shadow-card)" }}
         >
           <button onClick={() => onNavigate("single")} aria-label="Home" className="flex shrink-0 items-center gap-2">
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-full text-primary-foreground"
-              style={{ background: "var(--gradient-primary)" }}
-            >
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background">
               <PunqleLogo className="h-4 w-4" />
             </div>
             <span className="font-display text-sm font-extrabold text-foreground">Punqle</span>

@@ -1322,24 +1322,6 @@ export function AdVideoForm({
         <ProductPicker onSelect={handleQuickCreateFromCatalog} />
       </div>
 
-      <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Goal
-      </label>
-      <div className="mb-4 grid w-full grid-cols-4 gap-2">
-        {GOALS.map((g) => (
-          <button
-            key={g.value}
-            onClick={() => setGoal(g.value)}
-            className={[
-              "rounded-full px-3 py-2.5 text-sm font-semibold",
-              goal === g.value ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
-            ].join(" ")}
-          >
-            {g.label}
-          </button>
-        ))}
-      </div>
-
       {/* Style/Angle/Photo/Format un-collapsed onto the main screen
           (2026-09-23, same principle as Image Ad's redesign — see
           AdCreationForm.tsx): these are creative decisions that change
@@ -1624,6 +1606,24 @@ export function AdVideoForm({
               Vertical (9:16)
             </button>
           </div>
+      </div>
+
+      <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Goal
+      </label>
+      <div className="mb-4 grid w-full grid-cols-4 gap-2">
+        {GOALS.map((g) => (
+          <button
+            key={g.value}
+            onClick={() => setGoal(g.value)}
+            className={[
+              "rounded-full px-3 py-2.5 text-sm font-semibold",
+              goal === g.value ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
+            ].join(" ")}
+          >
+            {g.label}
+          </button>
+        ))}
       </div>
 
       <div className="mb-4 w-full rounded-2xl border border-dashed border-border bg-secondary/60 p-3 text-center text-xs font-semibold text-foreground">

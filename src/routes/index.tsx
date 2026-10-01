@@ -351,6 +351,12 @@ function HomeScreen() {
   // Arcads' own compact bar. Resets whenever the gender filter changes
   // so every filter starts compact.
   const [showAllActors, setShowAllActors] = useState(false);
+  // Collapsed by default (2026-10-01, founder's call) — the full
+  // actor grid used to be permanently open, pushing the narration box
+  // below the fold even after an actor was already picked. Now it's a
+  // click-to-expand panel; picking an actor (or canceling) collapses
+  // it back to a compact summary row.
+  const [actorPickerOpen, setActorPickerOpen] = useState(false);
   const [actorPreviewVideos, setActorPreviewVideos] = useState<Record<string, string>>({});
   const [selectedActorId, setSelectedActorId] = useState<string | null>(null);
   const [actorNarration, setActorNarration] = useState("");
@@ -1310,64 +1316,47 @@ function HomeScreen() {
               >
                 <MoreHorizontal className="h-4 w-4" />
                 See more
-                <ChevronDown className="h-3.5 w-3.5" />
+                <ChevronDown className={["h-3.5 w-3.5 transition-transform", showMoreMenu ? "rotate-180" : ""].join(" ")} />
               </button>
+              {/* Opens upward (2026-10-01, founder's call) — this row sits
+                  near the bottom of the bar, so a downward menu used to
+                  overlap the actor/image/video panel right below it.
+                  Also restyled with per-item accent-tinted icon chips
+                  (same visual language as the sidebar's "Insights"
+                  section) instead of plain icons, for a bit more polish. */}
               {showMoreMenu && (
                 <div
-                  className="absolute right-0 top-full z-10 mt-2 w-48 overflow-hidden rounded-2xl border border-border bg-card py-1"
-                  style={{ boxShadow: "var(--shadow-card)" }}
+                  className="absolute right-0 bottom-full z-10 mb-2 w-52 overflow-hidden rounded-2xl border border-border bg-card p-1.5"
+                  style={{ boxShadow: "0 16px 40px -12px rgba(0,0,0,0.22), var(--shadow-card)" }}
                 >
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      handleSwitchMode("unboxing");
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-secondary"
-                  >
-                    <PackageOpen className="h-4 w-4" />
-                    Unboxing
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      handleSwitchMode("show_app");
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-secondary"
-                  >
-                    <Smartphone className="h-4 w-4" />
-                    Show Your App
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      handleSwitchMode("upscale");
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-secondary"
-                  >
-                    <ZoomIn className="h-4 w-4" />
-                    Upscale
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      goTo("tryon");
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-secondary"
-                  >
-                    <Shirt className="h-4 w-4" />
-                    Try-On
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      setEntryHint("carousel");
-                      goTo("single");
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-secondary"
-                  >
-                    <Images className="h-4 w-4" />
-                    Carousel
-                  </button>
+                  {[
+                    { icon: PackageOpen, label: "Unboxing", onClick: () => handleSwitchMode("unboxing") },
+                    { icon: Smartphone, label: "Show Your App", onClick: () => handleSwitchMode("show_app") },
+                    { icon: ZoomIn, label: "Upscale", onClick: () => handleSwitchMode("upscale") },
+                    { icon: Shirt, label: "Try-On", onClick: () => goTo("tryon") },
+                    {
+                      icon: Images,
+                      label: "Carousel",
+                      onClick: () => {
+                        setEntryHint("carousel");
+                        goTo("single");
+                      },
+                    },
+                  ].map(({ icon: Icon, label, onClick }) => (
+                    <button
+                      key={label}
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        onClick();
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-foreground transition-colors hover:bg-accent/10"
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                      {label}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -1583,9 +1572,47 @@ function HomeScreen() {
                 ) : (
                   <div className="p-4">
                     {actorError && <p className="mb-2 text-xs font-medium text-destructive">{actorError}</p>}
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Choose your actor
-                    </p>
+                    {/* Collapsed by default (2026-10-01, founder's call) —
+                        this used to be a permanently-open grid pushing the
+                        script box below the fold. Now a compact row that
+                        expands on click, and auto-collapses back once an
+                        actor is picked (see the two onClick handlers
+                        below that call setActorPickerOpen(false)). */}
+                    {(() => {
+                      const selectedBuiltIn = selectedActorId ? actors.find((a) => a.id === selectedActorId) : null;
+                      const selectedCustom = selectedCustomActorId
+                        ? customActors.find((a) => a.id === selectedCustomActorId)
+                        : null;
+                      const thumbSrc = selectedBuiltIn
+                        ? `data:image/jpeg;base64,${selectedBuiltIn.situation_preview_base64 ?? selectedBuiltIn.preview_image_base64}`
+                        : selectedCustom
+                          ? `data:${selectedCustom.photo_mime_type};base64,${selectedCustom.photo_base64}`
+                          : null;
+                      const selectedName = selectedBuiltIn?.name ?? selectedCustom?.name ?? null;
+                      return (
+                        <button
+                          onClick={() => setActorPickerOpen((v) => !v)}
+                          className="mb-2 flex w-full items-center justify-between gap-2 rounded-xl px-1 py-1 text-left"
+                        >
+                          <span className="flex items-center gap-2">
+                            {thumbSrc ? (
+                              <img src={thumbSrc} alt={selectedName ?? "Selected actor"} className="h-7 w-7 rounded-lg object-cover" />
+                            ) : (
+                              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary">
+                                <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
+                              </span>
+                            )}
+                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              {selectedName ? `Actor: ${selectedName}` : "Choose your actor"}
+                            </span>
+                          </span>
+                          <ChevronDown
+                            className={["h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", actorPickerOpen ? "rotate-180" : ""].join(" ")}
+                          />
+                        </button>
+                      );
+                    })()}
+                    {actorPickerOpen && (
                     <div className="mb-3 flex gap-2">
                       {(["all", "female", "male"] as const).map((g) => (
                         <button
@@ -1604,7 +1631,8 @@ function HomeScreen() {
                         </button>
                       ))}
                     </div>
-                    {actorsLoading || !situationsLoaded ? (
+                    )}
+                    {actorPickerOpen && (actorsLoading || !situationsLoaded ? (
                       <div className="flex items-center justify-center py-6">
                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                       </div>
@@ -1645,6 +1673,7 @@ function HomeScreen() {
                                   if (!ready) return;
                                   setSelectedActorId(a.id);
                                   setSelectedCustomActorId(null);
+                                  setActorPickerOpen(false);
                                 }}
                                 disabled={!ready}
                                 onMouseEnter={(e) => {
@@ -1711,6 +1740,7 @@ function HomeScreen() {
                                     onClick={() => {
                                       setSelectedCustomActorId(a.id);
                                       setSelectedActorId(null);
+                                      setActorPickerOpen(false);
                                     }}
                                     className={[
                                       "absolute inset-0",
@@ -1785,9 +1815,9 @@ function HomeScreen() {
                         </button>
                       </div>
                       );
-                    })()}
+                    })())}
 
-                    {!selectedActorId && !selectedCustomActorId && (
+                    {actorPickerOpen && !selectedActorId && !selectedCustomActorId && (
                       <p className="mt-4 text-xs text-muted-foreground">Pick an actor above to set voice options.</p>
                     )}
 

@@ -218,7 +218,11 @@ export function Sidebar({
 
         <div className="flex flex-1 flex-col overflow-y-auto">
           <div className="mb-2 flex items-center justify-between px-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Projects</span>
+            {/* Darkened from text-muted-foreground (2026-10-01, founder's
+                call) — it was already font-bold, but the light gray color
+                read as thin/weak next to the darker "Insights" label
+                below it. */}
+            <span className="text-[11px] font-bold uppercase tracking-wider text-foreground">Projects</span>
             <button
               onClick={() => setAddingProject((v) => !v)}
               aria-label="New project"

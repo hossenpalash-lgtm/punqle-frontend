@@ -54,20 +54,11 @@ const AD_GOAL_CTA: Record<AdGoal, string> = {
   bookings: "Book Now",
 };
 
-// Instagram-gradient accent (2026-10-01, replacing the flat terracotta
-// --primary fill on this page specifically) — deliberately deeper/moodier
-// stops than Instagram's own logo colors (which read as a flat brand sticker
-// at this size), plus a soft matching glow + glassy top-sheen on the CTA
-// for the "aurora" depth real 2026 premium-SaaS gradient buttons use. Scoped
-// to this file only (inline styles, not the shared --primary token) so nothing
-// elsewhere in the app silently changes. ADS_ACCENT_SOLID is the same
-// gradient's rich midpoint, used wherever a flat (not gradient) accent color
-// is needed — link text, ring, badge text.
-const ADS_GRADIENT = "linear-gradient(135deg, #E2693F 0%, #C13E7A 55%, #6D3FA0 100%)";
-const ADS_SHEEN = "inset 0 1px 0 rgba(255,255,255,0.22)";
-const ADS_GLOW =
-  "inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 34px -8px rgba(177,56,122,0.5), 0 4px 14px -4px rgba(109,63,160,0.35)";
-const ADS_ACCENT_SOLID = "#B1387A";
+// Selected-state pills on this page went terracotta -> Instagram gradient
+// -> and now (2026-10-01, founder's call) solid black (bg-foreground), to
+// match the rest of the app's "black = selected" convention — only the
+// Image Ad/Video Ad toggle above (routes/index.tsx) keeps the gradient as
+// a deliberate one-off highlight.
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -562,9 +553,8 @@ export function AdCreationForm({
                   onClick={() => setGoal(g.value)}
                   className={[
                     "rounded-full px-3 py-2.5 text-sm font-semibold transition-colors",
-                    goal === g.value ? "text-white" : "bg-secondary text-secondary-foreground",
+                    goal === g.value ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                   ].join(" ")}
-                  style={goal === g.value ? { background: ADS_GRADIENT, boxShadow: ADS_SHEEN } : undefined}
                 >
                   {g.label}
                 </button>
@@ -593,9 +583,8 @@ export function AdCreationForm({
                     onClick={() => setVisualDirection(d.id)}
                     className={[
                       "rounded-xl px-2 py-2 text-left text-[11px] font-semibold leading-tight transition-colors",
-                      selected ? "text-white" : "bg-secondary text-secondary-foreground",
+                      selected ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                     ].join(" ")}
-                    style={selected ? { background: ADS_GRADIENT, boxShadow: ADS_SHEEN } : undefined}
                   >
                     {selected && <Check className="mb-0.5 h-3 w-3" />}
                     {d.label}
@@ -626,9 +615,8 @@ export function AdCreationForm({
                     onClick={() => setAngle(a.value)}
                     className={[
                       "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                      selected ? "text-white" : "bg-secondary text-secondary-foreground",
+                      selected ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                     ].join(" ")}
-                    style={selected ? { background: ADS_GRADIENT, boxShadow: ADS_SHEEN } : undefined}
                   >
                     {selected && a.value !== null && <Check className="h-3 w-3" />}
                     {a.value === null && <Sparkles className="h-3 w-3" />}
@@ -651,9 +639,8 @@ export function AdCreationForm({
                     onClick={() => setPlatform(p.id)}
                     className={[
                       "rounded-xl px-2 py-2 text-[11px] font-semibold transition-colors",
-                      platform === p.id ? "text-white" : "bg-secondary text-secondary-foreground",
+                      platform === p.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                     ].join(" ")}
-                    style={platform === p.id ? { background: ADS_GRADIENT, boxShadow: ADS_SHEEN } : undefined}
                   >
                     {p.label}
                   </button>
@@ -672,9 +659,8 @@ export function AdCreationForm({
                     onClick={() => setVersions(v)}
                     className={[
                       "flex-1 rounded-xl px-2 py-2 text-sm font-semibold transition-colors",
-                      versions === v ? "text-white" : "bg-secondary text-secondary-foreground",
+                      versions === v ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                     ].join(" ")}
-                    style={versions === v ? { background: ADS_GRADIENT, boxShadow: ADS_SHEEN } : undefined}
                   >
                     {v}
                   </button>
@@ -727,9 +713,8 @@ export function AdCreationForm({
                 }}
                 className={[
                   "flex-1 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
-                  !actorPickerOpen ? "text-white" : "bg-secondary text-secondary-foreground",
+                  !actorPickerOpen ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                 ].join(" ")}
-                style={!actorPickerOpen ? { background: ADS_GRADIENT, boxShadow: ADS_SHEEN } : undefined}
               >
                 No person
               </button>
@@ -737,9 +722,8 @@ export function AdCreationForm({
                 onClick={() => setActorPickerOpen(true)}
                 className={[
                   "flex-1 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
-                  actorPickerOpen ? "text-white" : "bg-secondary text-secondary-foreground",
+                  actorPickerOpen ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                 ].join(" ")}
-                style={actorPickerOpen ? { background: ADS_GRADIENT, boxShadow: ADS_SHEEN } : undefined}
               >
                 Choose an actor
               </button>
@@ -754,9 +738,8 @@ export function AdCreationForm({
                       onClick={() => setActorGenderFilter(g)}
                       className={[
                         "rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors",
-                        actorGenderFilter === g ? "text-white" : "bg-secondary text-secondary-foreground",
+                        actorGenderFilter === g ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                       ].join(" ")}
-                      style={actorGenderFilter === g ? { background: ADS_GRADIENT, boxShadow: ADS_SHEEN } : undefined}
                     >
                       {g}
                     </button>
@@ -779,8 +762,10 @@ export function AdCreationForm({
                             className="flex flex-col items-center gap-1"
                           >
                             <span
-                              className="relative aspect-square w-full overflow-hidden rounded-xl"
-                              style={selected ? { boxShadow: `0 0 0 2px ${ADS_ACCENT_SOLID}` } : undefined}
+                              className={[
+                                "relative aspect-square w-full overflow-hidden rounded-xl",
+                                selected ? "ring-2 ring-foreground" : "",
+                              ].join(" ")}
                             >
                               <img
                                 src={`data:image/jpeg;base64,${a.preview_image_base64}`}
@@ -788,10 +773,7 @@ export function AdCreationForm({
                                 className="h-full w-full object-cover"
                               />
                               {selected && (
-                                <span
-                                  className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full text-white"
-                                  style={{ background: ADS_GRADIENT }}
-                                >
+                                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background">
                                   <Check className="h-2.5 w-2.5" />
                                 </span>
                               )}
@@ -825,9 +807,8 @@ export function AdCreationForm({
                     onClick={() => setImageGenModel(m.id)}
                     className={[
                       "rounded-xl px-2 py-2 text-[11px] font-semibold transition-colors",
-                      imageGenModel === m.id ? "text-white" : "bg-secondary text-secondary-foreground",
+                      imageGenModel === m.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                     ].join(" ")}
-                    style={imageGenModel === m.id ? { background: ADS_GRADIENT, boxShadow: ADS_SHEEN } : undefined}
                   >
                     {m.label}
                   </button>
@@ -839,16 +820,13 @@ export function AdCreationForm({
           {(inputError || error) && <p className="mb-4 text-sm font-medium text-destructive">{inputError || error}</p>}
 
           {imageTrialAvailable && (
-            <p className="mb-2 text-center text-xs font-semibold" style={{ color: ADS_ACCENT_SOLID }}>
-              ✨ Your first ad is free — no credits
-            </p>
+            <p className="mb-2 text-center text-xs font-semibold text-foreground">✨ Your first ad is free — no credits</p>
           )}
 
           <button
             onClick={handleMainSubmit}
             disabled={!mainInput.trim() || inputFetching || outOfCredits}
-            className="flex w-full items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-white disabled:opacity-60"
-            style={{ background: ADS_GRADIENT, boxShadow: ADS_GLOW }}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-4 text-base font-semibold text-background disabled:opacity-60"
           >
             {inputFetching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
             {imageTrialAvailable ? "Try free" : "Create My Ad"}

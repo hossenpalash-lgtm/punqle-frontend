@@ -81,6 +81,7 @@ import {
 } from "@/components/ads/TryOnForm";
 import { VideoPostForm } from "@/components/ads/VideoPostForm";
 import { WeeklyPlanForm } from "@/components/ads/WeeklyPlanForm";
+import { ImageChoiceCard } from "@/components/ads/ImageChoiceCard";
 import { GeneratingGlow } from "@/components/GeneratingGlow";
 
 type Tab = "home" | "single" | "plan" | "calendar" | "performance" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative" | "tryon";
@@ -123,6 +124,18 @@ export const Route = createFileRoute("/")({
 // consistent accent across the app, not a one-off on a single page.
 const HOME_GRADIENT = "linear-gradient(135deg, #E2693F 0%, #C13E7A 55%, #6D3FA0 100%)";
 const HOME_GRADIENT_SHEEN = "inset 0 1px 0 rgba(255,255,255,0.22)";
+
+// Unboxing's surface picker (image cards, 2026-10-05 — founder liked
+// AdCreative.ai's "High Performance Scenes" picker). Thumbnails are static
+// one-time samples in /public/scene-previews, each generated from exactly
+// the phrase it sends, so a card shows what that phrase actually produces.
+const UNBOXING_SURFACES = [
+  { id: "marble", label: "Marble", phrase: "on a marble kitchen counter, soft morning light" },
+  { id: "wood", label: "Wood", phrase: "on a warm wooden table, natural daylight" },
+  { id: "linen", label: "Linen", phrase: "on soft wrinkled linen fabric, cozy natural light" },
+  { id: "outdoor", label: "Outdoor", phrase: "on a rustic outdoor patio table, golden hour light" },
+  { id: "tile", label: "Tile", phrase: "on a clean bathroom tile counter, bright even light" },
+] as const;
 
 // Image Post and Video are the two formats inside the ✨ Social Content
 // creation category — Punqle's product architecture is 3 categories
@@ -875,11 +888,18 @@ function HomeScreen() {
     setUnboxingFile(e.target.files?.[0] || null);
   };
 
-  // Quick-pick surface presets insert a short scene phrase rather than
-  // replacing whatever the user already typed, so picking one is a
-  // starting point, not a reset.
+  // Surface cards fill the scene text. Picking one replaces a previously
+  // picked card (they're alternatives, not stackable), but never wipes
+  // text the user typed themselves — that gets the phrase appended.
+  // Picking the already-picked card again clears it.
   const handlePickUnboxingSurface = (phrase: string) => {
-    setUnboxingScene((prev) => (prev.trim() ? `${prev.trim()}, ${phrase}` : phrase));
+    setUnboxingScene((prev) => {
+      const text = prev.trim();
+      if (text === phrase) return "";
+      if (!text || UNBOXING_SURFACES.some((s) => s.phrase === text)) return phrase;
+      if (text.includes(phrase)) return text;
+      return `${text}, ${phrase}`;
+    });
   };
 
   const handleGenerateUnboxing = async () => {
@@ -2603,24 +2623,15 @@ function HomeScreen() {
                       <input type="file" accept="image/*" className="hidden" onChange={handleUploadUnboxingProduct} />
                     </label>
 
-                    <div className="flex flex-wrap gap-1.5">
-                      {(
-                        [
-                          { label: "Marble", phrase: "on a marble kitchen counter, soft morning light" },
-                          { label: "Wood", phrase: "on a warm wooden table, natural daylight" },
-                          { label: "Linen", phrase: "on soft wrinkled linen fabric, cozy natural light" },
-                          { label: "Outdoor", phrase: "on a rustic outdoor patio table, golden hour light" },
-                          { label: "Tile", phrase: "on a clean bathroom tile counter, bright even light" },
-                        ] as const
-                      ).map((preset) => (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          onClick={() => handlePickUnboxingSurface(preset.phrase)}
-                          className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground"
-                        >
-                          {preset.label}
-                        </button>
+                    <div className="grid grid-cols-5 gap-2">
+                      {UNBOXING_SURFACES.map((s) => (
+                        <ImageChoiceCard
+                          key={s.id}
+                          image={`/scene-previews/${s.id}.jpg`}
+                          label={s.label}
+                          selected={unboxingScene.includes(s.phrase)}
+                          onClick={() => handlePickUnboxingSurface(s.phrase)}
+                        />
                       ))}
                     </div>
 

@@ -41,6 +41,7 @@ import {
 } from "@/lib/social-wizard";
 import { ANGLES, GOALS } from "./AdBriefStep";
 import { GenerationProgress } from "./GenerationProgress";
+import { ImageChoiceCard } from "./ImageChoiceCard";
 import { PostKit } from "./PostKit";
 import { ProductPicker } from "./ProductPicker";
 import { ResultsGrid } from "./ResultsGrid";
@@ -574,23 +575,20 @@ export function AdCreationForm({
             <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Style
             </label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {allDirections.map((d) => {
-                const selected = visualDirection === d.id;
-                return (
-                  <button
-                    key={d.id}
-                    onClick={() => setVisualDirection(d.id)}
-                    className={[
-                      "rounded-xl px-2 py-2 text-left text-[11px] font-semibold leading-tight transition-colors",
-                      selected ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
-                    ].join(" ")}
-                  >
-                    {selected && <Check className="mb-0.5 h-3 w-3" />}
-                    {d.label}
-                  </button>
-                );
-              })}
+            {/* Image cards (2026-10-05, founder liked AdCreative.ai's
+                style pickers): real sample thumbnails in /public/
+                style-previews, one per direction id, generated once
+                with the exact promptModifier each style sends. */}
+            <div className="grid grid-cols-3 gap-2">
+              {allDirections.map((d) => (
+                <ImageChoiceCard
+                  key={d.id}
+                  image={`/style-previews/${d.id}.jpg`}
+                  label={d.label}
+                  selected={visualDirection === d.id}
+                  onClick={() => setVisualDirection(d.id)}
+                />
+              ))}
             </div>
             {!showMoreStyles && (
               <button

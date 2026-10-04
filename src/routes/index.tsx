@@ -1252,7 +1252,7 @@ function HomeScreen() {
       {tab === "home" && (
         <div className="hidden flex-1 lg:flex lg:flex-col">
           <div className="flex flex-col items-center pt-4 text-center">
-            <h1 className="mb-2 text-3xl font-extrabold tracking-tight text-foreground">
+            <h1 className="font-display mb-2 text-3xl tracking-tight text-foreground">
               What are we creating today?
             </h1>
             {/* "Try every core tool free" banner (2026-09-25) — the

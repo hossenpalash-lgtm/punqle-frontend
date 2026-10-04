@@ -1,5 +1,15 @@
-import { Check, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { VIDEO_STYLES, type VideoStyle, type VideoStyleOption } from "@/lib/video-style";
+import { ImageChoiceCard } from "./ImageChoiceCard";
+
+const STYLE_PREVIEW: Record<VideoStyle, string> = {
+  product_showcase: "/video-style-previews/product_showcase.jpg",
+  lifestyle: "/video-style-previews/lifestyle.jpg",
+  cinematic: "/video-style-previews/cinematic.jpg",
+  cinematic_ugc: "/video-style-previews/cinematic_ugc.jpg",
+  avatar: "/video-style-previews/avatar.jpg",
+  ai_actor: "/actors/maya.jpg",
+};
 
 // Step 2 of Video Ad — deliberately just chips, no rich preview cards
 // (unlike Image Ad's reused VisualDirectionStep). Compacted to a 2-col
@@ -57,44 +67,27 @@ export function VideoStyleStep({
             <p className="px-1 text-left text-xs text-muted-foreground">{group.subtitle}</p>
             {(() => {
               const groupStyles = VIDEO_STYLES.filter((s) => s.group === group.key);
-              // One row per group instead of a fixed 2-col grid — a 3-card
-              // group (Product Videos) used to wrap to 2+1, which read as
-              // unbalanced next to the other groups' clean single rows.
-              const colsClass =
-                groupStyles.length >= 3 ? "grid-cols-3" : groupStyles.length === 2 ? "grid-cols-2" : "grid-cols-1";
+              // Image cards (2026-10-05, founder liked AdCreative.ai's pickers
+              // and asked for this step too — reversing the earlier
+              // "compact chips only" call). The recommended AI UGC group
+              // gets 2 larger columns so it still reads as the hero
+              // choice; the other groups use 3. Ready Actors shows a real
+              // Punqle actor; the rest are one-time illustrative stills
+              // under /public/video-style-previews.
+              const colsClass = isAiUgc ? "grid-cols-2" : "grid-cols-3";
               return (
-                <div className={["grid gap-1.5", colsClass].join(" ")}>
-                  {groupStyles.map((style) => {
-                    const isSelected = selected === style.id;
-                    const Icon = style.icon;
-                    return (
-                      <button
-                        key={style.id}
-                        onClick={() => onSelect(style.id)}
-                        className={[
-                          "flex flex-col items-start gap-1 rounded-xl px-3 py-2.5 text-left transition-colors",
-                          isSelected
-                            ? "bg-foreground text-background"
-                            : isAiUgc
-                              ? "bg-white/70 text-foreground"
-                              : "bg-secondary text-secondary-foreground",
-                        ].join(" ")}
-                      >
-                        <Icon
-                          className={["h-4 w-4 shrink-0", isSelected ? "text-background/90" : "text-muted-foreground"].join(" ")}
-                        />
-                        <span className="flex items-center gap-1 text-xs font-semibold leading-tight">
-                          {isSelected && <Check className="h-3 w-3 shrink-0" />}
-                          {style.label}
-                        </span>
-                        <span
-                          className={["text-[10px] font-semibold", isSelected ? "text-background/80" : "text-muted-foreground"].join(" ")}
-                        >
-                          {style.creditHint}
-                        </span>
-                      </button>
-                    );
-                  })}
+                <div className={["grid gap-2", colsClass].join(" ")}>
+                  {groupStyles.map((style) => (
+                    <ImageChoiceCard
+                      key={style.id}
+                      image={STYLE_PREVIEW[style.id]}
+                      label={style.label}
+                      sublabel={style.creditHint}
+                      video
+                      selected={selected === style.id}
+                      onClick={() => onSelect(style.id)}
+                    />
+                  ))}
                 </div>
               );
             })()}

@@ -87,7 +87,24 @@ export const ALL_NAV_TABS: NavTab[] = [
 // Ad Creation link and Plan & Publish header, per the founder's explicit
 // ask to keep those two visually matched.
 const SIDEBAR_GRADIENT = "linear-gradient(135deg, #E4754E 0%, #C64D85 55%, #794EA8 100%)";
-const SIDEBAR_GRADIENT_SHEEN = "inset 0 1px 0 rgba(255,255,255,0.22)";
+// Glossy-glass highlight for gradient surfaces (2026-10-05, iOS glass
+// pass): a bright top edge + a soft inner shade along the bottom edge
+// so the gradient reads as a lit, curved glass pill, not a flat fill.
+const SIDEBAR_GRADIENT_SHEEN = "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -8px 12px -8px rgba(70,10,80,0.3)";
+// Ad Creation / Plan & Publish pills (2026-10-05): the brand gradient came
+// off these two at the founder's call ("black white ios dite paro") —
+// they're now neutral iOS glass pills: frosted white at rest, solid
+// black glass when you're on that section (same "black = selected"
+// language as the home pills). The gradient stays on the small icon
+// chips below (Insights) and the platform icons.
+const GLASS_PILL_IDLE = {
+  background: "linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.6))",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.95), 0 0 0 1px rgba(255,255,255,0.7), 0 8px 18px -10px rgba(40,25,15,0.35)",
+};
+const GLASS_PILL_ACTIVE = {
+  background: "linear-gradient(180deg, #3b3633 0%, #151311 100%)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.28), 0 8px 18px -8px rgba(0,0,0,0.5)",
+};
 
 const SOCIAL_CONTENT_FORMATS: { tab: NavTab; label: string; icon: typeof Megaphone }[] = [
   { tab: "single", label: "Image Post", icon: ImageIcon },
@@ -166,6 +183,9 @@ export function Sidebar({
   const [newProjectName, setNewProjectName] = useState("");
   const [creatingProject, setCreatingProject] = useState(false);
   const [planPublishOpen, setPlanPublishOpen] = useState(() => PLAN_PUBLISH_ITEMS.some((i) => i.tab === tab));
+  // Which of the two big glass pills is the current section (black = selected).
+  const adActive = tab === "ad" || tab === "ad-video";
+  const planActive = PLAN_PUBLISH_ITEMS.some((i) => i.tab === tab);
   const [desktopMoreOpen, setDesktopMoreOpen] = useState(
     // Performance/Competitive Edge (INSIGHTS_ITEMS) no longer live inside
     // More (2026-10-01) — only Bulk Creative/History still do.
@@ -205,7 +225,7 @@ export function Sidebar({
           index.tsx) — this sidebar now only holds Projects, Plan &
           Publish, More, and account-level items, per the approved
           wireframe. Mobile's own header below is untouched. */}
-      <aside className="hidden shrink-0 border-r border-border bg-[oklch(0.975_0.002_260)] px-3.5 py-5 lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-60 lg:flex-col">
+      <aside className="glass-panel hidden shrink-0 px-3.5 py-5 lg:sticky lg:top-3 lg:m-3 lg:flex lg:h-[calc(100vh-1.5rem)] lg:w-60 lg:flex-col lg:rounded-[28px]">
         <button
           onClick={() => onNavigate("home")}
           className="mb-6 flex shrink-0 items-center gap-2 px-1.5"
@@ -279,10 +299,18 @@ export function Sidebar({
               Publish below. */}
           <button
             onClick={() => onNavigate("ad")}
-            className="mt-[58px] flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-[13px] font-bold text-white"
-            style={{ background: SIDEBAR_GRADIENT, boxShadow: `${SIDEBAR_GRADIENT_SHEEN}, var(--shadow-card)` }}
+            className={[
+              "mt-[58px] flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-[13px] font-bold transition-colors",
+              adActive ? "text-white" : "text-foreground",
+            ].join(" ")}
+            style={adActive ? GLASS_PILL_ACTIVE : GLASS_PILL_IDLE}
           >
-            <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md bg-white/20">
+            <span
+              className={[
+                "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md",
+                adActive ? "bg-white/20 text-white" : "bg-foreground text-background",
+              ].join(" ")}
+            >
               <Megaphone className="h-2.5 w-2.5" />
             </span>
             Ad Creation
@@ -296,17 +324,29 @@ export function Sidebar({
               live against real screenshots, not arbitrary. */}
           <button
             onClick={() => setPlanPublishOpen((v) => !v)}
-            className="mt-1.5 flex items-center justify-between rounded-xl px-2 py-1.5 text-white"
-            style={{ background: SIDEBAR_GRADIENT, boxShadow: `${SIDEBAR_GRADIENT_SHEEN}, var(--shadow-card)` }}
+            className={[
+              "mt-1.5 flex items-center justify-between rounded-xl px-2 py-1.5 transition-colors",
+              planActive ? "text-white" : "text-foreground",
+            ].join(" ")}
+            style={planActive ? GLASS_PILL_ACTIVE : GLASS_PILL_IDLE}
           >
-            <span className="flex items-center gap-1.5 text-[13px] font-bold text-white">
-              <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md bg-white/20">
+            <span className="flex items-center gap-1.5 text-[13px] font-bold">
+              <span
+                className={[
+                  "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md",
+                  planActive ? "bg-white/20 text-white" : "bg-foreground text-background",
+                ].join(" ")}
+              >
                 <Zap className="h-2.5 w-2.5" />
               </span>
               Plan &amp; Publish
             </span>
             <ChevronDown
-              className={["h-3.5 w-3.5 shrink-0 text-white/80 transition-transform", planPublishOpen ? "rotate-180" : ""].join(" ")}
+              className={[
+                "h-3.5 w-3.5 shrink-0 transition-transform",
+                planActive ? "text-white/80" : "text-muted-foreground",
+                planPublishOpen ? "rotate-180" : "",
+              ].join(" ")}
             />
           </button>
           {planPublishOpen && (
@@ -317,7 +357,7 @@ export function Sidebar({
                   onClick={() => onNavigate(t)}
                   className={[
                     "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                    tab === t ? "bg-foreground text-background" : "text-foreground hover:bg-secondary",
+                    tab === t ? "bg-foreground text-background" : "text-foreground hover:bg-white/60",
                   ].join(" ")}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -388,7 +428,7 @@ export function Sidebar({
                 onClick={() => onNavigate(t)}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-bold transition-colors",
-                  tab === t ? "bg-foreground text-background" : "text-foreground hover:bg-secondary",
+                  tab === t ? "bg-foreground text-background" : "text-foreground hover:bg-white/60",
                 ].join(" ")}
               >
                 <span
@@ -426,7 +466,7 @@ export function Sidebar({
                 onClick={() => onNavigate("bulk-creative")}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  tab === "bulk-creative" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
+                  tab === "bulk-creative" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-white/60",
                 ].join(" ")}
               >
                 <Layers className="h-3.5 w-3.5" />
@@ -436,7 +476,7 @@ export function Sidebar({
                 onClick={onOpenBrandKit}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  brandKitOpen ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
+                  brandKitOpen ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-white/60",
                 ].join(" ")}
               >
                 <Palette className="h-3.5 w-3.5" />
@@ -446,7 +486,7 @@ export function Sidebar({
                 onClick={onOpenProductCatalog}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  productCatalogOpen ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
+                  productCatalogOpen ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-white/60",
                 ].join(" ")}
               >
                 <Package className="h-3.5 w-3.5" />
@@ -456,7 +496,7 @@ export function Sidebar({
                 onClick={() => onNavigate("history")}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  tab === "history" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary",
+                  tab === "history" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-white/60",
                 ].join(" ")}
               >
                 <Clock className="h-3.5 w-3.5" />
@@ -464,14 +504,14 @@ export function Sidebar({
               </button>
               <button
                 onClick={onOpenReferral}
-                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-foreground hover:bg-secondary"
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-foreground hover:bg-white/60"
               >
                 <Gift className="h-3.5 w-3.5" />
                 Invite &amp; Earn
               </button>
               <button
                 onClick={onOpenBilling}
-                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-foreground hover:bg-secondary"
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-foreground hover:bg-white/60"
               >
                 <CreditCard className="h-3.5 w-3.5" />
                 Plans &amp; Billing
@@ -487,7 +527,7 @@ export function Sidebar({
             literal spec. */}
         <button
           onClick={onOpenBilling}
-          className="flex shrink-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-[13px] font-semibold text-secondary-foreground hover:bg-secondary"
+          className="flex shrink-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-[13px] font-semibold text-secondary-foreground hover:bg-white/60"
         >
           <SettingsIcon className="h-3.5 w-3.5" />
           Settings
@@ -548,7 +588,7 @@ export function Sidebar({
                 "flex items-center gap-1.5 rounded-full px-2.5 py-2 text-xs font-semibold",
                 tab === "single" || tab === "video"
                   ? "bg-primary text-primary-foreground"
-                  : "text-secondary-foreground hover:bg-secondary",
+                  : "text-secondary-foreground hover:bg-white/60",
               ].join(" ")}
             >
               <Sparkles className="h-3.5 w-3.5" />
@@ -560,7 +600,7 @@ export function Sidebar({
                 "flex items-center gap-1.5 rounded-full px-2.5 py-2 text-xs font-semibold",
                 tab === "ad" || tab === "ad-video"
                   ? "bg-primary text-primary-foreground"
-                  : "text-secondary-foreground hover:bg-secondary",
+                  : "text-secondary-foreground hover:bg-white/60",
               ].join(" ")}
             >
               <Megaphone className="h-3.5 w-3.5" />
@@ -572,7 +612,7 @@ export function Sidebar({
                 "flex items-center gap-1.5 rounded-full px-2.5 py-2 text-xs font-semibold",
                 tab === "bulk-creative"
                   ? "bg-primary text-primary-foreground"
-                  : "text-secondary-foreground hover:bg-secondary",
+                  : "text-secondary-foreground hover:bg-white/60",
               ].join(" ")}
             >
               <Layers className="h-3.5 w-3.5" />
@@ -588,7 +628,7 @@ export function Sidebar({
                 "flex items-center gap-1.5 rounded-full px-2.5 py-2 text-xs font-semibold",
                 tab === "tryon"
                   ? "bg-primary text-primary-foreground"
-                  : "border border-accent text-accent hover:bg-secondary",
+                  : "border border-accent text-accent hover:bg-white/60",
               ].join(" ")}
             >
               <Shirt className="h-3.5 w-3.5" />
@@ -600,7 +640,7 @@ export function Sidebar({
               aria-expanded={moreOpen}
               className={[
                 "flex items-center gap-1 rounded-full px-2.5 py-2 text-xs font-semibold",
-                moreOpen ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+                moreOpen ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-white/60",
               ].join(" ")}
             >
               <Menu className="h-3.5 w-3.5" />
@@ -631,7 +671,7 @@ export function Sidebar({
                   }}
                   className={[
                     "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
-                    tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+                    tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-white/60",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -651,7 +691,7 @@ export function Sidebar({
                   }}
                   className={[
                     "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
-                    tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+                    tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-white/60",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -669,7 +709,7 @@ export function Sidebar({
                 }}
                 className={[
                   "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
-                  productCatalogOpen ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+                  productCatalogOpen ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-white/60",
                 ].join(" ")}
               >
                 <Package className="h-4 w-4" />
@@ -686,7 +726,7 @@ export function Sidebar({
                 }}
                 className={[
                   "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
-                  brandKitOpen ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+                  brandKitOpen ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-white/60",
                 ].join(" ")}
               >
                 <Palette className="h-4 w-4" />
@@ -701,7 +741,7 @@ export function Sidebar({
                   onOpenMetaConnect();
                   setMoreOpen(false);
                 }}
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary"
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-white/60"
               >
                 <Facebook className="h-4 w-4" />
                 Social Accounts
@@ -711,7 +751,7 @@ export function Sidebar({
                   onOpenYouTubeConnect();
                   setMoreOpen(false);
                 }}
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary"
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-white/60"
               >
                 <Youtube className="h-4 w-4" />
                 YouTube
@@ -721,7 +761,7 @@ export function Sidebar({
                   onOpenTikTokConnect();
                   setMoreOpen(false);
                 }}
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary"
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-white/60"
               >
                 <TikTokIcon className="h-4 w-4" />
                 TikTok
@@ -733,7 +773,7 @@ export function Sidebar({
                 }}
                 className={[
                   "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
-                  tab === "history" ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-secondary",
+                  tab === "history" ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-white/60",
                 ].join(" ")}
               >
                 <Clock className="h-4 w-4" />
@@ -744,7 +784,7 @@ export function Sidebar({
                   onOpenReferral();
                   setMoreOpen(false);
                 }}
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary"
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-white/60"
               >
                 <Gift className="h-4 w-4" />
                 Invite &amp; Earn
@@ -754,7 +794,7 @@ export function Sidebar({
                   onOpenBilling();
                   setMoreOpen(false);
                 }}
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary"
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-white/60"
               >
                 <CreditCard className="h-4 w-4" />
                 Plans &amp; Billing
@@ -764,7 +804,7 @@ export function Sidebar({
                   onSignOut();
                   setMoreOpen(false);
                 }}
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-secondary-foreground hover:bg-secondary"
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-secondary-foreground hover:bg-white/60"
               >
                 <LogOut className="h-4 w-4" />
                 Sign out

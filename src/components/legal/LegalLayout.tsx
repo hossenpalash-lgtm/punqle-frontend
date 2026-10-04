@@ -17,7 +17,7 @@ export function LegalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background">
+    <div className="flex min-h-screen w-full flex-col">
       <header className="flex justify-center px-4 pt-4 sm:px-6">
         <div className="flex w-full max-w-[720px] items-center gap-2 py-3">
           <Link to="/" search={{ tab: "single" }} className="flex items-center gap-2">

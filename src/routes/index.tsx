@@ -123,7 +123,9 @@ export const Route = createFileRoute("/")({
 // Plan & Publish items) so the "premium gradient" treatment reads as one
 // consistent accent across the app, not a one-off on a single page.
 const HOME_GRADIENT = "linear-gradient(135deg, #E2693F 0%, #C13E7A 55%, #6D3FA0 100%)";
-const HOME_GRADIENT_SHEEN = "inset 0 1px 0 rgba(255,255,255,0.22)";
+// Glossy-glass highlight (2026-10-05 iOS glass pass) — bright top edge plus
+// a soft inner shade along the bottom, so gradient chips/buttons read as lit glass.
+const HOME_GRADIENT_SHEEN = "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -8px 12px -8px rgba(70,10,80,0.3)";
 
 // Unboxing's surface picker (image cards, 2026-10-05 — founder liked
 // AdCreative.ai's "High Performance Scenes" picker). Thumbnails are static
@@ -1224,8 +1226,8 @@ function HomeScreen() {
   return (
     <main className="flex flex-1 flex-col px-6 py-6">
       <div
-        className="mb-5 flex items-center justify-between rounded-full border border-border/60 px-4 py-2 backdrop-blur-md"
-        style={{ background: "oklch(1 0 0 / 55%)" }}
+        className="mb-5 flex items-center justify-between rounded-full border border-white/70 px-4 py-2 backdrop-blur-md"
+        style={{ background: "oklch(1 0 0 / 55%)", boxShadow: "var(--shadow-card)" }}
       >
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-accent" />
@@ -1356,7 +1358,7 @@ function HomeScreen() {
                       this dropdown previously did nothing at all. */}
                   <div className="fixed inset-0 z-30" onClick={() => setShowMoreMenu(false)} />
                   <div
-                    className="absolute right-0 bottom-full z-40 mb-2 w-52 overflow-hidden rounded-2xl border border-border bg-card p-1.5"
+                    className="glass-strong absolute right-0 bottom-full z-40 mb-2 w-52 overflow-hidden rounded-2xl bg-card p-1.5"
                     style={{ boxShadow: "0 16px 40px -12px rgba(0,0,0,0.22), var(--shadow-card)" }}
                   >
                   {[

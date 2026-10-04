@@ -320,8 +320,8 @@ export function TryOnForm({
   // `return`s, so this can't live in one shared wrapper without
   // restructuring every step into a single return.
   const handoffModal = handoffTarget && (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-card p-6 sm:rounded-3xl" style={{ boxShadow: "var(--shadow-card)" }}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm sm:items-center">
+      <div className="glass-strong max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-card p-6 sm:rounded-3xl" style={{ boxShadow: "var(--shadow-card)" }}>
         <div className="mb-5 flex items-center justify-between">
           <h2 className="font-display text-lg font-extrabold text-foreground">{handoffTitle}</h2>
           <button

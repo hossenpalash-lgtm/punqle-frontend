@@ -254,7 +254,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-screen w-full flex-col bg-background lg:flex-row">
+      <div className="flex min-h-screen w-full flex-col lg:flex-row">
         {isPublicRoute ? (
           // Bypasses the splash/login/sidebar gate entirely — these pages
           // (LegalLayout) render their own full page and must load the

@@ -293,9 +293,9 @@ export function CalendarView({ onGoToWeeklyPlan }: { onGoToWeeklyPlan: () => voi
       )}
 
       {selectedPost && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm sm:items-center">
           <div
-            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-card p-6 sm:rounded-3xl"
+            className="glass-strong max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-card p-6 sm:rounded-3xl"
             style={{ boxShadow: "var(--shadow-card)" }}
           >
             <div className="mb-5 flex items-center justify-between">

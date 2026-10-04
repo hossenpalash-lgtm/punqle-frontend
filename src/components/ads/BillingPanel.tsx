@@ -116,9 +116,9 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm sm:items-center sm:p-6">
       <div
-        className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-card p-6 sm:rounded-3xl"
+        className="glass-strong max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-card p-6 sm:rounded-3xl"
         style={{ boxShadow: "var(--shadow-card)" }}
       >
         <div className="mb-5 flex items-center justify-between">

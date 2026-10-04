@@ -54,8 +54,13 @@
      was originally matched to. Every existing
      `style={{ boxShadow: "var(--shadow-card)" }}` card picks this up
      automatically, no component changes needed. */
-  --shadow-card: 0 0 0 1px oklch(0.9 0.003 260 / 55%), 0 1px 2px oklch(0.2 0.01 260 / 4%),
-    0 12px 28px -8px oklch(0.2 0.01 260 / 10%);
+  /* 2026-10-05: re-tuned for the iOS "liquid glass" pass (founder's call,
+     after AdCreative.ai) — a bright 1px inner top highlight (light
+     catching the glass edge), a faint warm hairline ring, and one wide,
+     soft, warm-tinted drop shadow instead of grey. Every inline
+     `boxShadow: "var(--shadow-card)"` card/dialog/pill picks it up. */
+  --shadow-card: inset 0 1px 0 rgb(255 255 255 / 85%), 0 0 0 1px oklch(0.86 0.02 70 / 38%),
+    0 2px 4px oklch(0.3 0.04 50 / 4%), 0 18px 40px -16px oklch(0.34 0.06 40 / 18%);
 }
 
 :root {
@@ -82,14 +87,30 @@
   --radius: 0.6rem;
   --background: oklch(0.978 0.008 73.7);
   --foreground: oklch(0.266 0.016 67);
-  --card: oklch(1 0 0);
+  /* --card is now translucent (2026-10-05, iOS glass pass): every
+     `bg-card` surface in the app — form sections, pickers, pills,
+     dialogs — lets the soft ambient color behind the page (see
+     `body::before` below) show through instead of sitting as an opaque
+     white slab. Dialogs/menus that overlap other content use the
+     stronger `.glass-strong` fill + real backdrop blur on top of this. */
+  --card: oklch(1 0 0 / 62%);
   --card-foreground: oklch(0.266 0.016 67);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.266 0.016 67);
+  /* Glass surface fills/edges, used by .glass-panel / .glass-strong /
+     .glass-nav below. */
+  --glass-fill: rgb(255 255 255 / 52%);
+  --glass-fill-strong: rgb(255 255 255 / 78%);
+  --glass-edge: rgb(255 255 255 / 70%);
+  --glass-shadow: inset 0 1px 0 rgb(255 255 255 / 90%), 0 24px 60px -24px oklch(0.34 0.07 35 / 30%),
+    0 2px 6px oklch(0.3 0.04 50 / 6%);
   --primary: oklch(0.568 0.128 35.4);
   --primary-foreground: oklch(1 0 0);
   --primary-glow: oklch(0.704 0.104 43.5);
-  --secondary: oklch(0.951 0.014 78.3);
+  /* --secondary is translucent too (iOS glass pass): chips, filter pills
+     and hover washes read as frosted wells on a glass card instead of
+     opaque beige blocks. */
+  --secondary: oklch(0.93 0.02 75 / 58%);
   --secondary-foreground: oklch(0.266 0.016 67);
   --muted: oklch(0.951 0.014 78.3);
   --muted-foreground: oklch(0.59 0.039 79.4);
@@ -148,11 +169,38 @@
     border-color: var(--color-border);
   }
 
-  html, body {
+  html {
     background: var(--color-background);
+  }
+
+  /* Body is transparent on purpose: the ambient color wash below is a
+     fixed pseudo-element sitting *behind* it (z-index -1), and an opaque
+     body fill would paint straight over it. A fixed pseudo-element, not
+     `background-attachment: fixed` — the latter is unsupported/glitchy
+     on iOS Safari, which is a big share of this app's users. */
+  body {
+    background: transparent;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* The soft, warm color wash that gives the translucent glass surfaces
+     something to pick up (same terracotta -> pink -> violet family as
+     the brand gradient, kept low-alpha so it reads as atmosphere, not a
+     background image). */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(52rem 38rem at 6% -6%, rgb(226 105 63 / 28%), transparent 62%),
+      radial-gradient(48rem 36rem at 100% 2%, rgb(109 63 160 / 20%), transparent 62%),
+      radial-gradient(54rem 40rem at 78% 108%, rgb(193 62 122 / 20%), transparent 62%),
+      radial-gradient(44rem 34rem at -4% 98%, rgb(255 178 112 / 32%), transparent 62%),
+      radial-gradient(34rem 30rem at -2% 46%, rgb(150 110 220 / 16%), transparent 62%);
   }
 }
 
@@ -210,6 +258,7 @@
    text over busy content stays readable. */
 .glass-nav {
   background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--glass-edge);
   /* !important: Tailwind's own preflight/utilities layer sets a
      var-driven `backdrop-filter` reset on elements that lands after
      this un-layered rule in the compiled cascade, silently zeroing
@@ -222,6 +271,44 @@
 }
 .glass-nav-scrolled {
   background: rgba(255, 255, 255, 0.78);
+}
+
+/* iOS "liquid glass" surfaces (2026-10-05, founder's call after
+   AdCreative.ai's look). Two tiers, both a bright 1px edge + wide soft
+   warm shadow + backdrop blur/saturation so the ambient color wash
+   (body::before) and anything scrolling underneath glows through:
+     .glass-panel  — large, always-on-screen chrome (the desktop sidebar):
+                     lighter fill, more of the wash shows.
+     .glass-strong — surfaces that overlap content (dialogs, dropdown
+                     menus): denser fill so text on top stays readable.
+   Plain `bg-card` cards deliberately do NOT blur (see --card in :root):
+   100+ blurred layers is real GPU cost on the low-end Android phones
+   this app's users have, and a blur over a flat wash is invisible
+   anyway — the translucent fill + edge highlight carries the look.
+   `!important` on backdrop-filter for the same reason as .glass-nav
+   above (Tailwind's own reset otherwise zeroes it out). */
+.glass-panel,
+.glass-strong {
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+  backdrop-filter: blur(28px) saturate(180%) !important;
+}
+.glass-panel {
+  background: var(--glass-fill);
+}
+.glass-strong {
+  background: var(--glass-fill-strong);
+}
+
+/* Cheap glass edge for every plain `bg-card` surface — the bright inner
+   top highlight only. Lives in the components layer so any Tailwind
+   `shadow-*` utility or inline `boxShadow` (e.g. the full
+   --shadow-card on most cards) still wins over it. */
+@layer components {
+  .bg-card {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
+  }
 }
 
 /* WorkflowShowcase.tsx's two cards — subtle fade + rise, staggered via

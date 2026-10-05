@@ -208,20 +208,12 @@ export function AdVideoForm({
   // "Punqle Actors" style (v2) — a pre-baked Veo base clip per one of
   // Punqle's own _IMAGE_AD_ACTORS personas (same library Image Ad's
   // Actor picker uses), redubbed with a fresh per-user narration track
-  // via Sync Labs. voiceEngine is a real dropdown, not a hidden default
-  // — a live, founder-judged A/B/C listening test found the real cost
-  // difference between the three negligible, and a real competitor's own
-  // simple model-picker precedent settled on keeping all three rather
-  // than hardcoding one winner. "openai_natural" wins that listening
-  // test and is also the cheapest, hence the default.
+  // via Sync Labs. The voice is ElevenLabs only (OpenAI TTS shuts down 6 Jan 2027).
   const [actors, setActors] = useState<ApiImageActor[]>([]);
   const [actorsLoading, setActorsLoading] = useState(false);
   const [actorGenderFilter, setActorGenderFilter] = useState<"all" | "female" | "male">("all");
   const [selectedActorId, setSelectedActorId] = useState<string | null>(null);
-  // Default is "elevenlabs" (2026-10-05): the founder listened to the same
-  // lines on OpenAI Standard, OpenAI Natural and ElevenLabs v3 and preferred
-  // ElevenLabs; OpenAI's tts-1/gpt-4o-mini-tts also retire 6 Jan 2027. (It was
-  // "openai_standard" after a 2026-09-11 test against a saved reference clip.)
+  // ElevenLabs is the only engine (2026-10-05): the founder preferred it in a listening test and OpenAI TTS retires 6 Jan 2027.
   const [actorVoiceEngine, setActorVoiceEngine] = useState<ActorVoiceEngine>("elevenlabs");
   // actor_id -> situation_id (e.g. "coffee_shop") for whichever actors
   // actually have a pre-baked clip ready right now — an actor missing
@@ -1519,18 +1511,6 @@ export function AdVideoForm({
                     })}
                 </div>
               )}
-              <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Voice
-              </p>
-              <select
-                value={actorVoiceEngine}
-                onChange={(e) => setActorVoiceEngine(e.target.value as ActorVoiceEngine)}
-                className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="elevenlabs">ElevenLabs — Recommended</option>
-                <option value="openai_natural">OpenAI (Natural)</option>
-                <option value="openai_standard">OpenAI (Standard)</option>
-              </select>
             </div>
           )}
 

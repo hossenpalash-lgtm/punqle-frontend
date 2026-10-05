@@ -549,13 +549,11 @@ export function deleteCustomActor(actorId: string): Promise<{ deleted: boolean }
 
 // Punqle Actors v2 — a pre-baked Veo base clip per actor (generated once,
 // offline) redubbed with a fresh per-user narration track via Sync Labs,
-// replacing the OmniHuman pipeline above. voiceEngine is a real,
-// user-facing choice (see the "Voice" dropdown in AdVideoForm.tsx) — the
-// founder's own call after a live A/B/C listening test found the real
-// cost difference between the three negligible, matching how real
-// competitors already expose "which model" as a simple dropdown rather
-// than picking one winner.
-export type ActorVoiceEngine = "openai_natural" | "openai_standard" | "elevenlabs";
+// replacing the OmniHuman pipeline above. ElevenLabs is the only voice
+// engine now (2026-10-05): the founder preferred it in a listening test, and
+// OpenAI's tts-1 / gpt-4o-mini-tts shut down on 6 Jan 2027, so the old
+// OpenAI (Natural/Standard) choices were removed from the UI.
+export type ActorVoiceEngine = "elevenlabs";
 
 export interface ApiActorVideoV2Operation {
   prediction_id: string;

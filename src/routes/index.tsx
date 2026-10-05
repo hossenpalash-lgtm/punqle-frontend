@@ -1870,23 +1870,6 @@ function HomeScreen() {
                       <p className="mt-4 text-xs text-muted-foreground">Pick an actor above to set voice options.</p>
                     )}
 
-                    {selectedActorId && (
-                      <>
-                        <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Voice
-                        </p>
-                        <select
-                          value={actorVoiceEngine}
-                          onChange={(e) => setActorVoiceEngine(e.target.value as ActorVoiceEngine)}
-                          className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                        >
-                          <option value="elevenlabs">ElevenLabs — Recommended</option>
-                          <option value="openai_natural">OpenAI (Natural)</option>
-                          <option value="openai_standard">OpenAI (Standard)</option>
-                        </select>
-                      </>
-                    )}
-
                     {selectedActorId && actorVoiceEngine === "elevenlabs" && (
                       <div className="mt-3 space-y-4 rounded-xl bg-secondary/40 p-3">
                         <label className="flex items-center gap-2 text-xs font-semibold text-foreground">

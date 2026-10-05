@@ -199,21 +199,20 @@ const IMAGE_MODEL_LABELS: Record<ImageGenModel, string> = {
 const IMAGE_VIDEO_MODEL_OPTIONS: { id: ImageVideoModel; label: string; min: number; max: number }[] = [
   { id: "omni", label: "Gemini Omni (best)", min: 4, max: 10 },
   { id: "kling_3_pro", label: "Kling 3.0 Pro", min: 3, max: 15 },
-  { id: "seedance_2_5", label: "Seedance 2.5", min: 3, max: 15 },
 ];
 const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
   omni: "Gemini Omni",
   kling_3_pro: "Kling 3.0 Pro",
-  seedance_2_5: "Seedance 2.5",
 };
 // Display-only estimate, mirrors the backend's own provisional per-
 // second credit rates — the backend always computes the real charge
 // itself, this is just so the Generate button can show a cost upfront.
 const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
   omni: 3.75,
-  seedance_2_5: 6,
-  kling_3_pro: 6,
+  kling_3_pro: 9, // Kling now makes its own sound here; with a spoken narration it animates silently at 6/s (see videoCreditsPerSecond)
 };
+const videoCreditsPerSecond = (model: ImageVideoModel, withNarration: boolean) =>
+  model === "kling_3_pro" && withNarration ? 6 : IMAGE_VIDEO_CREDIT_PER_SECOND[model];
 // Mirrors the backend's own TALKING_VIDEO_REDUB_SURCHARGE — display only.
 const TALKING_VIDEO_REDUB_SURCHARGE = 18;
 // Mirrors the backend's own ACTOR_VIDEO_V2_CREDIT_COST (main.py) — same
@@ -2130,6 +2129,11 @@ function HomeScreen() {
                           </button>
                         ))}
                       </div>
+                      {!videoNarrationEnabled && (
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          Both add their own sound. Omni: up to 10 s, {IMAGE_VIDEO_CREDIT_PER_SECOND.omni} credits/s. Kling: up to 15 s, {IMAGE_VIDEO_CREDIT_PER_SECOND.kling_3_pro} credits/s.
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -2251,7 +2255,7 @@ function HomeScreen() {
                         className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
                         style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                       >
-                        Generate ({(Math.ceil(videoDuration * IMAGE_VIDEO_CREDIT_PER_SECOND[videoModel]) + (videoNarrationEnabled ? TALKING_VIDEO_REDUB_SURCHARGE : 0)) * videoVersions} credits)
+                        Generate ({(Math.ceil(videoDuration * videoCreditsPerSecond(videoModel, videoNarrationEnabled)) + (videoNarrationEnabled ? TALKING_VIDEO_REDUB_SURCHARGE : 0)) * videoVersions} credits)
                       </button>
                     </div>
                   </div>

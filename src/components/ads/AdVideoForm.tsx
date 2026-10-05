@@ -70,18 +70,12 @@ const POLL_INTERVAL_MS = 8000;
 // Premium 1.6 credits/s. Shown as "from N credits".
 const AVATAR_STANDARD_CREDIT_COST = 4;
 const AVATAR_PREMIUM_CREDIT_COST = 10;
-// Cinematic UGC runs on Gemini Omni by default (8 s, 1080p, sound, one price —
-// main.py's CINEMATIC_UGC_OMNI_CREDIT_COST). Seedance 2.5 stays as a choice with
-// its own Standard/Premium split (real per-second cost confirmed against a real
-// billed Replicate invoice 2026-09-06: ~$0.103/s at 480p, ~$0.231/s at 720p) —
-// matches main.py's CINEMATIC_UGC_CREDIT_COST.
+// Cinematic UGC runs on Gemini Omni only (8 s, 1080p, sound, one price —
+// main.py's CINEMATIC_UGC_OMNI_CREDIT_COST). The Seedance option was removed
+// 2026-10-06 (480p/720p and silent, worse and dearer than Omni); Kling in Video Ad
+// was dropped from the screen too. Both stay on the server only as an automatic
+// backup when Omni can't deliver.
 const CINEMATIC_UGC_OMNI_CREDIT_COST = 30;
-const CINEMATIC_UGC_CREDIT_COST: Record<AvatarTier, number> = { standard: 25, premium: 46 };
-type CinematicUgcEngine = "omni" | "seedance";
-type VideoAdEngine = "omni" | "kling_3_pro";
-// Video Ad on Kling 3.0 Pro with its own sound — mirrors main.py's
-// KLING_VIDEO_AD_CREDIT_COST. Pricier than Omni, so it is an opt-in choice.
-const KLING_VIDEO_AD_CREDIT_COST = 64;
 // AI Actor talking video (OmniHuman) — 8s x $0.14/s = $1.12 real cost,
 // matches main.py's AI_ACTOR_VIDEO_CREDIT_COST exactly. One fixed price,
 // no tier (OmniHuman has no cheap/expensive engine split like HeyGen).
@@ -218,8 +212,6 @@ export function AdVideoForm({
   // engine version. No avatar-grid picker for this path — Seedance has
   // no stock-character catalog (confirmed live against its real API).
   const [cinematicUgcTier, setCinematicUgcTier] = useState<AvatarTier>("standard");
-  const [cinematicUgcEngine, setCinematicUgcEngine] = useState<CinematicUgcEngine>("omni");
-  const [videoAdEngine, setVideoAdEngine] = useState<VideoAdEngine>("omni");
   const [cinematicUgcScenePrompt, setCinematicUgcScenePrompt] = useState("");
 
   // "Punqle Actors" style (v2) — a pre-baked Veo base clip per one of
@@ -465,7 +457,7 @@ export function AdVideoForm({
     file: File | null;
   }) => {
     const finalDescription = override.description.trim();
-    if (!finalDescription || generating || (credits !== null && credits < videoAdCost && !(videoAdTrialAvailable && videoAdEngine === "omni"))) return;
+    if (!finalDescription || generating || (credits !== null && credits < videoAdCost && !videoAdTrialAvailable)) return;
     setGenerating(true);
     setError(null);
     setVideoUrl(null);
@@ -491,7 +483,6 @@ export function AdVideoForm({
         goal,
         override.angle ?? undefined,
         override.script ?? undefined,
-        videoAdEngine,
       );
       setHeadline(r.headline);
       headlineRef.current = r.headline;
@@ -807,7 +798,7 @@ export function AdVideoForm({
       setCaption(capResult.captions[0]?.facebook_caption ?? "");
       setHeadline(capResult.captions[0]?.whatsapp_message ?? finalDescription);
 
-      const r = await startCinematicUgcGeneration(finalDescription, cinematicUgcScenePrompt.trim(), cinematicUgcTier, aspectRatio, cinematicUgcEngine);
+      const r = await startCinematicUgcGeneration(finalDescription, cinematicUgcScenePrompt.trim(), cinematicUgcTier, aspectRatio);
       pollTimeoutRef.current = setTimeout(() => pollCinematicUgcVideo(r.prediction_id), POLL_INTERVAL_MS);
     } catch (err) {
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
@@ -947,8 +938,6 @@ export function AdVideoForm({
     setSelectedVoiceId(null);
     setCaptionStyle("bold");
     setCinematicUgcTier("standard");
-    setCinematicUgcEngine("omni");
-    setVideoAdEngine("omni");
     setCinematicUgcScenePrompt("");
     setActorGenderFilter("all");
     setSelectedActorId(null);
@@ -971,10 +960,9 @@ export function AdVideoForm({
   // Avatar/Cinematic UGC/Punqle Actors have their own separate (excluded)
   // scope, see FEATURE_TRIAL_KEYS in main.py.
   const videoAdTrialAvailable = featureTrials?.video_ad === true;
-  const videoAdCost = videoAdEngine === "kling_3_pro" ? KLING_VIDEO_AD_CREDIT_COST : VIDEO_CREDIT_COST;
-  // The free first Video Ad is Omni only (a free Kling clip would cost ~$2.7).
-  const videoAdFree = videoAdTrialAvailable && videoAdEngine === "omni";
-  const cinematicUgcCost = cinematicUgcEngine === "seedance" ? CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier] : CINEMATIC_UGC_OMNI_CREDIT_COST;
+  const videoAdCost = VIDEO_CREDIT_COST;
+  const videoAdFree = videoAdTrialAvailable;
+  const cinematicUgcCost = CINEMATIC_UGC_OMNI_CREDIT_COST;
   const insufficientCredits = !videoAdFree && credits !== null && credits < videoAdCost;
   const avatarInsufficientCredits =
     credits !== null && credits < (avatarTier === "premium" ? AVATAR_PREMIUM_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST);
@@ -1398,43 +1386,6 @@ export function AdVideoForm({
 
           {videoStyle === "cinematic_ugc" && (
             <>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Video model</p>
-              <select
-                value={cinematicUgcEngine}
-                onChange={(e) => setCinematicUgcEngine(e.target.value as CinematicUgcEngine)}
-                className="mb-4 w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="omni">Gemini Omni — Recommended (1080p, with sound · {CINEMATIC_UGC_OMNI_CREDIT_COST} credits)</option>
-                <option value="seedance">Seedance 2.5 (silent · from {CINEMATIC_UGC_CREDIT_COST.standard} credits)</option>
-              </select>
-              {cinematicUgcEngine === "seedance" && (
-                <>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quality</p>
-                  <div className="mb-4 grid grid-cols-2 gap-2">
-                    {(["standard", "premium"] as AvatarTier[]).map((t) => {
-                      const selected = cinematicUgcTier === t;
-                      return (
-                        <button
-                          key={t}
-                          onClick={() => setCinematicUgcTier(t)}
-                          className={[
-                            "rounded-xl px-3 py-2.5 text-left transition-colors capitalize",
-                            selected ? "bg-foreground text-background" : "bg-card text-foreground",
-                          ].join(" ")}
-                        >
-                          <span className="flex items-center gap-1.5 text-sm font-semibold font-display">
-                            {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
-                            {t}
-                          </span>
-                          <span className={["block text-xs normal-case", selected ? "text-background/80" : "text-muted-foreground"].join(" ")}>
-                            {CINEMATIC_UGC_CREDIT_COST[t]} credits · {t === "premium" ? "720p" : "480p"}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Scene direction <span className="normal-case text-muted-foreground/70">(optional)</span>
               </p>
@@ -1652,20 +1603,6 @@ export function AdVideoForm({
           </button>
         ))}
       </div>
-
-      {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && (
-        <div className="mb-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Video model</p>
-          <select
-            value={videoAdEngine}
-            onChange={(e) => setVideoAdEngine(e.target.value as VideoAdEngine)}
-            className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="omni">Gemini Omni — Recommended ({VIDEO_CREDIT_COST} credits)</option>
-            <option value="kling_3_pro">Kling 3.0 Pro (with sound · {KLING_VIDEO_AD_CREDIT_COST} credits)</option>
-          </select>
-        </div>
-      )}
 
       <div className="mb-4 w-full rounded-2xl border border-dashed border-border bg-secondary/60 p-3 text-center text-xs font-semibold text-foreground">
         {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && videoAdFree ? (

@@ -18,7 +18,6 @@
 const PARTNERS = [
   "Gemini Omni",
   "OpenAI",
-  "Seedance 2.5",
   "Kling AI",
   "Sync Labs",
   "FASHN",

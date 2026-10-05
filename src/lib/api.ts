@@ -403,7 +403,6 @@ export function startCinematicUgcGeneration(
   stylePrompt: string,
   tier: AvatarTier,
   aspectRatio: VideoAspectRatio,
-  engine: "omni" | "seedance" = "omni",
 ): Promise<ApiCinematicUgcOperation> {
   return apiFetch<ApiCinematicUgcOperation>("/ads/generate-cinematic-ugc", {
     method: "POST",
@@ -413,7 +412,6 @@ export function startCinematicUgcGeneration(
       style_prompt: stylePrompt,
       tier,
       aspect_ratio: aspectRatio,
-      engine,
     }),
   });
 }
@@ -821,7 +819,7 @@ export function generateImageDirect(
 // reference + pick a model + pick a length + generate), matching a real
 // competitor's own simplest tool. Only 3 real, working models are
 // offered — see ImageVideoModel.
-export type ImageVideoModel = "omni" | "kling_3_pro" | "seedance_2_5"; // Veo retired 2026-10-22; Gemini Omni (1080p, sound included) is the default engine
+export type ImageVideoModel = "omni" | "kling_3_pro"; // Veo retired 2026-10-22; Gemini Omni (1080p, sound included) is the default engine
 
 export interface ApiImageVideoStartResponse {
   job_id: string;

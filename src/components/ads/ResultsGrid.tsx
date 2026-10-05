@@ -63,12 +63,12 @@ export function ResultsGrid({
               </span>
             )}
             {angleLabels?.[i] && (
-              <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">
+              <span className="glass-chip absolute bottom-2 left-2 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white">
                 {angleLabels[i]}
               </span>
             )}
             <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/25 group-hover:opacity-100">
-              <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-foreground">
+              <span className="glass-chip-light flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-foreground">
                 <Check className="h-3.5 w-3.5" />
                 Choose this
               </span>

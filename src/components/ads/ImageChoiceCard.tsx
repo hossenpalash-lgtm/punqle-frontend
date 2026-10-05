@@ -35,7 +35,7 @@ export function ImageChoiceCard({
       <span className="relative block aspect-square w-full overflow-hidden rounded-xl bg-secondary">
         <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
         {video && (
-          <span className="absolute bottom-1.5 left-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-white">
+          <span className="glass-chip absolute bottom-1.5 left-1.5 flex h-5 w-5 items-center justify-center rounded-full">
             <Play className="h-2.5 w-2.5 fill-current" />
           </span>
         )}

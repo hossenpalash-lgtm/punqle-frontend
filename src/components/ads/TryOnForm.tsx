@@ -393,7 +393,7 @@ export function TryOnForm({
         >
           <img src={resultUrl} alt="Try-on result" className="w-full object-contain" />
           {modelPreviewUrl && (
-            <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-black/55 py-1 pl-1 pr-2.5 backdrop-blur-sm">
+            <div className="glass-chip absolute left-3 top-3 flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2.5">
               <img src={modelPreviewUrl} alt="Your original photo" className="h-6 w-6 rounded-full object-cover" />
               <span className="text-[10px] font-semibold text-white">Before</span>
             </div>

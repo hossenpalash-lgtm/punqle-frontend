@@ -348,6 +348,37 @@
   }
 }
 
+/* Frosted glass overlays for text and badges that sit ON TOP of photos (founder,
+   2026-10-06: he liked the landing page's actor tiles, whose caption is a blurred
+   glass strip, and wanted that inside the app too). Small areas only, so the blur
+   stays cheap even on a grid of tiles.
+     .glass-caption    — a strip pinned to the bottom of a tile (name, situation)
+     .glass-chip       — a dark frosted badge / icon button over a photo
+     .glass-chip-light — a bright frosted pill (e.g. "Choose this" on hover)
+   `!important` on backdrop-filter for the Tailwind-reset reason noted above. */
+.glass-caption {
+  background: oklch(0.1 0.01 260 / 40%);
+  border-top: 1px solid oklch(1 0 0 / 16%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%);
+  -webkit-backdrop-filter: blur(14px) saturate(170%) !important;
+  backdrop-filter: blur(14px) saturate(170%) !important;
+}
+.glass-chip {
+  background: oklch(0.12 0.01 260 / 44%);
+  border: 1px solid oklch(1 0 0 / 18%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 14%);
+  color: #fff;
+  -webkit-backdrop-filter: blur(12px) saturate(170%) !important;
+  backdrop-filter: blur(12px) saturate(170%) !important;
+}
+.glass-chip-light {
+  background: rgb(255 255 255 / 68%);
+  border: 1px solid rgb(255 255 255 / 80%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 90%), 0 6px 16px -8px rgb(20 20 30 / 35%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
+  backdrop-filter: blur(14px) saturate(180%) !important;
+}
+
 /* WorkflowShowcase.tsx's two cards — subtle fade + rise, staggered via
    each card's own inline animation-delay. */
 @keyframes fade-rise {

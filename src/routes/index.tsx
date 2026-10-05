@@ -1806,9 +1806,11 @@ function HomeScreen() {
                                       <Check className="h-2.5 w-2.5" />
                                     </span>
                                   )}
+                                  <span className="glass-caption absolute inset-x-0 bottom-0 px-1.5 py-1 text-left">
+                                    <span className="block truncate text-[10px] font-semibold text-white">{a.name}</span>
+                                    <span className="block truncate text-[9px] text-white/75">{situationLabel}</span>
+                                  </span>
                                 </span>
-                                <span className="text-[10px] font-medium text-foreground">{a.name}</span>
-                                <span className="text-[9px] text-muted-foreground">{situationLabel}</span>
                               </button>
                             );
                           })}
@@ -1844,7 +1846,7 @@ function HomeScreen() {
                                   <button
                                     onClick={() => handleDeleteCustomActor(a.id)}
                                     title="Delete actor"
-                                    className="absolute left-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/50 text-white"
+                                    className="glass-chip absolute left-1 top-1 flex h-4 w-4 items-center justify-center rounded-full"
                                   >
                                     <X className="h-2.5 w-2.5" />
                                   </button>

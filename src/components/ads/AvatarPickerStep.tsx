@@ -254,7 +254,7 @@ export function AvatarPickerStep({
                     <Check className="h-3 w-3 text-white" />
                   </span>
                 )}
-                <span className="absolute inset-x-0 bottom-0 block truncate bg-black/60 px-1.5 py-1 text-[10px] font-semibold text-white">
+                <span className="glass-caption absolute inset-x-0 bottom-0 block truncate px-1.5 py-1 text-[10px] font-semibold text-white">
                   {a.name}
                 </span>
               </button>

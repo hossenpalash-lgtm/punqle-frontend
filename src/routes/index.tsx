@@ -224,12 +224,30 @@ const ACTOR_VIDEO_V2_CREDIT_COST = 30;
 // _omni_actor_clip_seconds / _omni_actor_cost — display only.
 const ACTOR_CHARS_PER_SECOND = 13;
 const OMNI_ACTOR_MAX_NARRATION_SECONDS = 9;
+// Longer narrations (OmniHuman 1.5): up to 675 characters (~45 s), 3.5 credits
+// per second after the flat 30. Ready Actors: up to 420 characters (~28 s),
+// 30 credits to 15 s then 2 per second. Mirrors main.py's
+// CUSTOM_ACTOR_MAX_NARRATION_CHARS / ACTOR_V2_MAX_NARRATION_CHARS and their
+// cost functions — display only, the server charges the real amount.
+const ACTOR_SPEECH_CHARS_PER_SECOND = 15;
+const CUSTOM_ACTOR_MAX_CHARS = 675;
+const READY_ACTOR_MAX_CHARS = 420;
+const OMNIHUMAN_CREDITS_PER_SECOND = 3.5;
+// [emotion] tags are voice direction, never spoken, so they don't count.
+const spokenLength = (text: string) => text.replace(/\[[^\]]*\]/g, "").trim().length;
+const actorSpeechSeconds = (text: string) => Math.max(3, spokenLength(text) / ACTOR_SPEECH_CHARS_PER_SECOND);
+function readyActorVideoCost(narration: string): number {
+  return Math.max(ACTOR_VIDEO_V2_CREDIT_COST, Math.ceil(actorSpeechSeconds(narration) * 2));
+}
 function customActorVideoCost(narration: string): number {
   const text = narration.trim();
   const est = Math.max(3, text.length / ACTOR_CHARS_PER_SECOND);
-  if (!text || est > OMNI_ACTOR_MAX_NARRATION_SECONDS) return ACTOR_VIDEO_V2_CREDIT_COST;
-  const clip = Math.max(4, Math.min(10, Math.ceil(est) + 1));
-  return Math.ceil(clip * IMAGE_VIDEO_CREDIT_PER_SECOND.omni) + TALKING_VIDEO_REDUB_SURCHARGE;
+  if (!text) return ACTOR_VIDEO_V2_CREDIT_COST;
+  if (est <= OMNI_ACTOR_MAX_NARRATION_SECONDS) {
+    const clip = Math.max(4, Math.min(10, Math.ceil(est) + 1));
+    return Math.ceil(clip * IMAGE_VIDEO_CREDIT_PER_SECOND.omni) + TALKING_VIDEO_REDUB_SURCHARGE;
+  }
+  return Math.max(ACTOR_VIDEO_V2_CREDIT_COST, Math.ceil(actorSpeechSeconds(text) * OMNIHUMAN_CREDITS_PER_SECOND));
 }
 
 // Mirrors the backend's own VIDEO_UPSCALE_CREDIT_COST (main.py) — display
@@ -1199,9 +1217,11 @@ function HomeScreen() {
   // narration, no script-angle pre-step (that's Ad-Creation-specific).
   // Custom actors skip the voice-engine/ElevenLabs controls entirely —
   // they always use the gender-matched ElevenLabs voice, no engine choice.
-  const actorVideoCost = selectedCustomActorId ? customActorVideoCost(actorNarration) : ACTOR_VIDEO_V2_CREDIT_COST;
+  const actorVideoCost = selectedCustomActorId ? customActorVideoCost(actorNarration) : readyActorVideoCost(actorNarration);
+  const actorNarrationMax = selectedCustomActorId ? CUSTOM_ACTOR_MAX_CHARS : READY_ACTOR_MAX_CHARS;
   const handleGenerateActorVideo = async () => {
     if ((!selectedActorId && !selectedCustomActorId) || !actorNarration.trim()) return;
+    if (spokenLength(actorNarration) > actorNarrationMax) return;
     if (credits !== null && credits < actorVideoCost) return;
     setActorError(null);
     let narration = actorNarration.trim();
@@ -1928,8 +1948,12 @@ function HomeScreen() {
                         onChange={(e) => setActorNarration(e.target.value)}
                         placeholder="What should your actor say?…"
                         rows={2}
+                        maxLength={actorNarrationMax + 200}
                         className="w-full resize-none bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                       />
+                      <p className={["px-3 pb-1 text-[11px]", spokenLength(actorNarration) > actorNarrationMax ? "font-semibold text-destructive" : "text-muted-foreground"].join(" ")}>
+                        {spokenLength(actorNarration)} / {actorNarrationMax} characters · about {Math.round(actorSpeechSeconds(actorNarration))} seconds
+                      </p>
 
                       <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">
                       <button
@@ -1938,6 +1962,7 @@ function HomeScreen() {
                           (!selectedActorId && !selectedCustomActorId) ||
                           !actorNarration.trim() ||
                           taggingEmotions ||
+                          spokenLength(actorNarration) > actorNarrationMax ||
                           (credits !== null && credits < actorVideoCost)
                         }
                         className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"

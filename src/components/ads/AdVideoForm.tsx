@@ -86,6 +86,14 @@ const KLING_VIDEO_AD_CREDIT_COST = 64;
 // matches main.py's AI_ACTOR_VIDEO_CREDIT_COST exactly. One fixed price,
 // no tier (OmniHuman has no cheap/expensive engine split like HeyGen).
 const AI_ACTOR_VIDEO_CREDIT_COST = 30;
+// Ready Actors: up to 420 characters (~28 s). 30 credits up to 15 s, then 2 per
+// extra second (Sync Labs bills by output length) — mirrors main.py's
+// ACTOR_V2_MAX_NARRATION_CHARS / _actor_v2_cost. Display only.
+const READY_ACTOR_MAX_CHARS = 420;
+// [emotion] tags are voice direction, never spoken, so they don't count.
+const spokenLength = (text: string) => text.replace(/\[[^\]]*\]/g, "").trim().length;
+const readyActorSeconds = (text: string) => Math.max(3, spokenLength(text) / 15);
+const readyActorCost = (text: string) => Math.max(AI_ACTOR_VIDEO_CREDIT_COST, Math.ceil(readyActorSeconds(text) * 2));
 
 type WizardStep = "create" | "review-script" | "generating" | "result" | "receiving";
 
@@ -1193,8 +1201,12 @@ export function AdVideoForm({
           value={actorNarrationDraft}
           onChange={(e) => setActorNarrationDraft(e.target.value)}
           rows={5}
-          className="mb-4 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          maxLength={READY_ACTOR_MAX_CHARS + 200}
+          className="mb-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
+        <p className={["mb-4 text-xs", spokenLength(actorNarrationDraft) > READY_ACTOR_MAX_CHARS ? "font-semibold text-destructive" : "text-muted-foreground"].join(" ")}>
+          {spokenLength(actorNarrationDraft)} / {READY_ACTOR_MAX_CHARS} characters · about {Math.round(readyActorSeconds(actorNarrationDraft))} seconds · {readyActorCost(actorNarrationDraft)} credits
+        </p>
 
         {showElevenLabsControls && (
           <>
@@ -1255,7 +1267,7 @@ export function AdVideoForm({
           <button
             type="button"
             onClick={handleConfirmActorScript}
-            disabled={!actorNarrationDraft.trim() || generating}
+            disabled={!actorNarrationDraft.trim() || generating || spokenLength(actorNarrationDraft) > READY_ACTOR_MAX_CHARS}
             className="flex-1 rounded-full bg-foreground px-4 py-2.5 text-sm font-semibold text-background disabled:opacity-50"
           >
             Generate video

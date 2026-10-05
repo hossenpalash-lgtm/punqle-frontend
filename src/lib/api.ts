@@ -146,6 +146,7 @@ export function startVideoGeneration(
   goal?: AdGoal,
   angle?: string | null,
   scriptOverride?: { headline: string; narration: string },
+  engine: "omni" | "kling_3_pro" = "omni",
 ): Promise<ApiVideoOperationResponse> {
   return apiFetch<ApiVideoOperationResponse>("/ads/generate-video", {
     method: "POST",
@@ -159,6 +160,7 @@ export function startVideoGeneration(
       angle,
       headline: scriptOverride?.headline,
       narration: scriptOverride?.narration,
+      engine,
     }),
   });
 }
@@ -401,6 +403,7 @@ export function startCinematicUgcGeneration(
   stylePrompt: string,
   tier: AvatarTier,
   aspectRatio: VideoAspectRatio,
+  engine: "omni" | "seedance" = "omni",
 ): Promise<ApiCinematicUgcOperation> {
   return apiFetch<ApiCinematicUgcOperation>("/ads/generate-cinematic-ugc", {
     method: "POST",
@@ -410,6 +413,7 @@ export function startCinematicUgcGeneration(
       style_prompt: stylePrompt,
       tier,
       aspect_ratio: aspectRatio,
+      engine,
     }),
   });
 }

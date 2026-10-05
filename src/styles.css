@@ -487,6 +487,20 @@ h6 {
   font-synthesis: none;
 }
 
+/* Founder, same day: "everywhere". Every emphasised piece of text — anything set
+   semibold / bold / extrabold: buttons, chips, labels, card names, numbers — now
+   uses the display font. Regular and medium text (paragraphs, captions, hints)
+   stays Inter. In the components layer so an explicit font-family utility on an
+   element (e.g. `font-sans`, or an inline style) still wins. */
+@layer components {
+  .font-semibold,
+  .font-bold,
+  .font-extrabold {
+    font-family: var(--font-display);
+    font-synthesis: none;
+  }
+}
+
 /* Legal page prose (Privacy Policy / Terms / Data Deletion) — plain
    reference-document typography, distinct from the app's card-based UI. */
 .legal-prose h2 {

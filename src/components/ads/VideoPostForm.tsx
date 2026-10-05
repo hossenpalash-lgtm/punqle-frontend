@@ -14,7 +14,7 @@ import { ProductPicker } from "./ProductPicker";
 import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
 
-const VIDEO_CREDIT_COST = 64; // Kling 3.0 Pro, 8 s, 1080p, with native sound — mirrors main.py (was 10 on Veo)
+const VIDEO_CREDIT_COST = 30; // Gemini Omni, 8 s, 1080p, sound included — mirrors main.py (was 10 on Veo)
 const POLL_INTERVAL_MS = 8000;
 
 function fileToBase64(file: File): Promise<string> {

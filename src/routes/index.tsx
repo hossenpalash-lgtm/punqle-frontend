@@ -195,10 +195,12 @@ const IMAGE_MODEL_LABELS: Record<ImageGenModel, string> = {
 // max mirror the backend's own per-model duration clamp exactly (Veo's
 // real 4-8s hard cap vs. Kling/Seedance's 3-15s).
 const IMAGE_VIDEO_MODEL_OPTIONS: { id: ImageVideoModel; label: string; min: number; max: number }[] = [
+  { id: "omni", label: "Gemini Omni (best)", min: 4, max: 10 },
   { id: "kling_3_pro", label: "Kling 3.0 Pro", min: 3, max: 15 },
   { id: "seedance_2_5", label: "Seedance 2.5", min: 3, max: 15 },
 ];
 const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
+  omni: "Gemini Omni",
   kling_3_pro: "Kling 3.0 Pro",
   seedance_2_5: "Seedance 2.5",
 };
@@ -206,6 +208,7 @@ const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
 // second credit rates — the backend always computes the real charge
 // itself, this is just so the Generate button can show a cost upfront.
 const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
+  omni: 3.75,
   seedance_2_5: 6,
   kling_3_pro: 6,
 };
@@ -281,7 +284,7 @@ function HomeScreen() {
   // result (the video itself, replacing the image in the same card).
   const [videoPanel, setVideoPanel] = useState<"closed" | "composer" | "generating" | "result">("closed");
   const [videoPrompt, setVideoPrompt] = useState("");
-  const [videoModel, setVideoModel] = useState<ImageVideoModel>("kling_3_pro");
+  const [videoModel, setVideoModel] = useState<ImageVideoModel>("omni");
   const [videoAspectRatio, setVideoAspectRatio] = useState<VideoAspectRatio>("1:1");
   const [videoDuration, setVideoDuration] = useState(5);
   // Up to 3 versions from one prompt, same idea as Ad Creation's own
@@ -748,9 +751,9 @@ function HomeScreen() {
       return;
     }
     setVideoPrompt("");
-    setVideoModel("kling_3_pro");
+    setVideoModel("omni");
     setVideoAspectRatio("1:1");
-    setVideoDuration(5);
+    setVideoDuration(8);
     setVideoError(null);
     setVideoNarrationEnabled(false);
     setVideoNarration("");
@@ -786,9 +789,9 @@ function HomeScreen() {
       if (!match) return;
       setVideoRefImage({ mimeType: match[1], base64: match[2] });
       setVideoPrompt("");
-      setVideoModel("kling_3_pro");
+      setVideoModel("omni");
       setVideoAspectRatio("1:1");
-      setVideoDuration(5);
+      setVideoDuration(8);
       setVideoError(null);
       setVideoPanel("composer");
     };
@@ -856,9 +859,9 @@ function HomeScreen() {
       setVideoNarrationEnabled(true);
       setVideoNarration(narration);
       setVideoVoiceGender("female");
-      setVideoModel("kling_3_pro");
+      setVideoModel("omni");
       setVideoAspectRatio(productVideoAspectRatio);
-      setVideoDuration(5);
+      setVideoDuration(8);
       setVideoError(null);
       setVideoStage("animating");
       setVideoPanel("generating");
@@ -867,8 +870,8 @@ function HomeScreen() {
         "image/png",
         narration,
         "female",
-        "kling_3_pro",
-        5,
+        "omni",
+        8,
         productVideoAspectRatio,
       );
       videoPollRef.current = setTimeout(() => pollTalkingVideo(started.job_id, started.operation), 8000);

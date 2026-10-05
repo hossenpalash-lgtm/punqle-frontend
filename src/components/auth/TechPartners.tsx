@@ -16,7 +16,7 @@
 // dividers between names instead of individual pill borders, so it
 // reads as one continuous line of real names rather than a button row.
 const PARTNERS = [
-  "Kling",
+  "Gemini Omni",
   "OpenAI",
   "Seedance 2.5",
   "Kling AI",

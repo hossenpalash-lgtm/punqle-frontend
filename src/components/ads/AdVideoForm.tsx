@@ -59,10 +59,10 @@ import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
 import { VideoStyleStep } from "./VideoStyleStep";
 
-// Mirrors main.py's VIDEO_CREDIT_COST: one fixed 8 s Kling 3.0 Pro (1080p)
-// clip WITH native sound (8 s x 8 credits/s). Was 10 on Veo 3.1 Lite until
-// Veo's 22 Oct 2026 retirement (2026-10-05).
-const VIDEO_CREDIT_COST = 64;
+// Mirrors main.py's VIDEO_CREDIT_COST: one fixed 8 s Gemini Omni clip at
+// 1080p, sound included. Was 10 on Veo 3.1 Lite until Veo's 22 Oct 2026
+// retirement (2026-10-05).
+const VIDEO_CREDIT_COST = 30;
 const POLL_INTERVAL_MS = 8000;
 // Avatar videos are now billed by their real length (main.py's
 // _avatar_credit_cost): these are the MINIMUM charges (short clips cost

@@ -28,7 +28,12 @@ const TEXT_POSITIONS: { value: TextPosition; label: string }[] = [
   { value: "bottom", label: "Bottom" },
 ];
 
-const VOICES: TtsVoice[] = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
+// Voiceovers are ElevenLabs now (2026-10-05) — it has a female and a male voice;
+// the backend maps these legacy OpenAI voice names to a gender.
+const VOICES: { value: TtsVoice; label: string }[] = [
+  { value: "nova", label: "Female voice" },
+  { value: "onyx", label: "Male voice" },
+];
 
 // Post-generation edit panel — headline/logo/brand-color/position/
 // voiceover/captions/mute, all reusing a fresh re-download of the same
@@ -66,7 +71,7 @@ export function EditVideoPanel({
   const [textPosition, setTextPosition] = useState<TextPosition>("bottom");
   const [voiceoverEnabled, setVoiceoverEnabled] = useState(false);
   const [editNarration, setEditNarration] = useState(narration);
-  const [voice, setVoice] = useState<TtsVoice>("alloy");
+  const [voice, setVoice] = useState<TtsVoice>("nova");
   const [captionsEnabled, setCaptionsEnabled] = useState(true);
   const [muted, setMuted] = useState(false);
   const [musicMood, setMusicMood] = useState<AvatarMusicMood | null>(null);
@@ -234,8 +239,8 @@ export function EditVideoPanel({
                     className="rounded-full border border-input bg-background px-3 py-1.5 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     {VOICES.map((v) => (
-                      <option key={v} value={v}>
-                        {v.charAt(0).toUpperCase() + v.slice(1)}
+                      <option key={v.value} value={v.value}>
+                        {v.label}
                       </option>
                     ))}
                   </select>

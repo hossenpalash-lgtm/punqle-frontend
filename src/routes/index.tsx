@@ -373,7 +373,7 @@ function HomeScreen() {
   const [actorPreviewVideos, setActorPreviewVideos] = useState<Record<string, string>>({});
   const [selectedActorId, setSelectedActorId] = useState<string | null>(null);
   const [actorNarration, setActorNarration] = useState("");
-  const [actorVoiceEngine, setActorVoiceEngine] = useState<ActorVoiceEngine>("openai_standard");
+  const [actorVoiceEngine, setActorVoiceEngine] = useState<ActorVoiceEngine>("elevenlabs");
   const [actorPanel, setActorPanel] = useState<"compose" | "generating" | "result">("compose");
   const [actorError, setActorError] = useState<string | null>(null);
   const [actorVideoBase64, setActorVideoBase64] = useState<string | null>(null);
@@ -1877,9 +1877,9 @@ function HomeScreen() {
                           onChange={(e) => setActorVoiceEngine(e.target.value as ActorVoiceEngine)}
                           className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         >
+                          <option value="elevenlabs">ElevenLabs — Recommended</option>
                           <option value="openai_natural">OpenAI (Natural)</option>
-                          <option value="openai_standard">OpenAI (Standard) — Recommended</option>
-                          <option value="elevenlabs">ElevenLabs</option>
+                          <option value="openai_standard">OpenAI (Standard)</option>
                         </select>
                       </>
                     )}

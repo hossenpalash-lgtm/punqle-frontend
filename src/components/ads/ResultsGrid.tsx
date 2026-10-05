@@ -55,7 +55,7 @@ export function ResultsGrid({
             />
             {i === recommended && images.length > 1 && (
               <span
-                className="absolute left-2 top-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                className="absolute left-2 top-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
                 style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground)" }}
               >
                 <Star className="h-2.5 w-2.5 fill-current" />
@@ -63,7 +63,7 @@ export function ResultsGrid({
               </span>
             )}
             {angleLabels?.[i] && (
-              <span className="glass-chip absolute bottom-2 left-2 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white">
+              <span className="glass-chip absolute bottom-2 left-2 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white">
                 {angleLabels[i]}
               </span>
             )}

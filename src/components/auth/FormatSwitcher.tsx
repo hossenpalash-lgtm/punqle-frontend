@@ -43,7 +43,7 @@ const FORMATS: Record<
     tag: "READY ACTORS",
     headline: "A real actor says your words.",
     desc: "Pick a filmed actor, write your script, and Punqle redubs it in their own voice.",
-    credit: "30 credits",
+    credit: "from 30 credits",
     // face3's own composition sits lower/closer than face1's did (more
     // hair up top, face centered further down the frame) — re-measured
     // for this panel's real ~4:1 crop window rather than reusing
@@ -189,7 +189,7 @@ export function FormatSwitcher() {
           />
         )}
         <div className="relative max-w-[540px] p-7 text-left sm:p-8">
-          <div className="mb-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: "oklch(0.82 0.09 300)" }}>
+          <div className="mb-2 text-[12px] font-bold uppercase tracking-wider" style={{ color: "oklch(0.82 0.09 300)" }}>
             {f.tag}
           </div>
           <h3 className="font-display mb-1.5 text-xl font-bold text-white">{f.headline}</h3>

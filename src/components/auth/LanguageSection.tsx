@@ -70,7 +70,7 @@ export function LanguageSection() {
           className="flex aspect-[4/5] flex-col justify-end rounded-[22px] border border-white/10 bg-[#0e0e10] p-7"
           style={{ boxShadow: "var(--shadow-card)" }}
         >
-          <span className="mb-auto w-fit rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-bold text-white">
+          <span className="mb-auto w-fit rounded-full bg-white/10 px-3 py-1.5 text-[12px] font-bold text-white">
             Made with Punqle
           </span>
           <div>

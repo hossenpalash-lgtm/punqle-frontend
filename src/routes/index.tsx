@@ -1324,10 +1324,10 @@ function HomeScreen() {
             {homeIdle && (
               <HomeShowcase
                 cards={[
-                  { key: "actors", title: "Ready Actors", blurb: "A real filmed actor says your words", meta: "30 credits", image: "/home/actors.jpg", icon: UserRound, onClick: () => handleSwitchMode("talking_actors") },
+                  { key: "actors", title: "Ready Actors", blurb: "A real filmed actor says your words", meta: "from 30 credits", image: "/home/actors.jpg", icon: UserRound, onClick: () => handleSwitchMode("talking_actors") },
                   { key: "video", title: "Video", blurb: "Turn any photo into a short clip", meta: "from 15 credits", image: "/home/video.jpg", icon: Video, onClick: () => handleSwitchMode("video") },
                   { key: "image", title: "Image", blurb: "Studio ad images from a prompt", meta: "from 2 credits", image: "/home/image.jpg", icon: Sparkles, onClick: () => handleSwitchMode("image") },
-                  { key: "product", title: "Product", blurb: "A person showing off your product", meta: "from 15 credits", image: "/home/product.jpg", icon: Package, onClick: () => handleSwitchMode("product") },
+                  { key: "product", title: "Product", blurb: "A person showing off your product", meta: "from 3 credits", image: "/home/product.jpg", icon: Package, onClick: () => handleSwitchMode("product") },
                 ]}
               />
             )}
@@ -1559,7 +1559,7 @@ function HomeScreen() {
                             video. The backend now constrains every generation
                             here to one person regardless of scene, but this
                             sets the right expectation upfront too. */}
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-[12px] text-muted-foreground">
                           One person only — if your description implies a setting with other people
                           (a driver, a crowd), we'll keep just your actor in frame.
                         </p>
@@ -1834,8 +1834,8 @@ function HomeScreen() {
                                     </span>
                                   )}
                                   <span className="glass-caption absolute inset-x-0 bottom-0 px-1.5 py-1 text-left">
-                                    <span className="block truncate text-[10px] font-semibold text-white">{a.name}</span>
-                                    <span className="block truncate text-[9px] text-white/75">{situationLabel}</span>
+                                    <span className="block truncate text-[11px] font-semibold text-white">{a.name}</span>
+                                    <span className="block truncate text-[10px] text-white/75">{situationLabel}</span>
                                   </span>
                                 </span>
                               </button>
@@ -1888,18 +1888,18 @@ function HomeScreen() {
                                       if (e.key === "Enter") handleSaveRenameCustomActor();
                                       if (e.key === "Escape") setEditingCustomActorId(null);
                                     }}
-                                    className="w-full rounded border border-border bg-card px-1 text-center text-[10px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+                                    className="w-full rounded border border-border bg-card px-1 text-center text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none"
                                   />
                                 ) : (
                                   <button
                                     onClick={() => handleStartRenameCustomActor(a)}
-                                    className="flex items-center gap-0.5 text-[10px] font-medium text-foreground"
+                                    className="flex items-center gap-0.5 text-[11px] font-medium text-foreground"
                                   >
                                     {a.name}
                                     <Pencil className="h-2 w-2 text-muted-foreground" />
                                   </button>
                                 )}
-                                <span className="text-[9px] text-muted-foreground">Your actor</span>
+                                <span className="text-[10px] text-muted-foreground">Your actor</span>
                               </div>
                             );
                           })}
@@ -1911,7 +1911,7 @@ function HomeScreen() {
                             <span className="flex aspect-square w-full items-center justify-center rounded-xl border border-dashed border-border">
                               <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
                             </span>
-                            <span className="text-[10px] font-medium text-foreground">
+                            <span className="text-[11px] font-medium text-foreground">
                               {showAllActors ? "Show less" : "More"}
                             </span>
                           </button>
@@ -1923,7 +1923,7 @@ function HomeScreen() {
                           <span className="flex aspect-square w-full items-center justify-center rounded-xl border border-dashed border-border">
                             <Plus className="h-5 w-5 text-muted-foreground" />
                           </span>
-                          <span className="text-[10px] font-medium text-foreground">Create your own</span>
+                          <span className="text-[11px] font-medium text-foreground">Create your own</span>
                         </button>
                       </div>
                       );
@@ -1982,7 +1982,7 @@ function HomeScreen() {
                         className="w-full resize-none bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                       />
                       {actorNarration.trim() && (
-                        <p className="px-3 pb-1 text-[11px] text-muted-foreground">
+                        <p className="px-3 pb-1 text-[12px] text-muted-foreground">
                           About {Math.round(actorSpeechSeconds(actorNarration))} seconds · {actorVideoCost} credits
                         </p>
                       )}
@@ -2096,7 +2096,7 @@ function HomeScreen() {
                         className="h-10 w-10 shrink-0 rounded-lg object-cover"
                       />
                       <span className="flex-1 text-xs text-muted-foreground">Reference image</span>
-                      <label className="flex cursor-pointer items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground">
+                      <label className="flex cursor-pointer items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-[12px] font-semibold text-secondary-foreground">
                         <Upload className="h-3 w-3" />
                         Replace
                         <input type="file" accept="image/*" className="hidden" onChange={handleReplaceVideoImage} />

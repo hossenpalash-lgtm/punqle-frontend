@@ -83,7 +83,7 @@ function FilmCardEl({ image, caption, tall, video, stack }: FilmCard) {
         className="absolute inset-x-0 bottom-0 border-t px-3 py-2 backdrop-blur-md"
         style={{ background: "oklch(0.1 0.01 260 / 42%)", borderColor: "oklch(1 0 0 / 14%)" }}
       >
-        <span className="text-[11.5px] font-semibold text-white">{caption}</span>
+        <span className="text-[12.5px] font-semibold text-white">{caption}</span>
       </div>
     </div>
   );

@@ -1545,8 +1545,8 @@ export function AdVideoForm({
                               </span>
                             )}
                             <span className="glass-caption absolute inset-x-0 bottom-0 px-1.5 py-1 text-left">
-                              <span className="block truncate text-[10px] font-semibold text-white">{a.name}</span>
-                              <span className="block truncate text-[9px] text-white/75">{situationLabel}</span>
+                              <span className="block truncate text-[11px] font-semibold text-white">{a.name}</span>
+                              <span className="block truncate text-[10px] text-white/75">{situationLabel}</span>
                             </span>
                           </span>
                         </button>

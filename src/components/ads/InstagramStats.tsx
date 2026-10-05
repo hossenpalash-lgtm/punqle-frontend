@@ -29,9 +29,9 @@ function Card({ title, note, children }: { title: string; note?: string; childre
 function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-xl bg-secondary px-3 py-2.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className="text-lg font-bold leading-tight text-foreground font-display">{value}</p>
-      {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -119,13 +119,13 @@ function Heatmap({ posts, engagement }: { posts: number[][]; engagement: number[
       <div className="grid gap-1" style={{ gridTemplateColumns: "2.2rem repeat(6, 1fr)" }}>
         <div />
         {TIME_SLOTS.map((t) => (
-          <p key={t} className="text-center text-[10px] text-muted-foreground">
+          <p key={t} className="text-center text-[11px] text-muted-foreground">
             {t}
           </p>
         ))}
         {grid.map((row, r) => (
           <div key={r} className="contents">
-            <p className="self-center text-[10px] text-muted-foreground">{WEEKDAYS[r]}</p>
+            <p className="self-center text-[11px] text-muted-foreground">{WEEKDAYS[r]}</p>
             {row.map((v, c) => (
               <div key={c} className="relative h-6 overflow-hidden rounded bg-secondary" title={`${WEEKDAYS[r]} ${TIME_SLOTS[c]} UTC: ${mode === "posts" ? `${v} posts` : `${fmt(v)} engagement`}`}>
                 <div className="absolute inset-0" style={{ background: COLORS[0], opacity: v / max }} />
@@ -134,7 +134,7 @@ function Heatmap({ posts, engagement }: { posts: number[][]; engagement: number[
           </div>
         ))}
       </div>
-      <p className="mt-1.5 text-[10px] text-muted-foreground">Times are UTC. Darker = more.</p>
+      <p className="mt-1.5 text-[11px] text-muted-foreground">Times are UTC. Darker = more.</p>
     </div>
   );
 }
@@ -274,7 +274,7 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
                 {data.analyzed_posts} recent posts · {data.date_from} → {data.date_to}
               </p>
             </div>
-            <p className="no-print mt-0.5 text-[11px] text-muted-foreground">
+            <p className="no-print mt-0.5 text-[12px] text-muted-foreground">
               {data.account_website ? `Website on this account: ${data.account_website.replace(/^https?:\/\//, "").replace(/\/$/, "")}. ` : ""}
               Not the right account? Type another username above.
             </p>
@@ -307,7 +307,7 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
                 <Donut slices={typeSlices} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <p className="text-lg font-bold text-foreground font-display">{data.analyzed_posts}</p>
-                  <p className="text-[10px] text-muted-foreground">posts</p>
+                  <p className="text-[11px] text-muted-foreground">posts</p>
                 </div>
               </div>
               <div className="flex-1 space-y-2">
@@ -334,14 +334,14 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
                     <p className="mb-1 text-sm font-medium text-foreground">{t.theme}</p>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <p className="w-14 shrink-0 text-[10px] text-muted-foreground">Posts</p>
+                        <p className="w-14 shrink-0 text-[11px] text-muted-foreground">Posts</p>
                         <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
                           <div className="h-full rounded-full" style={{ width: `${(t.share_pct / maxThemeShare) * 100}%`, background: COLORS[1] }} />
                         </div>
                         <p className="w-10 shrink-0 text-right text-xs text-muted-foreground">{t.share_pct}%</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <p className="w-14 shrink-0 text-[10px] text-muted-foreground">Engagement</p>
+                        <p className="w-14 shrink-0 text-[11px] text-muted-foreground">Engagement</p>
                         <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
                           <div className="h-full rounded-full" style={{ width: `${(t.engagement_share_pct / maxThemeShare) * 100}%`, background: COLORS[0] }} />
                         </div>
@@ -392,7 +392,7 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
                   rel="noopener noreferrer"
                   className="block rounded-xl bg-secondary px-3 py-2 hover:bg-secondary/70"
                 >
-                  <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     {p.type === "video" ? "Reel / Video" : p.type === "carousel" ? "Carousel" : p.type === "image" ? "Image" : "Post"} · {p.date}
                   </p>
                   <p className="text-sm text-secondary-foreground">{p.caption || "(no caption)"}</p>
@@ -405,7 +405,7 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
             </div>
           </Card>
 
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground">
             Source: Instagram's official Business Discovery data for public Business and Creator accounts, last {data.analyzed_posts} posts. Themes are labelled by AI; all numbers are counted directly from the posts.
           </p>
         </>

@@ -241,7 +241,7 @@ export function MetaConnectPanel({ open, onClose }: { open: boolean; onClose: ()
           </button>
         )}
 
-        <p className="mt-4 text-[11px] text-muted-foreground">
+        <p className="mt-4 text-[12px] text-muted-foreground">
           While Punqle's Meta app review is pending, this only works for accounts added as testers on our Meta app.
         </p>
       </div>

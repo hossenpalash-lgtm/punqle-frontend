@@ -81,7 +81,7 @@ export function VideoAnglesStep({
                   {a.angle}
                   {i === recommendedIndex && (
                     <span
-                      className="ml-auto flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                      className="ml-auto flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
                       style={{
                         background: isSelected ? "rgba(255,255,255,0.2)" : "var(--color-accent)",
                         color: isSelected ? "inherit" : "var(--color-accent-foreground)",

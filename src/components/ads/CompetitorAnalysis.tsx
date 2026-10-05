@@ -83,7 +83,7 @@ function Section({
         <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {title}
           {count !== undefined && (
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold normal-case text-secondary-foreground">{count}</span>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold normal-case text-secondary-foreground">{count}</span>
           )}
         </span>
         <ChevronDown className="no-print h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
@@ -104,12 +104,12 @@ function SourceLink({ url, kind }: { url: string | null; kind?: string }) {
   const style = kind ? KIND_STYLES[kind] : undefined;
   return (
     <span className="mt-1 flex flex-wrap items-center gap-1.5">
-      {style && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${style.className}`}>{style.label}</span>}
+      {style && <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${style.className}`}>{style.label}</span>}
       <a
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:underline"
+        className="inline-flex items-center gap-1 text-[12px] font-medium text-accent hover:underline"
       >
         <ExternalLink className="h-3 w-3" />
         {host}
@@ -379,7 +379,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
                 <div className="flex items-start gap-3 rounded-xl bg-secondary px-3 py-2.5">
                   <Eye className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">What they do</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">What they do</p>
                     <p className="text-sm text-secondary-foreground">
                       {firstDoing?.observation || result.snapshot.positioning || "Not enough public information found."}
                     </p>
@@ -388,7 +388,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
                 <div className="flex items-start gap-3 rounded-xl bg-secondary px-3 py-2.5">
                   <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Customers say</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Customers say</p>
                     <p className="text-sm text-secondary-foreground">
                       {firstSignal?.signal || "No reliable public customer feedback found."}
                     </p>
@@ -397,7 +397,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
                 <div className="flex items-start gap-3 rounded-xl bg-secondary px-3 py-2.5">
                   <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Your best move</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your best move</p>
                     {firstOpp ? (
                       <>
                         <p className="text-sm font-medium text-secondary-foreground">{firstOpp.title}</p>
@@ -421,7 +421,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
                   `${result.opportunities.length} opportunit${result.opportunities.length === 1 ? "y" : "ies"}`,
                   `${result.sources.length} source${result.sources.length === 1 ? "" : "s"}`,
                 ].map((chip) => (
-                  <span key={chip} className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-secondary-foreground">
+                  <span key={chip} className="rounded-full bg-secondary px-2.5 py-1 text-[12px] font-medium text-secondary-foreground">
                     {chip}
                   </span>
                 ))}
@@ -453,7 +453,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
               <div className="flex flex-col gap-2">
                 {result.opportunities.map((item, i) => (
                   <div key={i} className="rounded-xl bg-secondary px-3 py-2">
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">{item.title}</p>
+                    <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-primary">{item.title}</p>
                     <p className="mb-1.5 text-sm text-secondary-foreground">{item.opportunity}</p>
                     {item.evidence && <p className="mb-1.5 text-xs italic text-muted-foreground">Why: {item.evidence}</p>}
                     <SourceLink url={item.source_url} kind={item.source_url ? kindByUrl[item.source_url] : undefined} />
@@ -507,7 +507,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
                 <div className="grid grid-cols-2 gap-2">
                   {SNAPSHOT_FIELDS.filter((f) => result.snapshot[f.key]).map((f) => (
                     <div key={f.key} className="rounded-lg bg-secondary px-2.5 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{f.label}</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{f.label}</p>
                       <p className="text-xs text-secondary-foreground">{result.snapshot[f.key]}</p>
                     </div>
                   ))}
@@ -525,7 +525,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
                 <div className="grid grid-cols-2 gap-2">
                   {metricRows.map((m) => (
                     <div key={m.label} className="rounded-lg bg-secondary px-2.5 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{m.label}</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{m.label}</p>
                       <p className={m.value ? "text-xs font-semibold text-secondary-foreground" : "text-xs italic text-muted-foreground"}>
                         {m.value || "Not publicly available"}
                       </p>
@@ -544,7 +544,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
                       href={s.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-secondary-foreground hover:underline"
+                      className="rounded-full bg-secondary px-2.5 py-1 text-[12px] font-medium text-secondary-foreground hover:underline"
                     >
                       {s.title || s.url}
                     </a>

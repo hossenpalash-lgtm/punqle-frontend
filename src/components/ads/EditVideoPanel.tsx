@@ -271,7 +271,7 @@ export function EditVideoPanel({
           <div>
             <div className="mb-2 flex items-center justify-between">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Background music</label>
-              <span className="text-[11px] text-muted-foreground">Free · mixed under the sound</span>
+              <span className="text-[12px] text-muted-foreground">Free · mixed under the sound</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {([null, "upbeat", "calm", "energetic", "corporate"] as (AvatarMusicMood | null)[]).map((mood) => (

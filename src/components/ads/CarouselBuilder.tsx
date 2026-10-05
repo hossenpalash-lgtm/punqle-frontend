@@ -225,7 +225,7 @@ export function CarouselBuilder({
         {autoExpand ? "Your carousel" : "Select 2 or more images for the carousel"}
       </p>
       {orderedSelected.length >= 2 && (
-        <p className="mb-2 text-[11px] text-muted-foreground">
+        <p className="mb-2 text-[12px] text-muted-foreground">
           {autoExpand
             ? "Each slide has its own headline. Drag to reorder, tap the pool below to swap one in."
             : "Drag a selected slide to reorder it."}
@@ -246,7 +246,7 @@ export function CarouselBuilder({
             ].join(" ")}
           >
             <img src={toImgSrc(item.imageData)} alt="" className="pointer-events-none h-full w-full object-cover" />
-            <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+            <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
               {index + 1}
             </span>
           </button>
@@ -265,7 +265,7 @@ export function CarouselBuilder({
           className="flex h-16 w-16 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-border text-muted-foreground"
         >
           <Plus className="h-4 w-4" />
-          <span className="text-[9px] font-medium leading-none">Add image</span>
+          <span className="text-[10px] font-medium leading-none">Add image</span>
         </button>
         <input
           ref={fileInputRef}

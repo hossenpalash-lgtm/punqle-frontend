@@ -244,7 +244,7 @@ function CleanPremiumPreview({ imageUrl, copy }: { imageUrl: string | undefined;
       </div>
       <div className="flex min-h-0 flex-1 flex-col justify-center px-1 pt-1">
         <div className="mb-0.5 h-px w-4 bg-black/25" />
-        <p className="line-clamp-2 text-[10px] font-bold uppercase leading-[1.05] tracking-tight text-black">
+        <p className="line-clamp-2 text-[11px] font-bold uppercase leading-[1.05] tracking-tight text-black">
           {copy.tier1}
         </p>
         {copy.tier2 && (
@@ -334,7 +334,7 @@ function WarmLifestylePreview({ imageUrl, copy }: { imageUrl: string | undefined
       />
       <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#2e1a0c]/80 to-transparent" />
       <div className="absolute inset-x-0 bottom-1.5 flex flex-col items-center text-center">
-        <p className="font-display line-clamp-2 max-w-[90%] text-[10px] font-bold leading-[1.15] text-[#fdf3e7]">
+        <p className="font-display line-clamp-2 max-w-[90%] text-[11px] font-bold leading-[1.15] text-[#fdf3e7]">
           {copy.tier1}
         </p>
         {copy.tier2 && <p className="line-clamp-1 text-[6.5px] italic text-[#fdf3e7]/85">{copy.tier2}</p>}
@@ -405,7 +405,7 @@ function VibrantPlayfulPreview({ imageUrl, copy }: { imageUrl: string | undefine
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent" />
       <div className="absolute -right-4 -top-4 h-14 w-14 rounded-full bg-white/20" />
       <div className="absolute inset-x-1.5 bottom-1.5">
-        <p className="line-clamp-2 text-[11px] font-extrabold uppercase leading-[1.1] text-white">
+        <p className="line-clamp-2 text-[12px] font-extrabold uppercase leading-[1.1] text-white">
           {copy.tier1}
         </p>
         {copy.tier2 && (
@@ -573,7 +573,7 @@ export function VisualDirectionStep({
                 <div className="mb-1 flex items-center gap-2">
                   <span className="text-sm font-semibold text-foreground font-display">{opt.label}</span>
                   {isRecommended && (
-                    <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">
+                    <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">
                       Recommended
                     </span>
                   )}

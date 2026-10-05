@@ -238,7 +238,7 @@ export function CalendarView({ onGoToWeeklyPlan }: { onGoToWeeklyPlan: () => voi
                 </p>
                 <div className="flex flex-col gap-2">
                   {dayPosts.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-border py-4 text-center text-[11px] text-muted-foreground/70">
+                    <div className="rounded-xl border border-dashed border-border py-4 text-center text-[12px] text-muted-foreground/70">
                       —
                     </div>
                   ) : (
@@ -264,14 +264,14 @@ export function CalendarView({ onGoToWeeklyPlan }: { onGoToWeeklyPlan: () => voi
                               <Youtube className="h-5 w-5 text-secondary-foreground" />
                             </div>
                           )}
-                          <p className="line-clamp-2 text-[11px] text-foreground">{post.caption || "(no caption)"}</p>
+                          <p className="line-clamp-2 text-[12px] text-foreground">{post.caption || "(no caption)"}</p>
                           <div className="mt-1 flex items-center justify-between">
-                            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                               <PlatformIcon className="h-3 w-3" />
                               {new Date(post.scheduled_time).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
                             </span>
                             <span
-                              className={["flex items-center gap-0.5 text-[10px] font-medium", meta.className].join(" ")}
+                              className={["flex items-center gap-0.5 text-[11px] font-medium", meta.className].join(" ")}
                               title={
                                 post.status === "published"
                                   ? "Based on the platform accepting the scheduled post — not independently confirmed."

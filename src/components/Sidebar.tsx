@@ -242,7 +242,7 @@ export function Sidebar({
                 call) — it was already font-bold, but the light gray color
                 read as thin/weak next to the darker "Insights" label
                 below it. */}
-            <span className="text-[11px] font-bold uppercase tracking-wider text-foreground">Projects</span>
+            <span className="text-[13px] font-bold uppercase tracking-wider text-foreground">Projects</span>
             <button
               onClick={() => setAddingProject((v) => !v)}
               aria-label="New project"
@@ -255,14 +255,14 @@ export function Sidebar({
           <div className="mb-1 flex flex-col gap-0.5">
             {projects.map((p) => (
               <div key={p.id} className="rounded-lg px-1.5 py-1.5">
-                <div className="truncate text-[13px] font-semibold text-foreground font-display">{p.name}</div>
-                <div className="text-[11px] text-muted-foreground">
+                <div className="truncate text-[14px] font-semibold text-foreground font-display">{p.name}</div>
+                <div className="text-[13px] text-muted-foreground">
                   {new Date(p.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                 </div>
               </div>
             ))}
             {projects.length === 0 && !addingProject && (
-              <p className="px-1.5 py-1 text-[12px] text-muted-foreground">No projects yet.</p>
+              <p className="px-1.5 py-1 text-[13px] text-muted-foreground">No projects yet.</p>
             )}
           </div>
 
@@ -278,7 +278,7 @@ export function Sidebar({
                 }}
                 placeholder="Project name"
                 disabled={creatingProject}
-                className="w-full rounded-lg border border-input bg-card px-2 py-1 text-[12px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full rounded-lg border border-input bg-card px-2 py-1 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               />
               <button
                 onClick={handleCreateProject}
@@ -290,7 +290,7 @@ export function Sidebar({
               </button>
             </div>
           )}
-          {projectsError && <p className="mb-1 px-1.5 text-[11px] text-destructive">{projectsError}</p>}
+          {projectsError && <p className="mb-1 px-1.5 text-[13px] text-destructive">{projectsError}</p>}
 
           {/* Ad Creation — moved here from the home screen (2026-10-01,
               founder's call) to sit directly above Plan & Publish, same
@@ -300,7 +300,7 @@ export function Sidebar({
           <button
             onClick={() => onNavigate("ad")}
             className={[
-              "mt-[58px] flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-[13px] font-bold transition-colors",
+              "mt-[58px] flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-[14px] font-bold transition-colors",
               adActive ? "text-white" : "text-foreground",
             ].join(" ")}
             style={adActive ? GLASS_PILL_ACTIVE : GLASS_PILL_IDLE}
@@ -330,7 +330,7 @@ export function Sidebar({
             ].join(" ")}
             style={planActive ? GLASS_PILL_ACTIVE : GLASS_PILL_IDLE}
           >
-            <span className="flex items-center gap-1.5 text-[13px] font-bold font-display">
+            <span className="flex items-center gap-1.5 text-[14px] font-bold font-display">
               <span
                 className={[
                   "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md",
@@ -418,7 +418,7 @@ export function Sidebar({
               a deliberate reversal of the original 2026-10-01 call to
               keep gradient reserved for exactly two "hero" items; founder
               decided the richer treatment reads better here too. */}
-          <div className="mb-1 mt-2.5 px-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          <div className="mb-1 mt-2.5 px-1.5 text-[13px] font-bold uppercase tracking-wider text-muted-foreground">
             Insights
           </div>
           <div className="flex flex-col gap-0.5">
@@ -452,7 +452,7 @@ export function Sidebar({
             className="mt-[68px] flex items-center justify-between rounded-xl border border-border bg-card px-2 py-1.5"
             style={{ boxShadow: "var(--shadow-card)" }}
           >
-            <span className="text-[13px] font-bold text-foreground font-display">More</span>
+            <span className="text-[14px] font-bold text-foreground font-display">More</span>
             <ChevronDown
               className={[
                 "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
@@ -527,7 +527,7 @@ export function Sidebar({
             literal spec. */}
         <button
           onClick={onOpenBilling}
-          className="flex shrink-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-[13px] font-semibold text-secondary-foreground hover:bg-white/60"
+          className="flex shrink-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-[14px] font-semibold text-secondary-foreground hover:bg-white/60"
         >
           <SettingsIcon className="h-3.5 w-3.5" />
           Settings
@@ -537,10 +537,10 @@ export function Sidebar({
           className="flex shrink-0 items-center justify-between border-t border-border pt-3 mt-1.5"
         >
           <span className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-[12px] font-bold text-foreground">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-[13px] font-bold text-foreground">
               <LogOut className="h-3.5 w-3.5" />
             </span>
-            <span className="text-[13px] font-semibold text-foreground font-display">Sign out</span>
+            <span className="text-[14px] font-semibold text-foreground font-display">Sign out</span>
           </span>
         </button>
       </aside>
@@ -659,7 +659,7 @@ export function Sidebar({
               className="glass-nav absolute right-3 top-full z-40 mt-2 flex max-h-[70vh] w-64 flex-col gap-0.5 overflow-y-auto rounded-2xl p-3"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
-              <span className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <span className="mb-1 px-2 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                 Plan &amp; Publish
               </span>
               {PLAN_PUBLISH_ITEMS.map(({ tab: t, label, icon: Icon }) => (
@@ -679,7 +679,7 @@ export function Sidebar({
                 </button>
               ))}
 
-              <span className="mb-1 mt-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <span className="mb-1 mt-3 px-2 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                 Insights
               </span>
               {INSIGHTS_ITEMS.map(({ tab: t, label, icon: Icon }) => (
@@ -699,7 +699,7 @@ export function Sidebar({
                 </button>
               ))}
 
-              <span className="mb-1 mt-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <span className="mb-1 mt-3 px-2 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                 Products
               </span>
               <button
@@ -716,7 +716,7 @@ export function Sidebar({
                 Product Catalog
               </button>
 
-              <span className="mb-1 mt-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <span className="mb-1 mt-3 px-2 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                 Brand
               </span>
               <button
@@ -733,7 +733,7 @@ export function Sidebar({
                 Brand Kit
               </button>
 
-              <span className="mb-1 mt-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <span className="mb-1 mt-3 px-2 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                 Account
               </span>
               <button

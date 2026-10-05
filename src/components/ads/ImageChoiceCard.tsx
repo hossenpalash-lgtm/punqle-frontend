@@ -46,7 +46,7 @@ export function ImageChoiceCard({
         )}
       </span>
       <span className="px-1 font-display text-[13px] leading-tight text-foreground">{label}</span>
-      {sublabel && <span className="px-1 pb-0.5 text-[10.5px] font-semibold leading-none text-muted-foreground">{sublabel}</span>}
+      {sublabel && <span className="px-1 pb-0.5 text-[11.5px] font-semibold leading-none text-muted-foreground">{sublabel}</span>}
       {!sublabel && <span className="pb-0.5" />}
     </button>
   );

@@ -152,7 +152,7 @@ export function PostKit({
   // features — pure grouping + spacing + one localized dark "stage"
   // behind the image, per the agreed design direction).
   const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-    <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-accent">{children}</p>
+    <p className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-accent">{children}</p>
   );
 
   return (
@@ -214,7 +214,7 @@ export function PostKit({
               >
                 <Check className="h-3 w-3" />
               </span>
-              <span className="text-[11px] font-semibold text-foreground">{label}</span>
+              <span className="text-[12px] font-semibold text-foreground">{label}</span>
             </div>
           ))}
         </div>
@@ -317,7 +317,7 @@ export function PostKit({
           >
             <Rocket className="h-4 w-4" />
             Launch Campaign
-            <span className="ml-1 flex items-center gap-1 rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold">
+            <span className="ml-1 flex items-center gap-1 rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold">
               <Lock className="h-2.5 w-2.5" />
               Coming soon
             </span>

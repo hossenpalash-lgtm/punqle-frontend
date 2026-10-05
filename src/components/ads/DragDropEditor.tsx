@@ -162,7 +162,7 @@ export function DragDropEditor({
             height: "20%",
           }}
         >
-          <span className="absolute -top-6 left-0 flex items-center gap-1 rounded-full bg-foreground/80 px-2 py-0.5 text-[10px] font-semibold text-background">
+          <span className="absolute -top-6 left-0 flex items-center gap-1 rounded-full bg-foreground/80 px-2 py-0.5 text-[11px] font-semibold text-background">
             <Move className="h-2.5 w-2.5" />
             Caption
           </span>
@@ -183,7 +183,7 @@ export function DragDropEditor({
               aspectRatio: "1",
             }}
           >
-            <span className="absolute -top-6 left-0 rounded-full bg-foreground/80 px-2 py-0.5 text-[10px] font-semibold text-background">
+            <span className="absolute -top-6 left-0 rounded-full bg-foreground/80 px-2 py-0.5 text-[11px] font-semibold text-background">
               Logo
             </span>
             <div

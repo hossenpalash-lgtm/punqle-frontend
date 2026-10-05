@@ -44,6 +44,13 @@
      font-extrabold. */
   --font-display: "Cal Sans", "Inter", system-ui, sans-serif;
   --font-sans: "Inter", "Plus Jakarta Sans", system-ui, sans-serif;
+  /* 2026-10-06 (founder: helper lines, upload labels and the sidebar looked too small
+     and light): the two smallest text steps grow by 1px app-wide. text-xs 12 -> 13px
+     (hints, descriptions, labels), text-sm 14 -> 15px (most UI text). */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.2rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.4rem;
   --gradient-primary: linear-gradient(135deg, var(--primary), var(--primary-glow));
   --gradient-destructive: linear-gradient(135deg, var(--destructive), var(--destructive-glow));
   --gradient-success: linear-gradient(135deg, var(--success), var(--success-glow));
@@ -121,7 +128,7 @@
   --secondary: oklch(0.93 0.005 255 / 60%);
   --secondary-foreground: oklch(0.24 0.01 260);
   --muted: oklch(0.953 0.005 255);
-  --muted-foreground: oklch(0.5 0.014 258);
+  --muted-foreground: oklch(0.43 0.014 258);
   /* The one restrained "AI accent" — a muted violet, reserved for
      recommendation badges, sparkle/AI icons, and progress-indicator
      active states (see the Social Content master-refinement pass,

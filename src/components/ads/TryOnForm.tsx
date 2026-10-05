@@ -395,7 +395,7 @@ export function TryOnForm({
           {modelPreviewUrl && (
             <div className="glass-chip absolute left-3 top-3 flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2.5">
               <img src={modelPreviewUrl} alt="Your original photo" className="h-6 w-6 rounded-full object-cover" />
-              <span className="text-[10px] font-semibold text-white">Before</span>
+              <span className="text-[11px] font-semibold text-white">Before</span>
             </div>
           )}
         </div>

@@ -273,13 +273,13 @@ export function PerformanceView() {
                   <PlatformIcon platform={post.platform} className="h-3 w-3" />
                   {formatDate(post.scheduled_time)}
                   {isWinner(scores.get(post.id)) && (
-                    <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-accent">
+                    <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
                       <Trophy className="h-2.5 w-2.5" />
                       Winner · {formatMultiple(scores.get(post.id)!.multiple)}
                     </span>
                   )}
                   {post.angle && (
-                    <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-secondary-foreground">
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
                       {formatLabel(post.angle)}
                     </span>
                   )}

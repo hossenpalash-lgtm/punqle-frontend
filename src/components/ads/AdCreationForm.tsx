@@ -593,7 +593,7 @@ export function AdCreationForm({
             {!showMoreStyles && (
               <button
                 onClick={() => setShowMoreStyles(true)}
-                className="mt-2 text-[11px] font-semibold text-muted-foreground underline"
+                className="mt-2 text-[12px] font-semibold text-muted-foreground underline"
               >
                 Show more styles
               </button>
@@ -636,7 +636,7 @@ export function AdCreationForm({
                     key={p.id}
                     onClick={() => setPlatform(p.id)}
                     className={[
-                      "rounded-xl px-2 py-2 text-[11px] font-semibold transition-colors",
+                      "rounded-xl px-2 py-2 text-[12px] font-semibold transition-colors",
                       platform === p.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                     ].join(" ")}
                   >
@@ -676,7 +676,7 @@ export function AdCreationForm({
             People &amp; Product
           </label>
           <div className="mb-4 w-full rounded-2xl border border-border bg-card p-4 text-left">
-            <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
+            <p className="mb-2 text-[12px] font-semibold text-muted-foreground">
               Product photo <span className="normal-case text-muted-foreground/70">— optional, Punqle can create one</span>
             </p>
             {!file ? (
@@ -702,7 +702,7 @@ export function AdCreationForm({
               </div>
             )}
 
-            <p className="mb-2 mt-4 text-[11px] font-semibold text-muted-foreground">Add a person</p>
+            <p className="mb-2 mt-4 text-[12px] font-semibold text-muted-foreground">Add a person</p>
             <div className="mb-2 flex gap-1.5">
               <button
                 onClick={() => {
@@ -776,7 +776,7 @@ export function AdCreationForm({
                                 </span>
                               )}
                             </span>
-                            <span className="text-[10px] font-medium text-foreground">{a.name}</span>
+                            <span className="text-[11px] font-medium text-foreground">{a.name}</span>
                           </button>
                         );
                       })}
@@ -804,7 +804,7 @@ export function AdCreationForm({
                     key={m.id}
                     onClick={() => setImageGenModel(m.id)}
                     className={[
-                      "rounded-xl px-2 py-2 text-[11px] font-semibold transition-colors",
+                      "rounded-xl px-2 py-2 text-[12px] font-semibold transition-colors",
                       imageGenModel === m.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
                     ].join(" ")}
                   >

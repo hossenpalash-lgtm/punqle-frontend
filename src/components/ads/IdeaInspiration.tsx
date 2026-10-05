@@ -122,7 +122,7 @@ export function IdeaInspiration({ onSelect }: { onSelect: (idea: string) => void
 
       {ideas.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-semibold text-muted-foreground">
+          <p className="text-[12px] font-semibold text-muted-foreground">
             {source === "blog" ? "Tap an idea inspired by that article:" : "Tap an idea to use it:"}
           </p>
           {ideas.map((idea, i) => (

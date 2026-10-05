@@ -27,7 +27,7 @@ export function WizardProgress({
               onClick={clickable ? () => onNavigate!(stage as 1 | 2 | 3) : undefined}
               disabled={!clickable}
               className={[
-                "flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold transition-colors",
+                "flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-semibold transition-colors",
                 done || active ? "text-white" : "bg-secondary text-muted-foreground",
                 clickable ? "cursor-pointer hover:opacity-80" : "cursor-default",
               ].join(" ")}

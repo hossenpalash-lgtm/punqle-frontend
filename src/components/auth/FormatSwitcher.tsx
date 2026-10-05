@@ -58,7 +58,7 @@ const FORMATS: Record<
     tag: "VIDEO AD",
     headline: "Cinematic, lifestyle, or UGC — you pick the style.",
     desc: "Product Showcase, Lifestyle, Cinematic UGC and AI Presenter styles, all from one prompt.",
-    credit: "4–46 credits",
+    credit: "from 4 credits",
     image: "/showcase-ads/product-showcase-poster.jpg",
     video: "/showcase-ads/product-showcase.mp4",
   },
@@ -68,7 +68,7 @@ const FORMATS: Record<
     tag: "IMAGE AD",
     headline: "One product photo, a goal-driven ad.",
     desc: "Pick Sales, Leads, Traffic or Bookings — Punqle writes the copy and builds the creative to match.",
-    credit: "1 credit",
+    credit: "from 3 credits",
     // A real hands-holding-product shot reads as "real ad" far better
     // than a product sitting alone on a surface — founder's own ask.
     image: "/showcase-ads/product-in-hand.jpg",
@@ -91,7 +91,7 @@ const FORMATS: Record<
     tag: "CAROUSEL",
     headline: "One topic. A full carousel, auto-designed.",
     desc: "Punqle plans 3–6 sequenced slides — hook, feature, proof, offer — and generates every image.",
-    credit: "3–6 credits",
+    credit: "3 credits per slide",
     image: "/showcase-ads/food.jpg",
     stack: ["/showcase-ads/food.jpg", "/showcase-ads/fashion.jpg", "/showcase-ads/skincare.jpg"],
   },

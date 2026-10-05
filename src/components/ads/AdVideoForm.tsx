@@ -59,12 +59,17 @@ import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
 import { VideoStyleStep } from "./VideoStyleStep";
 
-const VIDEO_CREDIT_COST = 10;
+// Mirrors main.py's VIDEO_CREDIT_COST: one fixed 8 s Kling 3.0 Pro (1080p)
+// clip (8 s x 6 credits/s). Was 10 on Veo 3.1 Lite until Veo's 22 Oct 2026
+// retirement (2026-10-05).
+const VIDEO_CREDIT_COST = 48;
 const POLL_INTERVAL_MS = 8000;
-// Avatar "premium" tier costs the same real amount as a Veo video, so it
-// reuses VIDEO_CREDIT_COST directly (see main.py's AVATAR_PREMIUM_CREDIT_COST);
-// "standard" gets its own, cheaper constant matching main.py's real one.
+// Avatar videos are now billed by their real length (main.py's
+// _avatar_credit_cost): these are the MINIMUM charges (short clips cost
+// exactly these); longer scripts cost more — Standard 0.5 credits/s,
+// Premium 1.6 credits/s. Shown as "from N credits".
 const AVATAR_STANDARD_CREDIT_COST = 4;
+const AVATAR_PREMIUM_CREDIT_COST = 10;
 // Cinematic UGC (Seedance 2.5) — real per-second cost confirmed live
 // against a real billed Replicate invoice 2026-09-06 (~$0.103/s at
 // 480p, ~$0.231/s at 720p for an 8s clip) — matches main.py's
@@ -643,7 +648,7 @@ export function AdVideoForm({
     descriptionOverride: string,
     scriptOverride: { headline: string; narration: string },
   ) => {
-    const avatarCreditCost = avatarTier === "premium" ? VIDEO_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST;
+    const avatarCreditCost = avatarTier === "premium" ? AVATAR_PREMIUM_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST;
     if (!selectedAvatarId || generating || (credits !== null && credits < avatarCreditCost)) return;
     setGenerating(true);
     setError(null);
@@ -957,7 +962,7 @@ export function AdVideoForm({
   const videoAdTrialAvailable = featureTrials?.video_ad === true;
   const insufficientCredits = !videoAdTrialAvailable && credits !== null && credits < VIDEO_CREDIT_COST;
   const avatarInsufficientCredits =
-    credits !== null && credits < (avatarTier === "premium" ? VIDEO_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST);
+    credits !== null && credits < (avatarTier === "premium" ? AVATAR_PREMIUM_CREDIT_COST : AVATAR_STANDARD_CREDIT_COST);
   const cinematicUgcInsufficientCredits = credits !== null && credits < CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier];
   const aiActorInsufficientCredits = credits !== null && credits < AI_ACTOR_VIDEO_CREDIT_COST;
 
@@ -989,8 +994,8 @@ export function AdVideoForm({
 
         {isAvatarResult && avatarFellBack && (
           <p className="mb-3 rounded-2xl bg-secondary/60 px-4 py-3 text-xs text-muted-foreground">
-            This avatar didn't support Premium quality, so Standard was used instead — you were charged{" "}
-            {AVATAR_STANDARD_CREDIT_COST} credits, not the Premium price.
+            This avatar didn't support Premium quality, so Standard was used instead — you were charged the Standard price (from{" "}
+            {AVATAR_STANDARD_CREDIT_COST} credits), not the Premium price.
           </p>
         )}
 
@@ -1157,8 +1162,8 @@ export function AdVideoForm({
           </p>
           {videoStyle === "avatar" && avatarFellBack && (
             <p className="mt-2 rounded-xl bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
-              This avatar doesn't support Premium — using Standard instead, so you'll only be charged{" "}
-              {AVATAR_STANDARD_CREDIT_COST} credits.
+              This avatar doesn't support Premium — using Standard instead, so you'll only be charged the Standard price (from{" "}
+              {AVATAR_STANDARD_CREDIT_COST} credits).
             </p>
           )}
         </div>
@@ -1288,7 +1293,7 @@ export function AdVideoForm({
   const currentCost =
     videoStyle === "avatar"
       ? avatarTier === "premium"
-        ? VIDEO_CREDIT_COST
+        ? AVATAR_PREMIUM_CREDIT_COST
         : AVATAR_STANDARD_CREDIT_COST
       : videoStyle === "cinematic_ugc"
         ? CINEMATIC_UGC_CREDIT_COST[cinematicUgcTier]
@@ -1630,7 +1635,7 @@ export function AdVideoForm({
         {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && videoAdTrialAvailable ? (
           <span className="text-foreground">✨ Try free — no credits</span>
         ) : (
-          <>1 video · {currentCost} credits</>
+          <>1 video · {videoStyle === "avatar" ? "from " : ""}{currentCost} credits</>
         )}{" "}
         ·{" "}
         {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" ? "about 1-2 min" : "usually a few minutes"}

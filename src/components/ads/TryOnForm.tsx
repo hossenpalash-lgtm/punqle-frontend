@@ -15,7 +15,7 @@ import {
 import { GOALS } from "./AdBriefStep";
 
 const TRYON_CREDIT_COST = 2;
-const VIDEO_CREDIT_COST = 10;
+const VIDEO_CREDIT_COST = 48; // Kling 3.0 Pro, 8 s, 1080p — mirrors main.py (was 10 on Veo)
 const POLL_INTERVAL_MS = 4000;
 const VIDEO_POLL_INTERVAL_MS = 8000;
 

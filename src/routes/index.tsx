@@ -197,20 +197,17 @@ const IMAGE_MODEL_LABELS: Record<ImageGenModel, string> = {
 const IMAGE_VIDEO_MODEL_OPTIONS: { id: ImageVideoModel; label: string; min: number; max: number }[] = [
   { id: "kling_3_pro", label: "Kling 3.0 Pro", min: 3, max: 15 },
   { id: "seedance_2_5", label: "Seedance 2.5", min: 3, max: 15 },
-  { id: "veo_3_1", label: "Veo 3.1", min: 4, max: 8 },
 ];
 const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
   kling_3_pro: "Kling 3.0 Pro",
   seedance_2_5: "Seedance 2.5",
-  veo_3_1: "Veo 3.1",
 };
 // Display-only estimate, mirrors the backend's own provisional per-
 // second credit rates — the backend always computes the real charge
 // itself, this is just so the Generate button can show a cost upfront.
 const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
-  veo_3_1: 1.25,
   seedance_2_5: 6,
-  kling_3_pro: 8,
+  kling_3_pro: 6,
 };
 // Mirrors the backend's own TALKING_VIDEO_REDUB_SURCHARGE — display only.
 const TALKING_VIDEO_REDUB_SURCHARGE = 10;

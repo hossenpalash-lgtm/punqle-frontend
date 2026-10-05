@@ -734,20 +734,22 @@ export type AspectRatio = "square" | "feed" | "story";
 // actor voice-engine picker).
 export type ImageGenModel = "nano_banana_pro" | "nano_banana_2" | "gpt_image";
 
-// Mirrors the backend's IMAGE_GEN_CREDIT_COST (main.py) — real per-image
-// provider cost differs a lot across these three (Nano Banana Pro is
-// ~3.2x GPT Image's cost), so they're no longer flat-priced. Only
-// applies to the no-photo/AI-generates-everything path; a real uploaded
-// photo always costs 1 credit regardless of `model` (see
-// imageGenerateCreditCost below).
+// Mirrors the backend's IMAGE_GEN_CREDIT_COST + PHOTO_EDIT_CREDIT_COST
+// (main.py) — priced to each model's real provider cost at the top quality
+// setting (2026-10-05 quality pass: Gemini at 2K, GPT Image 2.5 at "max").
+// IMAGE_GEN_CREDIT_COST is the no-photo / AI-generates-everything path; any
+// path that edits a real uploaded photo, and every photo-edit tool (Remove
+// Background, Enhance, Unboxing, Show Your App, Product combine, Refine
+// Actor), is a Nano Banana Pro call and costs PHOTO_EDIT_CREDIT_COST.
 export const IMAGE_GEN_CREDIT_COST: Record<ImageGenModel, number> = {
   nano_banana_pro: 3,
   nano_banana_2: 2,
-  gpt_image: 1,
+  gpt_image: 5,
 };
+export const PHOTO_EDIT_CREDIT_COST = 3;
 
 export function imageGenerateCreditCost(hasPhoto: boolean, model: ImageGenModel): number {
-  return hasPhoto ? 1 : IMAGE_GEN_CREDIT_COST[model];
+  return hasPhoto ? PHOTO_EDIT_CREDIT_COST : IMAGE_GEN_CREDIT_COST[model];
 }
 
 export function generateAd(
@@ -813,7 +815,7 @@ export function generateImageDirect(
 // reference + pick a model + pick a length + generate), matching a real
 // competitor's own simplest tool. Only 3 real, working models are
 // offered — see ImageVideoModel.
-export type ImageVideoModel = "veo_3_1" | "kling_3_pro" | "seedance_2_5";
+export type ImageVideoModel = "kling_3_pro" | "seedance_2_5"; // Veo retired 2026-10-22; Kling 3.0 Pro is the default engine
 
 export interface ApiImageVideoStartResponse {
   job_id: string;

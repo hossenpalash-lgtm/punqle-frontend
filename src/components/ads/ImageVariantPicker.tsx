@@ -1,6 +1,8 @@
 import { ChevronDown, Eraser, Loader2, Sparkles, Wand2 } from "lucide-react";
 import { useState } from "react";
 
+import { PHOTO_EDIT_CREDIT_COST } from "@/lib/api";
+
 // Unlike captions, each extra image costs a real credit (Gemini image
 // generation isn't cheap) — the button says so up front rather than
 // surprising the user at the credit counter. Remove background and
@@ -98,7 +100,7 @@ export function ImageVariantPicker({
                 ) : (
                   <Eraser className="h-3.5 w-3.5" />
                 )}
-                Remove background (1 credit)
+                Remove background ({PHOTO_EDIT_CREDIT_COST} credits)
               </button>
             )}
             {onEnhance && (
@@ -112,7 +114,7 @@ export function ImageVariantPicker({
                 ) : (
                   <Wand2 className="h-3.5 w-3.5" />
                 )}
-                Enhance (1 credit)
+                Enhance ({PHOTO_EDIT_CREDIT_COST} credits)
               </button>
             )}
           </div>

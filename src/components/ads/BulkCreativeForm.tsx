@@ -22,6 +22,7 @@ import {
   generateCaptions,
   type AdGoal,
   type ApiImportedProduct,
+  PHOTO_EDIT_CREDIT_COST,
 } from "@/lib/api";
 import { GOALS } from "./AdBriefStep";
 
@@ -126,7 +127,10 @@ export function BulkCreativeForm({
 
   const selectedCount = selectedIds.size;
   const allSelected = products.length > 0 && selectedCount === products.length;
-  const insufficientCredits = credits !== null && credits < selectedCount;
+  // Each product is a photo-based Nano Banana Pro generation (generateAd with
+  // the product image), so priced at PHOTO_EDIT_CREDIT_COST, not 1.
+  const totalCreditCost = selectedCount * PHOTO_EDIT_CREDIT_COST;
+  const insufficientCredits = credits !== null && credits < totalCreditCost;
   const estimatedMinutes = Math.max(1, Math.round((selectedCount * SECONDS_PER_ITEM) / 60));
 
   const toggleProduct = (id: string) => {
@@ -409,7 +413,7 @@ export function BulkCreativeForm({
           {insufficientCredits && (
             <p className="mb-4 flex items-center gap-1.5 text-xs font-medium text-destructive">
               <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-              You only have {credits} credits — select fewer products or top up first.
+              You have {credits} credits and this batch needs {totalCreditCost} ({PHOTO_EDIT_CREDIT_COST} per product) — select fewer products or top up first.
             </p>
           )}
 

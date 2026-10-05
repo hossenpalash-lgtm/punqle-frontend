@@ -12,7 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useState } from "react";
-import { base64ToFile, fetchProductLink } from "@/lib/api";
+import { base64ToFile, fetchProductLink, imageGenerateCreditCost } from "@/lib/api";
 import type { Platform } from "@/lib/social-wizard";
 import { CAROUSEL_SLIDE_COUNTS, PLATFORM_OPTIONS, VERSION_COUNTS } from "@/lib/social-wizard";
 import { ProductPicker } from "./ProductPicker";
@@ -88,8 +88,14 @@ export function SetupStep({
   // request still needs credits for versions-1 — only skip the gate
   // entirely when requesting just 1 (the common case: Quick-Create-style
   // single generation).
-  const insufficientCredits =
-    !(imageTrialAvailable && versions === 1) && credits !== null && credits < versions;
+  // Each image/slide is a Nano Banana Pro call (this step always generates
+  // with the default model, or edits the uploaded photo) — priced at the
+  // real per-image cost, not 1 credit. (Before 2026-10-05 this said
+  // "N versions = N credits" even after Nano Banana Pro went to 3 each.)
+  const perImageCredits = imageGenerateCreditCost(!!file && !useAiImage, "nano_banana_pro");
+  const chargedImages = imageTrialAvailable ? Math.max(versions - 1, 0) : versions;
+  const totalCredits = chargedImages * perImageCredits;
+  const insufficientCredits = credits !== null && totalCredits > 0 && credits < totalCredits;
 
   const handleFetchProductLink = async () => {
     if (!productUrl.trim() || fetchingLink) return;
@@ -265,13 +271,9 @@ export function SetupStep({
         {imageTrialAvailable && versions === 1 ? (
           <span className="font-semibold text-primary">✨ Your first one's free — no credits</span>
         ) : imageTrialAvailable ? (
-          isCarousel
-            ? `First slide free, then ${versions - 1} more slide${versions - 1 > 1 ? "s" : ""} = ${versions - 1} credit${versions - 1 > 1 ? "s" : ""}.`
-            : `First version free, then ${versions - 1} more = ${versions - 1} credit${versions - 1 > 1 ? "s" : ""}.`
-        ) : isCarousel ? (
-          `${versions} slides = ${versions} credits.`
+          `First ${isCarousel ? "slide" : "version"} free, then ${versions - 1} more = ${totalCredits} credits.`
         ) : (
-          `${versions} version${versions > 1 ? "s" : ""} = ${versions} credit${versions > 1 ? "s" : ""}.`
+          `${versions} ${isCarousel ? "slide" : "version"}${versions > 1 ? "s" : ""} = ${totalCredits} credits (${perImageCredits} each).`
         )}
       </p>
 

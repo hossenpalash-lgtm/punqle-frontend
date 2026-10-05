@@ -112,7 +112,7 @@ export function AvatarPickerStep({
               <span className="flex items-center gap-1.5 text-sm font-semibold">
                 {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
                 {t.label}
-                <span className="ml-auto text-xs font-normal opacity-80">{t.credits} credits</span>
+                <span className="ml-auto text-xs font-normal opacity-80">from {t.credits} credits</span>
               </span>
               <span className={["block text-xs", selected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}>
                 {t.description}

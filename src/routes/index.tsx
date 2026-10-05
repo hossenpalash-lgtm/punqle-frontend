@@ -226,7 +226,7 @@ const ACTOR_CHARS_PER_SECOND = 13;
 const OMNI_ACTOR_MAX_NARRATION_SECONDS = 9;
 // Longer narrations (OmniHuman 1.5): up to 900 characters (~60 s), 3.5 credits
 // per second after the flat 30. Over ~35 s it is made in 720p (one continuous
-// take); the server also accepts "1080p" (joined once) but the app doesn't offer it. Ready Actors: up to 420 characters (~28 s),
+// take); the user can pick "1080p · one cut" (two joined calls). Ready Actors: up to 420 characters (~28 s),
 // 30 credits to 15 s then 2 per second. Mirrors main.py's
 // CUSTOM_ACTOR_MAX_NARRATION_CHARS / ACTOR_V2_MAX_NARRATION_CHARS and their
 // cost functions — display only, the server charges the real amount.
@@ -424,6 +424,8 @@ function HomeScreen() {
   const [customActors, setCustomActors] = useState<ApiCustomActor[]>([]);
   const [customActorsLoading, setCustomActorsLoading] = useState(false);
   const [selectedCustomActorId, setSelectedCustomActorId] = useState<string | null>(null);
+  // Only offered for a custom actor's narration over ~35 s: 720p (one take) or 1080p (one cut).
+  const [actorResolution, setActorResolution] = useState<"720p" | "1080p">("720p");
   const [showCreateActor, setShowCreateActor] = useState(false);
   const [createActorSource, setCreateActorSource] = useState<"choose" | "upload" | "generate">("choose");
   const [createActorName, setCreateActorName] = useState("");
@@ -1244,7 +1246,7 @@ function HomeScreen() {
     setActorPanel("generating");
     try {
       if (selectedCustomActorId) {
-        const r = await startAiActorVideoGeneration(narration, { customActorId: selectedCustomActorId, language: "english" });
+        const r = await startAiActorVideoGeneration(narration, { customActorId: selectedCustomActorId, language: "english", resolution: actorResolution });
         actorPollRef.current = setTimeout(() => pollActorVideo(r.prediction_id, "omnihuman"), 8000);
         return;
       }
@@ -1955,11 +1957,29 @@ function HomeScreen() {
                         maxLength={actorNarrationMax + 200}
                         className="w-full resize-none bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                       />
-                      <p className={["px-3 pb-1 text-[11px]", spokenLength(actorNarration) > actorNarrationMax ? "font-semibold text-destructive" : "text-muted-foreground"].join(" ")}>
-                        {spokenLength(actorNarration)} / {actorNarrationMax} characters · about {Math.round(actorSpeechSeconds(actorNarration))} seconds
-                      </p>
-                      {selectedCustomActorId && spokenLength(actorNarration) > CUSTOM_ACTOR_FULL_HD_MAX_CHARS && (
-                        <p className="px-3 pb-2 text-[11px] text-muted-foreground">Videos over about 35 seconds are made in 720p.</p>
+                      {actorNarration.trim() && (
+                        <p className={["px-3 pb-1 text-[11px]", spokenLength(actorNarration) > actorNarrationMax ? "font-semibold text-destructive" : "text-muted-foreground"].join(" ")}>
+                          {spokenLength(actorNarration) > actorNarrationMax
+                            ? `Too long — up to about ${Math.floor(actorNarrationMax / ACTOR_SPEECH_CHARS_PER_SECOND)} seconds`
+                            : `About ${Math.round(actorSpeechSeconds(actorNarration))} seconds · ${actorVideoCost} credits`}
+                        </p>
+                      )}
+                      {selectedCustomActorId && spokenLength(actorNarration) > CUSTOM_ACTOR_FULL_HD_MAX_CHARS && spokenLength(actorNarration) <= actorNarrationMax && (
+                        <div className="flex items-center gap-1.5 px-3 pb-2">
+                          {(["720p", "1080p"] as const).map((q) => (
+                            <button
+                              key={q}
+                              type="button"
+                              onClick={() => setActorResolution(q)}
+                              className={[
+                                "rounded-full px-3 py-1 text-[11px] font-semibold",
+                                actorResolution === q ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
+                              ].join(" ")}
+                            >
+                              {q === "720p" ? "720p" : "1080p · one cut"}
+                            </button>
+                          ))}
+                        </div>
                       )}
 
                       <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">

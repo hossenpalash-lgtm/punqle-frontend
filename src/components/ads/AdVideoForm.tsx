@@ -1205,7 +1205,9 @@ export function AdVideoForm({
           className="mb-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <p className={["mb-4 text-xs", spokenLength(actorNarrationDraft) > READY_ACTOR_MAX_CHARS ? "font-semibold text-destructive" : "text-muted-foreground"].join(" ")}>
-          {spokenLength(actorNarrationDraft)} / {READY_ACTOR_MAX_CHARS} characters · about {Math.round(readyActorSeconds(actorNarrationDraft))} seconds · {readyActorCost(actorNarrationDraft)} credits
+          {spokenLength(actorNarrationDraft) > READY_ACTOR_MAX_CHARS
+            ? `Too long — up to about ${Math.floor(READY_ACTOR_MAX_CHARS / 15)} seconds`
+            : `About ${Math.round(readyActorSeconds(actorNarrationDraft))} seconds · ${readyActorCost(actorNarrationDraft)} credits`}
         </p>
 
         {showElevenLabsControls && (

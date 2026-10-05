@@ -82,21 +82,12 @@ export const ALL_NAV_TABS: NavTab[] = [
 // a real differentiator (not a generic utility), gets the same
 // accent-icon-box treatment as Social Content/Ad Creation below instead
 // of a plain link, so it visually reads as equally primary.
-// Same deep coral->magenta->violet gradient used on the Ad Creation page
-// and home screen (2026-10-01) — reused here for the sidebar's own
-// Ad Creation link and Plan & Publish header, per the founder's explicit
-// ask to keep those two visually matched.
-const SIDEBAR_GRADIENT = "linear-gradient(135deg, #E4754E 0%, #C64D85 55%, #794EA8 100%)";
-// Glossy-glass highlight for gradient surfaces (2026-10-05, iOS glass
-// pass): a bright top edge + a soft inner shade along the bottom edge
-// so the gradient reads as a lit, curved glass pill, not a flat fill.
-const SIDEBAR_GRADIENT_SHEEN = "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -8px 12px -8px rgba(70,10,80,0.3)";
-// Ad Creation / Plan & Publish pills (2026-10-05): the brand gradient came
-// off these two at the founder's call ("black white ios dite paro") —
-// they're now neutral iOS glass pills: frosted white at rest, solid
-// black glass when you're on that section (same "black = selected"
-// language as the home pills). The gradient stays on the small icon
-// chips below (Insights) and the platform icons.
+// Sidebar pills (2026-10-05, extended to Insights 2026-10-06): the brand
+// gradient came off Ad Creation / Plan & Publish at the founder's call
+// ("black white ios dite paro") and then off Performance / Competitive
+// Edge too — they're all neutral iOS glass pills: frosted white at rest,
+// solid black glass when you're on that section (same "black = selected"
+// language as the home pills). Only the platform icons keep real colour.
 const GLASS_PILL_IDLE = {
   background: "linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.6))",
   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.95), 0 0 0 1px rgba(255,255,255,0.7), 0 8px 18px -10px rgba(40,25,15,0.35)",
@@ -414,35 +405,40 @@ export function Sidebar({
             </button>
           </div>
 
-          {/* Insights — Performance + Competitive Edge only. Icon chips
-              moved from the flat violet accent tint to the same
-              Ad Creation/Plan & Publish gradient (2026-10-02, founder's
-              call, after seeing it on the home bar's "See more" menu) —
-              a deliberate reversal of the original 2026-10-01 call to
-              keep gradient reserved for exactly two "hero" items; founder
-              decided the richer treatment reads better here too. */}
+          {/* Insights — Performance + Competitive Edge only. These two
+              used to carry the coral->violet gradient icon chips
+              (2026-10-02); at the founder's call (2026-10-06) the colour
+              is gone and they're the same neutral iOS glass pills as Ad
+              Creation / Plan & Publish — frosted white at rest, black
+              glass when selected, monochrome icon chip. */}
           <div className="mb-1 mt-2.5 px-1.5 text-[13px] font-bold uppercase tracking-wider text-muted-foreground">
             Insights
           </div>
-          <div className="flex flex-col gap-0.5">
-            {INSIGHTS_ITEMS.map(({ tab: t, label, icon: Icon }) => (
-              <button
-                key={t}
-                onClick={() => onNavigate(t)}
-                className={[
-                  "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-bold transition-colors",
-                  tab === t ? "bg-foreground text-background" : "text-foreground hover:bg-white/60",
-                ].join(" ")}
-              >
-                <span
-                  className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md text-white"
-                  style={{ background: SIDEBAR_GRADIENT, boxShadow: SIDEBAR_GRADIENT_SHEEN }}
+          <div className="flex flex-col gap-1.5">
+            {INSIGHTS_ITEMS.map(({ tab: t, label, icon: Icon }) => {
+              const selected = tab === t;
+              return (
+                <button
+                  key={t}
+                  onClick={() => onNavigate(t)}
+                  className={[
+                    "flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-[14px] font-bold transition-colors",
+                    selected ? "text-white" : "text-foreground",
+                  ].join(" ")}
+                  style={selected ? GLASS_PILL_ACTIVE : GLASS_PILL_IDLE}
                 >
-                  <Icon className="h-2.5 w-2.5" />
-                </span>
-                {label}
-              </button>
-            ))}
+                  <span
+                    className={[
+                      "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md",
+                      selected ? "bg-white/20 text-white" : "bg-foreground text-background",
+                    ].join(" ")}
+                  >
+                    <Icon className="h-2.5 w-2.5" />
+                  </span>
+                  {label}
+                </button>
+              );
+            })}
           </div>
 
           {/* More — Bulk Creative lives here (moved back 2026-10-01, same

@@ -18,6 +18,7 @@ import {
   Settings2,
   Shirt,
   Smartphone,
+  Gift,
   Sparkles,
   Upload,
   UserRound,
@@ -25,6 +26,7 @@ import {
   X,
   ZoomIn,
 } from "lucide-react";
+import { HomeShowcase } from "@/components/home/HomeShowcase";
 import { useEffect, useRef, useState } from "react";
 import {
   addEmotionTags,
@@ -767,6 +769,19 @@ function HomeScreen() {
   // Switching pills always lands on a clean compose view for that mode —
   // this (plus only ever rendering one mode's block) is what makes the
   // old double-render bug structurally impossible now.
+  // True while the home bar is just waiting for input (nothing generating or showing
+  // a result), so the example showcase above it is shown only then.
+  const homeIdle =
+    actorPanel === "compose" &&
+    videoPanel === "closed" &&
+    productPanel === "closed" &&
+    upscalePanel === "closed" &&
+    !homeImageGenerating &&
+    !homeGeneratedImage &&
+    !homeGeneratedVideo &&
+    !upscaleResultImage &&
+    !upscaleResultVideo;
+
   const handleSwitchMode = (mode: HomeMode) => {
     handleResetHome();
     setHomeMode(mode);
@@ -1259,17 +1274,15 @@ function HomeScreen() {
 
   return (
     <main className="flex flex-1 flex-col px-6 py-6">
-      <div
-        className="mb-5 flex items-center justify-between rounded-full border border-white/70 px-4 py-2 backdrop-blur-md"
-        style={{ background: "oklch(1 0 0 / 55%)", boxShadow: "var(--shadow-card)" }}
-      >
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-accent" />
-          <span className="text-sm font-semibold text-foreground">Your credits</span>
+      <div className="mb-5 flex justify-end">
+        <div
+          className="flex items-center gap-2 rounded-full border border-white/70 py-1.5 pl-3 pr-4 backdrop-blur-md"
+          style={{ background: "oklch(1 0 0 / 55%)", boxShadow: "var(--shadow-card)" }}
+        >
+          <Sparkles className="h-3.5 w-3.5 text-accent" />
+          <span className="font-display text-sm text-foreground">{credits === null ? "..." : credits}</span>
+          <span className="text-xs text-muted-foreground">credits</span>
         </div>
-        <span className="text-base font-extrabold text-primary font-display">
-          {credits === null ? "..." : credits}
-        </span>
       </div>
       {creditsError && <p className="mb-4 text-sm text-destructive">{creditsError}</p>}
 
@@ -1288,9 +1301,10 @@ function HomeScreen() {
       {tab === "home" && (
         <div className="hidden flex-1 lg:flex lg:flex-col">
           <div className="flex flex-col items-center pt-4 text-center">
-            <h1 className="font-display mb-2 text-3xl tracking-tight text-foreground">
+            <h1 className="font-display mb-3 text-4xl leading-[1.05] tracking-[-0.02em] text-foreground xl:text-5xl">
               What are we creating today?
             </h1>
+            <p className="max-w-md text-sm text-muted-foreground">Pick a tool below, describe what you need, and Punqle makes it.</p>
             {/* "Try every core tool free" banner (2026-09-25) — the
                 per-button "Try free" labels below only announce
                 themselves one mode/pill at a time, so a brand-new user
@@ -1299,14 +1313,25 @@ function HomeScreen() {
                 trial's claimed (remainingTrialsCount === 0) — advertising
                 a free try that no longer exists would just be confusing. */}
             {remainingTrialsCount !== null && remainingTrialsCount > 0 && (
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span>🎁</span>
+              <div className="glass-chip-light mt-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-foreground">
+                <Gift className="h-3.5 w-3.5" />
                 Try every core tool free — once each
               </div>
             )}
           </div>
 
-          <div className="flex-1" />
+          <div className="flex flex-1 items-center justify-center py-8">
+            {homeIdle && (
+              <HomeShowcase
+                cards={[
+                  { key: "actors", title: "Ready Actors", blurb: "A real filmed actor says your words", meta: "30 credits", image: "/home/actors.jpg", icon: UserRound, onClick: () => handleSwitchMode("talking_actors") },
+                  { key: "video", title: "Video", blurb: "Turn any photo into a short clip", meta: "from 15 credits", image: "/home/video.jpg", icon: Video, onClick: () => handleSwitchMode("video") },
+                  { key: "image", title: "Image", blurb: "Studio ad images from a prompt", meta: "from 2 credits", image: "/home/image.jpg", icon: Sparkles, onClick: () => handleSwitchMode("image") },
+                  { key: "product", title: "Product", blurb: "A person showing off your product", meta: "from 15 credits", image: "/home/product.jpg", icon: Package, onClick: () => handleSwitchMode("product") },
+                ]}
+              />
+            )}
+          </div>
 
           {/* Ad Creation moved into the left sidebar (2026-10-01, just
               above Plan & Publish) — see Sidebar.tsx. Was a banner here;
@@ -1320,14 +1345,17 @@ function HomeScreen() {
               structurally impossible now. Try-On/Carousel keep their
               exact original goTo() handlers, unchanged, tucked under "See
               more" instead of being permanent top-level pills. */}
-          <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
+          <div
+            className="mx-auto mb-3 flex w-fit flex-wrap items-center justify-center gap-1 rounded-full border border-white/70 p-1.5 backdrop-blur-md"
+            style={{ background: "oklch(1 0 0 / 45%)", boxShadow: "var(--shadow-card)" }}
+          >
             <button
               onClick={() => handleSwitchMode("talking_actors")}
               className={[
-                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "talking_actors" ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground",
+                "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors",
+                homeMode === "talking_actors" ? "text-white" : "text-foreground hover:bg-white/60",
               ].join(" ")}
-              style={{ boxShadow: "var(--shadow-card)" }}
+              style={homeMode === "talking_actors" ? { background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN } : undefined}
             >
               <UserRound className="h-4 w-4" />
               Ready Actors
@@ -1335,10 +1363,10 @@ function HomeScreen() {
             <button
               onClick={() => handleSwitchMode("video")}
               className={[
-                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "video" ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground",
+                "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors",
+                homeMode === "video" ? "text-white" : "text-foreground hover:bg-white/60",
               ].join(" ")}
-              style={{ boxShadow: "var(--shadow-card)" }}
+              style={homeMode === "video" ? { background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN } : undefined}
             >
               <Video className="h-4 w-4" />
               Video
@@ -1346,10 +1374,10 @@ function HomeScreen() {
             <button
               onClick={() => handleSwitchMode("image")}
               className={[
-                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "image" ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground",
+                "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors",
+                homeMode === "image" ? "text-white" : "text-foreground hover:bg-white/60",
               ].join(" ")}
-              style={{ boxShadow: "var(--shadow-card)" }}
+              style={homeMode === "image" ? { background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN } : undefined}
             >
               <Sparkles className="h-4 w-4" />
               Image
@@ -1357,10 +1385,10 @@ function HomeScreen() {
             <button
               onClick={() => handleSwitchMode("product")}
               className={[
-                "flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold",
-                homeMode === "product" ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground",
+                "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors",
+                homeMode === "product" ? "text-white" : "text-foreground hover:bg-white/60",
               ].join(" ")}
-              style={{ boxShadow: "var(--shadow-card)" }}
+              style={homeMode === "product" ? { background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN } : undefined}
             >
               <Package className="h-4 w-4" />
               Product
@@ -1368,8 +1396,7 @@ function HomeScreen() {
             <div className="relative">
               <button
                 onClick={() => setShowMoreMenu((v) => !v)}
-                className="flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground"
-                style={{ boxShadow: "var(--shadow-card)" }}
+                className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold text-foreground transition-colors hover:bg-white/60"
               >
                 <MoreHorizontal className="h-4 w-4" />
                 See more

@@ -485,7 +485,7 @@ export interface ApiAiActorVideoOperation {
 // the same OmniHuman pipeline server-side.
 export function startAiActorVideoGeneration(
   narration: string,
-  options: { actorId?: string; customActorId?: string; language?: "english" | "bangla" },
+  options: { actorId?: string; customActorId?: string; language?: "english" | "bangla"; resolution?: "720p" | "1080p" },
 ): Promise<ApiAiActorVideoOperation> {
   return apiFetch<ApiAiActorVideoOperation>("/ads/generate-ai-actor-video", {
     method: "POST",
@@ -495,6 +495,7 @@ export function startAiActorVideoGeneration(
       custom_actor_id: options.customActorId,
       narration,
       language: options.language ?? "english",
+      resolution: options.resolution ?? "720p",
     }),
   });
 }

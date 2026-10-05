@@ -224,13 +224,14 @@ const ACTOR_VIDEO_V2_CREDIT_COST = 30;
 // _omni_actor_clip_seconds / _omni_actor_cost — display only.
 const ACTOR_CHARS_PER_SECOND = 13;
 const OMNI_ACTOR_MAX_NARRATION_SECONDS = 9;
-// Longer narrations (OmniHuman 1.5): up to 675 characters (~45 s), 3.5 credits
-// per second after the flat 30. Ready Actors: up to 420 characters (~28 s),
+// Longer narrations (OmniHuman 1.5): up to 900 characters (~60 s), 3.5 credits
+// per second after the flat 30. Over ~30 s the user picks 720p (one continuous
+// take) or 1080p (joined once at a sentence break). Ready Actors: up to 420 characters (~28 s),
 // 30 credits to 15 s then 2 per second. Mirrors main.py's
 // CUSTOM_ACTOR_MAX_NARRATION_CHARS / ACTOR_V2_MAX_NARRATION_CHARS and their
 // cost functions — display only, the server charges the real amount.
 const ACTOR_SPEECH_CHARS_PER_SECOND = 15;
-const CUSTOM_ACTOR_MAX_CHARS = 675;
+const CUSTOM_ACTOR_MAX_CHARS = 900;
 const READY_ACTOR_MAX_CHARS = 420;
 const OMNIHUMAN_CREDITS_PER_SECOND = 3.5;
 // [emotion] tags are voice direction, never spoken, so they don't count.
@@ -420,6 +421,7 @@ function HomeScreen() {
   const [customActors, setCustomActors] = useState<ApiCustomActor[]>([]);
   const [customActorsLoading, setCustomActorsLoading] = useState(false);
   const [selectedCustomActorId, setSelectedCustomActorId] = useState<string | null>(null);
+  const [actorResolution, setActorResolution] = useState<"720p" | "1080p">("720p");
   const [showCreateActor, setShowCreateActor] = useState(false);
   const [createActorSource, setCreateActorSource] = useState<"choose" | "upload" | "generate">("choose");
   const [createActorName, setCreateActorName] = useState("");
@@ -1240,7 +1242,7 @@ function HomeScreen() {
     setActorPanel("generating");
     try {
       if (selectedCustomActorId) {
-        const r = await startAiActorVideoGeneration(narration, { customActorId: selectedCustomActorId, language: "english" });
+        const r = await startAiActorVideoGeneration(narration, { customActorId: selectedCustomActorId, language: "english", resolution: actorResolution });
         actorPollRef.current = setTimeout(() => pollActorVideo(r.prediction_id, "omnihuman"), 8000);
         return;
       }
@@ -1954,6 +1956,18 @@ function HomeScreen() {
                       <p className={["px-3 pb-1 text-[11px]", spokenLength(actorNarration) > actorNarrationMax ? "font-semibold text-destructive" : "text-muted-foreground"].join(" ")}>
                         {spokenLength(actorNarration)} / {actorNarrationMax} characters · about {Math.round(actorSpeechSeconds(actorNarration))} seconds
                       </p>
+                      {selectedCustomActorId && actorSpeechSeconds(actorNarration) > 30 && (
+                        <div className="px-3 pb-2">
+                          <select
+                            value={actorResolution}
+                            onChange={(e) => setActorResolution(e.target.value as "720p" | "1080p")}
+                            className="w-full rounded-lg border border-input bg-card px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            <option value="720p">720p — one continuous take (recommended)</option>
+                            <option value="1080p">1080p — full HD, joined once between two sentences</option>
+                          </select>
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">
                       <button

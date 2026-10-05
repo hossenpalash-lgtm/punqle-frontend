@@ -213,7 +213,7 @@ const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
   kling_3_pro: 6,
 };
 // Mirrors the backend's own TALKING_VIDEO_REDUB_SURCHARGE — display only.
-const TALKING_VIDEO_REDUB_SURCHARGE = 10;
+const TALKING_VIDEO_REDUB_SURCHARGE = 18;
 // Mirrors the backend's own ACTOR_VIDEO_V2_CREDIT_COST (main.py) — same
 // flat price AdVideoForm.tsx's "Punqle Actors" style already charges,
 // since this reuses that exact same endpoint. Display only.

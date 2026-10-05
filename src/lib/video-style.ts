@@ -60,7 +60,7 @@ export interface VideoStyleOption {
   icon: LucideIcon;
   // A real credit figure, not a placeholder — mirrors the backend's own
   // constants (main.py: VIDEO_CREDIT_COST=10, AVATAR_STANDARD/PREMIUM=4/10,
-  // CINEMATIC_UGC_CREDIT_COST standard/premium=25/46). There's no shared
+  // CINEMATIC_UGC_OMNI_CREDIT_COST=30). There's no shared
   // source of truth across the Python/TS boundary, so this has to be kept
   // in sync by hand if those constants ever change — same as every other
   // credit figure already hardcoded in the frontend (e.g. Setup step's own
@@ -102,7 +102,7 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
   {
     id: "cinematic_ugc",
     label: "Cinematic UGC",
-    // Deliberately doesn't say "real" — Seedance 2.5 is text-to-video, a
+    // Deliberately doesn't say "real" — Gemini Omni is text-to-video, a
     // fully AI-imagined actor and motion, not filmed footage. Confirmed
     // 2026-09-23 (a founder-relayed review flagged the exact wording
     // risk): only Ready Actors' base clips are genuinely real filmed
@@ -112,14 +112,14 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     description: "An AI-imagined actor shows the product in hand",
     // Unused — like Avatar, Cinematic UGC bypasses Veo/promptModifier
     // entirely; handleGenerate special-cases videoStyle === "cinematic_ugc"
-    // and calls Seedance 2.5 (via Replicate) instead. Exists for a real
+    // and calls Gemini Omni instead. Exists for a real
     // gap neither Veo nor HeyGen covers: HeyGen's avatar motion prompts
     // don't reach props/held objects (confirmed via HeyGen's own docs),
     // and Veo has no reliably consistent character across a shot.
     promptModifier: "",
     group: "ai_ugc",
     icon: Hand,
-    creditHint: "25–46 credits",
+    creditHint: "30 credits",
   },
   {
     id: "ai_actor",

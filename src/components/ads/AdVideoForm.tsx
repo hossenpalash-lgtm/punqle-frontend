@@ -70,11 +70,10 @@ const POLL_INTERVAL_MS = 8000;
 // Premium 1.6 credits/s. Shown as "from N credits".
 const AVATAR_STANDARD_CREDIT_COST = 4;
 const AVATAR_PREMIUM_CREDIT_COST = 10;
-// Cinematic UGC (Seedance 2.5) — real per-second cost confirmed live
-// against a real billed Replicate invoice 2026-09-06 (~$0.103/s at
-// 480p, ~$0.231/s at 720p for an 8s clip) — matches main.py's
-// CINEMATIC_UGC_CREDIT_COST exactly.
-const CINEMATIC_UGC_CREDIT_COST: Record<AvatarTier, number> = { standard: 25, premium: 46 };
+// Cinematic UGC now runs on Gemini Omni (8 s, 1080p, sound) at one price —
+// matches main.py's CINEMATIC_UGC_OMNI_CREDIT_COST. The old Standard/Premium
+// (Seedance 480p/720p) split is gone, so there is no quality picker.
+const CINEMATIC_UGC_CREDIT_COST: Record<AvatarTier, number> = { standard: 30, premium: 30 };
 // AI Actor talking video (OmniHuman) — 8s x $0.14/s = $1.12 real cost,
 // matches main.py's AI_ACTOR_VIDEO_CREDIT_COST exactly. One fixed price,
 // no tier (OmniHuman has no cheap/expensive engine split like HeyGen).
@@ -1370,30 +1369,6 @@ export function AdVideoForm({
 
           {videoStyle === "cinematic_ugc" && (
             <>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quality</p>
-              <div className="mb-4 grid grid-cols-2 gap-2">
-                {(["standard", "premium"] as AvatarTier[]).map((t) => {
-                  const selected = cinematicUgcTier === t;
-                  return (
-                    <button
-                      key={t}
-                      onClick={() => setCinematicUgcTier(t)}
-                      className={[
-                        "rounded-xl px-3 py-2.5 text-left transition-colors capitalize",
-                        selected ? "bg-foreground text-background" : "bg-card text-foreground",
-                      ].join(" ")}
-                    >
-                      <span className="flex items-center gap-1.5 text-sm font-semibold">
-                        {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
-                        {t}
-                      </span>
-                      <span className={["block text-xs normal-case", selected ? "text-background/80" : "text-muted-foreground"].join(" ")}>
-                        {CINEMATIC_UGC_CREDIT_COST[t]} credits · {t === "premium" ? "720p" : "480p"}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Scene direction <span className="normal-case text-muted-foreground/70">(optional)</span>
               </p>

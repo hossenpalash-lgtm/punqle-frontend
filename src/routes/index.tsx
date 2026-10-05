@@ -218,6 +218,19 @@ const TALKING_VIDEO_REDUB_SURCHARGE = 18;
 // flat price AdVideoForm.tsx's "Punqle Actors" style already charges,
 // since this reuses that exact same endpoint. Display only.
 const ACTOR_VIDEO_V2_CREDIT_COST = 30;
+// Custom actors (the user's own photo): a narration up to ~9 s is filmed by
+// Gemini Omni and lip-synced (Talking Video's chain), a longer one stays on
+// OmniHuman at the flat price above. Mirrors the backend's
+// _omni_actor_clip_seconds / _omni_actor_cost — display only.
+const ACTOR_CHARS_PER_SECOND = 13;
+const OMNI_ACTOR_MAX_NARRATION_SECONDS = 9;
+function customActorVideoCost(narration: string): number {
+  const text = narration.trim();
+  const est = Math.max(3, text.length / ACTOR_CHARS_PER_SECOND);
+  if (!text || est > OMNI_ACTOR_MAX_NARRATION_SECONDS) return ACTOR_VIDEO_V2_CREDIT_COST;
+  const clip = Math.max(4, Math.min(10, Math.ceil(est) + 1));
+  return Math.ceil(clip * IMAGE_VIDEO_CREDIT_PER_SECOND.omni) + TALKING_VIDEO_REDUB_SURCHARGE;
+}
 
 // Mirrors the backend's own VIDEO_UPSCALE_CREDIT_COST (main.py) — display
 // only, the backend computes and charges the real amount server-side.
@@ -1185,11 +1198,11 @@ function HomeScreen() {
   // (main.py:5364) — the user's own textarea text goes straight in as
   // narration, no script-angle pre-step (that's Ad-Creation-specific).
   // Custom actors skip the voice-engine/ElevenLabs controls entirely —
-  // OmniHuman always speaks with a fixed gender-matched OpenAI voice,
-  // no engine choice.
+  // they always use the gender-matched ElevenLabs voice, no engine choice.
+  const actorVideoCost = selectedCustomActorId ? customActorVideoCost(actorNarration) : ACTOR_VIDEO_V2_CREDIT_COST;
   const handleGenerateActorVideo = async () => {
     if ((!selectedActorId && !selectedCustomActorId) || !actorNarration.trim()) return;
-    if (credits !== null && credits < ACTOR_VIDEO_V2_CREDIT_COST) return;
+    if (credits !== null && credits < actorVideoCost) return;
     setActorError(null);
     let narration = actorNarration.trim();
     if (selectedActorId && actorVoiceEngine === "elevenlabs" && addEmotions) {
@@ -1925,12 +1938,12 @@ function HomeScreen() {
                           (!selectedActorId && !selectedCustomActorId) ||
                           !actorNarration.trim() ||
                           taggingEmotions ||
-                          (credits !== null && credits < ACTOR_VIDEO_V2_CREDIT_COST)
+                          (credits !== null && credits < actorVideoCost)
                         }
                         className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
                         style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                       >
-                        {taggingEmotions ? "Adding emotions…" : `Generate (${ACTOR_VIDEO_V2_CREDIT_COST} credits)`}
+                        {taggingEmotions ? "Adding emotions…" : `Generate (${actorVideoCost} credits)`}
                       </button>
                       </div>
                     </div>

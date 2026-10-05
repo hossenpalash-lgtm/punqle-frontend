@@ -1949,14 +1949,12 @@ function HomeScreen() {
                         onChange={(e) => setActorNarration(e.target.value)}
                         placeholder="What should your actor say?…"
                         rows={2}
-                        maxLength={actorNarrationMax + 200}
+                        maxLength={actorNarrationMax}
                         className="w-full resize-none bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                       />
                       {actorNarration.trim() && (
-                        <p className={["px-3 pb-1 text-[11px]", spokenLength(actorNarration) > actorNarrationMax ? "font-semibold text-destructive" : "text-muted-foreground"].join(" ")}>
-                          {spokenLength(actorNarration) > actorNarrationMax
-                            ? `Too long — up to about ${Math.floor(actorNarrationMax / ACTOR_SPEECH_CHARS_PER_SECOND)} seconds`
-                            : `About ${Math.round(actorSpeechSeconds(actorNarration))} seconds · ${actorVideoCost} credits`}
+                        <p className="px-3 pb-1 text-[11px] text-muted-foreground">
+                          About {Math.round(actorSpeechSeconds(actorNarration))} seconds · {actorVideoCost} credits
                         </p>
                       )}
                       <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">

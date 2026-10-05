@@ -232,6 +232,10 @@ const OMNI_ACTOR_MAX_NARRATION_SECONDS = 9;
 // cost functions — display only, the server charges the real amount.
 const ACTOR_SPEECH_CHARS_PER_SECOND = 15;
 const CUSTOM_ACTOR_MAX_CHARS = 900;
+// Up to ~35 s of speech (≈ 500 characters) a custom actor video is full HD (1080p
+// or better); beyond that the user chooses 720p one-take or 1080p joined once.
+const CUSTOM_ACTOR_FULL_HD_MAX_CHARS = 500;
+const OMNI_ACTOR_MAX_CHARS = 117; // ≈ 9 s: the Gemini Omni route (mirrors the backend)
 const READY_ACTOR_MAX_CHARS = 420;
 const OMNIHUMAN_CREDITS_PER_SECOND = 3.5;
 // [emotion] tags are voice direction, never spoken, so they don't count.
@@ -1956,8 +1960,12 @@ function HomeScreen() {
                       <p className={["px-3 pb-1 text-[11px]", spokenLength(actorNarration) > actorNarrationMax ? "font-semibold text-destructive" : "text-muted-foreground"].join(" ")}>
                         {spokenLength(actorNarration)} / {actorNarrationMax} characters · about {Math.round(actorSpeechSeconds(actorNarration))} seconds
                       </p>
-                      {selectedCustomActorId && actorSpeechSeconds(actorNarration) > 30 && (
+                      {selectedCustomActorId && spokenLength(actorNarration) > OMNI_ACTOR_MAX_CHARS && spokenLength(actorNarration) <= CUSTOM_ACTOR_FULL_HD_MAX_CHARS && (
+                        <p className="px-3 pb-2 text-[11px] text-muted-foreground">Up to about 35 seconds ({CUSTOM_ACTOR_FULL_HD_MAX_CHARS} characters): full HD, one continuous take.</p>
+                      )}
+                      {selectedCustomActorId && spokenLength(actorNarration) > CUSTOM_ACTOR_FULL_HD_MAX_CHARS && (
                         <div className="px-3 pb-2">
+                          <p className="mb-1 text-[11px] text-muted-foreground">Over about 35 seconds — choose the quality:</p>
                           <select
                             value={actorResolution}
                             onChange={(e) => setActorResolution(e.target.value as "720p" | "1080p")}

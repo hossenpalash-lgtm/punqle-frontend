@@ -59,8 +59,11 @@
      catching the glass edge), a faint warm hairline ring, and one wide,
      soft, warm-tinted drop shadow instead of grey. Every inline
      `boxShadow: "var(--shadow-card)"` card/dialog/pill picks it up. */
-  --shadow-card: inset 0 1px 0 rgb(255 255 255 / 85%), 0 0 0 1px oklch(0.86 0.02 70 / 38%),
-    0 2px 4px oklch(0.3 0.04 50 / 4%), 0 18px 40px -16px oklch(0.34 0.06 40 / 18%);
+  /* 2026-10-06 "pearl" pass (founder: the app had turned pinkish and lost its
+     premium feel): the card shadow is cool-neutral now, no warm/pink tint. */
+  --shadow-card: inset 0 1px 0 rgb(255 255 255 / 90%), inset 0 -1px 0 rgb(255 255 255 / 30%),
+    0 0 0 1px oklch(0.86 0.008 255 / 45%), 0 2px 4px oklch(0.3 0.02 260 / 4%),
+    0 18px 40px -18px oklch(0.3 0.03 260 / 20%);
 }
 
 :root {
@@ -85,35 +88,40 @@
      4.77:1 against white, 4.47:1 against the cream background — both
      pass. --primary-glow (the diagonal CTA sheen) darkened to match. */
   --radius: 0.6rem;
-  --background: oklch(0.978 0.008 73.7);
-  --foreground: oklch(0.266 0.016 67);
+  /* 2026-10-06 "pearl" pass: the warm cream + terracotta + pink/violet wash made the
+     whole app read pink (founder's words) and less premium. Now a cool pearl
+     white, charcoal ink and charcoal buttons (the same "black = selected" language as
+     the Ad Creation / Plan & Publish pills); the violet --accent stays as the one AI
+     highlight. The glass look comes from translucency + blur + a bright edge. */
+  --background: oklch(0.972 0.004 255);
+  --foreground: oklch(0.24 0.01 260);
   /* --card is now translucent (2026-10-05, iOS glass pass): every
      `bg-card` surface in the app — form sections, pickers, pills,
      dialogs — lets the soft ambient color behind the page (see
      `body::before` below) show through instead of sitting as an opaque
      white slab. Dialogs/menus that overlap other content use the
      stronger `.glass-strong` fill + real backdrop blur on top of this. */
-  --card: oklch(1 0 0 / 62%);
-  --card-foreground: oklch(0.266 0.016 67);
+  --card: oklch(1 0 0 / 60%);
+  --card-foreground: oklch(0.24 0.01 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.266 0.016 67);
+  --popover-foreground: oklch(0.24 0.01 260);
   /* Glass surface fills/edges, used by .glass-panel / .glass-strong /
      .glass-nav below. */
-  --glass-fill: rgb(255 255 255 / 52%);
-  --glass-fill-strong: rgb(255 255 255 / 78%);
-  --glass-edge: rgb(255 255 255 / 70%);
-  --glass-shadow: inset 0 1px 0 rgb(255 255 255 / 90%), 0 24px 60px -24px oklch(0.34 0.07 35 / 30%),
-    0 2px 6px oklch(0.3 0.04 50 / 6%);
-  --primary: oklch(0.568 0.128 35.4);
+  --glass-fill: rgb(255 255 255 / 50%);
+  --glass-fill-strong: rgb(255 255 255 / 76%);
+  --glass-edge: rgb(255 255 255 / 78%);
+  --glass-shadow: inset 0 1px 0 rgb(255 255 255 / 95%), inset 0 -1px 0 rgb(255 255 255 / 35%),
+    0 24px 60px -26px oklch(0.3 0.03 260 / 28%), 0 2px 6px oklch(0.3 0.02 260 / 6%);
+  --primary: oklch(0.26 0.01 260);
   --primary-foreground: oklch(1 0 0);
-  --primary-glow: oklch(0.704 0.104 43.5);
+  --primary-glow: oklch(0.42 0.012 260);
   /* --secondary is translucent too (iOS glass pass): chips, filter pills
      and hover washes read as frosted wells on a glass card instead of
      opaque beige blocks. */
-  --secondary: oklch(0.93 0.02 75 / 58%);
-  --secondary-foreground: oklch(0.266 0.016 67);
-  --muted: oklch(0.951 0.014 78.3);
-  --muted-foreground: oklch(0.59 0.039 79.4);
+  --secondary: oklch(0.93 0.005 255 / 60%);
+  --secondary-foreground: oklch(0.24 0.01 260);
+  --muted: oklch(0.953 0.005 255);
+  --muted-foreground: oklch(0.5 0.014 258);
   /* The one restrained "AI accent" — a muted violet, reserved for
      recommendation badges, sparkle/AI icons, and progress-indicator
      active states (see the Social Content master-refinement pass,
@@ -130,9 +138,9 @@
   --success-foreground: oklch(1 0 0);
   --warning: oklch(0.75 0.16 75);
   --warning-foreground: oklch(0.22 0.05 75);
-  --border: oklch(0.911 0.022 76.5);
-  --input: oklch(0.911 0.022 76.5);
-  --ring: oklch(0.568 0.128 35.4);
+  --border: oklch(0.905 0.006 255);
+  --input: oklch(0.905 0.006 255);
+  --ring: oklch(0.26 0.01 260);
 }
 
 .dark {
@@ -185,10 +193,10 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* The soft, warm color wash that gives the translucent glass surfaces
-     something to pick up (same terracotta -> pink -> violet family as
-     the brand gradient, kept low-alpha so it reads as atmosphere, not a
-     background image). */
+  /* The soft ambient light that gives the translucent glass surfaces something to
+     pick up. 2026-10-06: it used to be orange / pink / violet blobs, which tinted
+     the whole app pink; now it is cool ice-blue, periwinkle and sky with one faint
+     champagne glow, all low-alpha, so the glass reads as light, not colour. */
   body::before {
     content: "";
     position: fixed;
@@ -196,11 +204,11 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(52rem 38rem at 6% -6%, rgb(226 105 63 / 28%), transparent 62%),
-      radial-gradient(48rem 36rem at 100% 2%, rgb(109 63 160 / 20%), transparent 62%),
-      radial-gradient(54rem 40rem at 78% 108%, rgb(193 62 122 / 20%), transparent 62%),
-      radial-gradient(44rem 34rem at -4% 98%, rgb(255 178 112 / 32%), transparent 62%),
-      radial-gradient(34rem 30rem at -2% 46%, rgb(150 110 220 / 16%), transparent 62%);
+      radial-gradient(52rem 38rem at 6% -8%, rgb(140 184 255 / 36%), transparent 62%),
+      radial-gradient(48rem 36rem at 100% 0%, rgb(176 190 255 / 30%), transparent 62%),
+      radial-gradient(54rem 40rem at 80% 108%, rgb(150 206 236 / 32%), transparent 62%),
+      radial-gradient(40rem 30rem at -4% 100%, rgb(255 238 216 / 38%), transparent 62%),
+      radial-gradient(30rem 24rem at 50% 45%, rgb(214 224 255 / 22%), transparent 70%);
   }
 }
 
@@ -257,7 +265,7 @@
    see-through at the very top, slightly more opaque once scrolled so
    text over busy content stays readable. */
 .glass-nav {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.5);
   border: 1px solid var(--glass-edge);
   /* !important: Tailwind's own preflight/utilities layer sets a
      var-driven `backdrop-filter` reset on elements that lands after
@@ -270,7 +278,7 @@
   transition: background-color 0.3s ease;
 }
 .glass-nav-scrolled {
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.76);
 }
 
 /* iOS "liquid glass" surfaces (2026-10-05, founder's call after
@@ -307,7 +315,36 @@
    --shadow-card on most cards) still wins over it. */
 @layer components {
   .bg-card {
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 85%), inset 0 -1px 0 rgb(255 255 255 / 28%);
+  }
+  /* Primary buttons: a charcoal "glass metal" finish — soft top-to-bottom
+     sheen, a bright inner top edge, and a tight contact shadow — instead of a
+     flat fill. Utilities that set their own shadow/background still win. */
+  .bg-primary {
+    background-image: linear-gradient(180deg, var(--primary-glow), var(--primary));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 30%), inset 0 -8px 12px -8px rgb(0 0 0 / 35%),
+      0 6px 16px -8px rgb(20 20 30 / 45%);
+  }
+  .bg-secondary {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
+  }
+}
+
+/* More of the app is real glass (founder, 2026-10-06: "iOS glass feature onek kom"):
+   every LARGE card (rounded-2xl / rounded-3xl bg-card — form sections, pickers,
+   result panels, the home composer) now blurs what is behind it. Small chips and
+   tiles stay un-blurred on purpose: dozens of tiny blurred layers (the actor grid)
+   is where low-end phones start to stutter. `!important` for the same Tailwind
+   reset reason as .glass-nav above; skipped when the OS asks for less transparency. */
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  @media (prefers-reduced-transparency: no-preference) {
+    .bg-card.rounded-2xl,
+    .bg-card.rounded-3xl {
+      -webkit-backdrop-filter: blur(18px) saturate(170%) !important;
+      backdrop-filter: blur(18px) saturate(170%) !important;
+      /* a soft specular sweep (light catching the glass, top-left to bottom-right) */
+      background-image: linear-gradient(155deg, rgb(255 255 255 / 55%) 0%, rgb(255 255 255 / 6%) 42%, rgb(255 255 255 / 22%) 100%);
+    }
   }
 }
 

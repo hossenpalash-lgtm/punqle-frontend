@@ -116,16 +116,16 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-// Shared Instagram-gradient accent (2026-10-01) — same deep coral->magenta
-// ->violet stops used on the Ad Creation page and its Image Ad/Video Ad
-// toggle, reused here for the home screen's own selected-state surfaces
-// (gender filter, every mode's Generate button, the sidebar's Ad Creation/
-// Plan & Publish items) so the "premium gradient" treatment reads as one
-// consistent accent across the app, not a one-off on a single page.
-const HOME_GRADIENT = "linear-gradient(135deg, #E2693F 0%, #C13E7A 55%, #6D3FA0 100%)";
-// Glossy-glass highlight (2026-10-05 iOS glass pass) — bright top edge plus
-// a soft inner shade along the bottom, so gradient chips/buttons read as lit glass.
-const HOME_GRADIENT_SHEEN = "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -8px 12px -8px rgba(70,10,80,0.3)";
+// Charcoal glass for the home screen's selected-state surfaces (gender filter,
+// every mode's Generate button, the tab chips). 2026-10-06: this used to be an
+// orange -> magenta -> violet gradient, which tinted the whole app pink; it is now
+// the same charcoal "glass metal" as the primary buttons (`.bg-primary`), so
+// black reads as the one selected / primary colour everywhere.
+const HOME_GRADIENT = "linear-gradient(180deg, #4B4B52 0%, #1E1E22 100%)";
+// Glossy-glass highlight: bright top edge, a soft inner shade along the bottom and
+// a tight contact shadow, so the charcoal reads as lit glass.
+const HOME_GRADIENT_SHEEN =
+  "inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -10px 14px -10px rgba(0,0,0,0.5), 0 6px 16px -8px rgba(20,20,30,0.45)";
 
 // Unboxing's surface picker (image cards, 2026-10-05 — founder liked
 // AdCreative.ai's "High Performance Scenes" picker). Thumbnails are static
@@ -3072,8 +3072,8 @@ function HomeScreen() {
                   style={
                     tab === t
                       ? {
-                          background: "linear-gradient(135deg, #E2693F 0%, #C13E7A 55%, #6D3FA0 100%)",
-                          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22)",
+                          background: HOME_GRADIENT,
+                          boxShadow: HOME_GRADIENT_SHEEN,
                         }
                       : undefined
                   }

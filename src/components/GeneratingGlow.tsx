@@ -1,3 +1,5 @@
+// 2026-10-06: the ring was orange -> magenta -> violet; it is now ice-blue -> violet
+// (no pink), part of the app-wide "pearl" de-pinking.
 // Dark "generating" screen for the home bar's AI actions — approved
 // 2026-10-01 after a design exploration (started from "I like Meta's new
 // logo's color contrast", iterated away from anything resembling its own
@@ -17,21 +19,21 @@
 // in motion); box-shadow glow + a small glossy highlight gets the same
 // "glowing" feel without ever softening the dot's own edge.
 const RING_DOTS: { left: number; top: number; color: string; highlight: string; delay: number }[] = [
-  { left: 102.0, top: 10.0, color: "#E2693F", highlight: "#FFAF85", delay: 0.0 },
-  { left: 139.4, top: 18.0, color: "#DE6347", highlight: "#FFA98D", delay: 0.15 },
-  { left: 170.4, top: 40.4, color: "#D95E4E", highlight: "#FFA494", delay: 0.3 },
-  { left: 189.5, top: 73.6, color: "#D55856", highlight: "#FF9E9C", delay: 0.45 },
-  { left: 193.5, top: 111.6, color: "#D1535E", highlight: "#FF99A4", delay: 0.6 },
-  { left: 181.7, top: 148.0, color: "#CD4D65", highlight: "#FF93AB", delay: 0.75 },
-  { left: 156.1, top: 176.4, color: "#C8476D", highlight: "#FF8DB3", delay: 0.9 },
-  { left: 121.1, top: 192.0, color: "#C44275", highlight: "#FF88BB", delay: 1.05 },
-  { left: 82.9, top: 192.0, color: "#BD3E7C", highlight: "#FF84C2", delay: 1.2 },
-  { left: 47.9, top: 176.4, color: "#B03E82", highlight: "#F684C8", delay: 1.35 },
-  { left: 22.3, top: 148.0, color: "#A23E88", highlight: "#E884CE", delay: 1.5 },
-  { left: 10.5, top: 111.6, color: "#953F8E", highlight: "#DB85D4", delay: 1.65 },
-  { left: 14.5, top: 73.6, color: "#883F94", highlight: "#CE85DA", delay: 1.8 },
-  { left: 33.6, top: 40.4, color: "#7A3F9A", highlight: "#C085E0", delay: 1.95 },
-  { left: 64.6, top: 18.0, color: "#6D3FA0", highlight: "#B385E6", delay: 2.1 },
+  { left: 102.0, top: 10.0, color: "#7FB6FF", highlight: "#BFDAFF", delay: 0.0 },
+  { left: 139.4, top: 18.0, color: "#81B2FF", highlight: "#C0D8FF", delay: 0.15 },
+  { left: 170.4, top: 40.4, color: "#83AEFF", highlight: "#C1D6FF", delay: 0.3 },
+  { left: 189.5, top: 73.6, color: "#85A9FF", highlight: "#C2D4FF", delay: 0.45 },
+  { left: 193.5, top: 111.6, color: "#87A5FF", highlight: "#C3D2FF", delay: 0.6 },
+  { left: 181.7, top: 148.0, color: "#89A1FF", highlight: "#C4D0FF", delay: 0.75 },
+  { left: 156.1, top: 176.4, color: "#8B9DFF", highlight: "#C5CEFF", delay: 0.9 },
+  { left: 121.1, top: 192.0, color: "#8D98FF", highlight: "#C6CCFF", delay: 1.05 },
+  { left: 82.9, top: 192.0, color: "#8F94FF", highlight: "#C7CAFF", delay: 1.2 },
+  { left: 47.9, top: 176.4, color: "#9190FF", highlight: "#C8C8FF", delay: 1.35 },
+  { left: 22.3, top: 148.0, color: "#938CFF", highlight: "#C9C6FF", delay: 1.5 },
+  { left: 10.5, top: 111.6, color: "#9588FF", highlight: "#CAC4FF", delay: 1.65 },
+  { left: 14.5, top: 73.6, color: "#9783FF", highlight: "#CBC1FF", delay: 1.8 },
+  { left: 33.6, top: 40.4, color: "#997FFF", highlight: "#CCBFFF", delay: 1.95 },
+  { left: 64.6, top: 18.0, color: "#9B7BFF", highlight: "#CDBDFF", delay: 2.1 },
 ];
 
 export function GeneratingGlow({ label }: { label: string }) {
@@ -41,7 +43,7 @@ export function GeneratingGlow({ label }: { label: string }) {
         className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[10px] animate-[generating-bloom-pulse_5s_ease-in-out_infinite]"
         style={{
           background:
-            "radial-gradient(circle, rgba(193,62,122,0.32) 0%, rgba(109,63,160,0.16) 45%, rgba(11,10,14,0) 72%)",
+            "radial-gradient(circle, rgba(110,150,255,0.30) 0%, rgba(140,110,255,0.15) 45%, rgba(11,10,14,0) 72%)",
         }}
       />
 
@@ -69,7 +71,7 @@ export function GeneratingGlow({ label }: { label: string }) {
       <div className="relative z-[2] h-[3px] w-[150px] overflow-hidden rounded-full bg-white/[0.08]">
         <div
           className="absolute top-0 h-full w-[36%] rounded-full animate-[generating-loader-slide_1.8s_ease-in-out_infinite]"
-          style={{ background: "linear-gradient(90deg,#E2693F,#C13E7A,#6D3FA0)" }}
+          style={{ background: "linear-gradient(90deg,#7FB6FF,#9B7BFF,#C9BBFF)" }}
         />
       </div>
     </div>

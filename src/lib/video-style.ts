@@ -79,7 +79,7 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     promptModifier: "clean product showcase, the item as the clear hero, simple uncluttered background",
     group: "product",
     icon: Package,
-    creditHint: "48 credits",
+    creditHint: "64 credits",
   },
   {
     id: "lifestyle",
@@ -88,7 +88,7 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     promptModifier: "warm lifestyle setting, the product in genuine everyday use",
     group: "product",
     icon: Heart,
-    creditHint: "48 credits",
+    creditHint: "64 credits",
   },
   {
     id: "cinematic",
@@ -97,7 +97,7 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     promptModifier: "cinematic lighting, dramatic composition, film-like color grading",
     group: "product",
     icon: Clapperboard,
-    creditHint: "48 credits",
+    creditHint: "64 credits",
   },
   {
     id: "cinematic_ugc",

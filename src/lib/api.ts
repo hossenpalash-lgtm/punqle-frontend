@@ -687,6 +687,9 @@ export interface EditVideoOptions {
   voice: TtsVoice;
   captionsEnabled: boolean;
   muted: boolean;
+  // Optional free background music, mixed under whatever audio the edited
+  // video has (Kling's native sound, the voiceover, or nothing when muted).
+  musicMood?: AvatarMusicMood | null;
 }
 
 export interface ApiEditVideoResponse {
@@ -721,6 +724,7 @@ export function editVideo(
       voice: options.voice,
       captions_enabled: options.captionsEnabled,
       muted: options.muted,
+      music_mood: options.musicMood ?? null,
     }),
   });
 }

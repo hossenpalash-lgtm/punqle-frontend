@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   editVideo,
   type ApiVideoOperation,
+  type AvatarMusicMood,
   type LogoPosition,
   type TextPosition,
   type TtsVoice,
@@ -68,6 +69,7 @@ export function EditVideoPanel({
   const [voice, setVoice] = useState<TtsVoice>("alloy");
   const [captionsEnabled, setCaptionsEnabled] = useState(true);
   const [muted, setMuted] = useState(false);
+  const [musicMood, setMusicMood] = useState<AvatarMusicMood | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedOnce, setSavedOnce] = useState(false);
@@ -98,6 +100,7 @@ export function EditVideoPanel({
         voice,
         captionsEnabled,
         muted,
+        musicMood,
       });
       onSaved(r.video_base64);
       setCredits(r.credits_remaining);
@@ -258,6 +261,27 @@ export function EditVideoPanel({
             >
               {muted ? "Muted" : "Unmuted"}
             </button>
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Background music</label>
+              <span className="text-[11px] text-muted-foreground">Free · mixed under the sound</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {([null, "upbeat", "calm", "energetic", "corporate"] as (AvatarMusicMood | null)[]).map((mood) => (
+                <button
+                  key={mood ?? "none"}
+                  onClick={() => setMusicMood(mood)}
+                  className={[
+                    "rounded-full px-3 py-1 text-xs font-semibold capitalize",
+                    musicMood === mood ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
+                  ].join(" ")}
+                >
+                  {mood ?? "None"}
+                </button>
+              ))}
+            </div>
           </div>
 
           <p className="text-center text-xs font-semibold text-muted-foreground">

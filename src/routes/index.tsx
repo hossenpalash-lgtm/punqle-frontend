@@ -782,9 +782,17 @@ function HomeScreen() {
     !upscaleResultVideo;
 
   const handleSwitchMode = (mode: HomeMode) => {
+    setShowMoreMenu(false);
+    // Tapping the already-selected Ready Actors pill again toggles the actor picker
+    // (open <-> closed) instead of resetting everything.
+    if (mode === homeMode && mode === "talking_actors") {
+      setActorPickerOpen((v) => !v);
+      return;
+    }
     handleResetHome();
     setHomeMode(mode);
-    setShowMoreMenu(false);
+    // Arriving on Ready Actors shows the actors straight away.
+    if (mode === "talking_actors") setActorPickerOpen(true);
   };
 
   const handleOpenVideoComposer = () => {
@@ -1345,8 +1353,11 @@ function HomeScreen() {
               exact original goTo() handlers, unchanged, tucked under "See
               more" instead of being permanent top-level pills. */}
           <div
-            className="mx-auto mb-3 flex w-fit flex-wrap items-center justify-center gap-1 rounded-full border border-white/70 p-1.5 backdrop-blur-md"
-            style={{ background: "oklch(1 0 0 / 45%)", boxShadow: "var(--shadow-card)" }}
+            // No backdrop-blur here: a backdrop-filter on this track would make it the
+            // containing block of the See-more menu's full-screen tap-outside backdrop
+            // (`fixed inset-0`), so tapping outside stopped closing the menu.
+            className="mx-auto mb-3 flex w-fit flex-wrap items-center justify-center gap-1 rounded-full border border-white/70 p-1.5"
+            style={{ background: "oklch(1 0 0 / 72%)", boxShadow: "var(--shadow-card)" }}
           >
             <button
               onClick={() => handleSwitchMode("talking_actors")}
@@ -1419,7 +1430,7 @@ function HomeScreen() {
                   <div className="fixed inset-0 z-30" onClick={() => setShowMoreMenu(false)} />
                   <div
                     className="glass-strong absolute right-0 bottom-full z-40 mb-2 w-52 overflow-hidden rounded-2xl bg-card p-1.5"
-                    style={{ boxShadow: "0 16px 40px -12px rgba(0,0,0,0.22), var(--shadow-card)" }}
+                    style={{ background: "rgb(255 255 255 / 94%)", boxShadow: "0 16px 40px -12px rgba(0,0,0,0.22), var(--shadow-card)" }}
                   >
                   {[
                     { icon: PackageOpen, label: "Unboxing", onClick: () => handleSwitchMode("unboxing") },

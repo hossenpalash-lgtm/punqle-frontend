@@ -186,6 +186,9 @@ export function Sidebar({
   // Which of the two big glass pills is the current section (black = selected).
   const adActive = tab === "ad" || tab === "ad-video";
   const planActive = PLAN_PUBLISH_ITEMS.some((i) => i.tab === tab);
+  // The header reads as selected (black) while its section is open too, not only when
+  // one of its pages is the current screen.
+  const planSelected = planActive || planPublishOpen;
   const [desktopMoreOpen, setDesktopMoreOpen] = useState(
     // Performance/Competitive Edge (INSIGHTS_ITEMS) no longer live inside
     // More (2026-10-01) — only Bulk Creative/History still do.
@@ -326,15 +329,15 @@ export function Sidebar({
             onClick={() => setPlanPublishOpen((v) => !v)}
             className={[
               "mt-1.5 flex items-center justify-between rounded-xl px-2 py-1.5 transition-colors",
-              planActive ? "text-white" : "text-foreground",
+              planSelected ? "text-white" : "text-foreground",
             ].join(" ")}
-            style={planActive ? GLASS_PILL_ACTIVE : GLASS_PILL_IDLE}
+            style={planSelected ? GLASS_PILL_ACTIVE : GLASS_PILL_IDLE}
           >
             <span className="flex items-center gap-1.5 text-[14px] font-bold font-display">
               <span
                 className={[
                   "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md",
-                  planActive ? "bg-white/20 text-white" : "bg-foreground text-background",
+                  planSelected ? "bg-white/20 text-white" : "bg-foreground text-background",
                 ].join(" ")}
               >
                 <Zap className="h-2.5 w-2.5" />
@@ -344,7 +347,7 @@ export function Sidebar({
             <ChevronDown
               className={[
                 "h-3.5 w-3.5 shrink-0 transition-transform",
-                planActive ? "text-white/80" : "text-muted-foreground",
+                planSelected ? "text-white/80" : "text-muted-foreground",
                 planPublishOpen ? "rotate-180" : "",
               ].join(" ")}
             />

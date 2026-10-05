@@ -174,7 +174,7 @@ export function PlanDayCard({
       >
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2">
-            <span className="text-sm font-bold text-foreground">
+            <span className="text-sm font-bold text-foreground font-display">
               {DAY_LABELS[post.day] ?? post.day}
             </span>
             <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">

@@ -199,7 +199,7 @@ export function CalendarView({ onGoToWeeklyPlan }: { onGoToWeeklyPlan: () => voi
           <ChevronLeft className="h-4 w-4" />
         </button>
         <div className="flex flex-col items-center">
-          <span className="text-sm font-semibold text-foreground">{formatWeekRange(weekStart)}</span>
+          <span className="text-sm font-semibold text-foreground font-display">{formatWeekRange(weekStart)}</span>
           <button onClick={() => setWeekStart(startOfWeek(new Date()))} className="text-xs font-medium text-primary">
             This week
           </button>

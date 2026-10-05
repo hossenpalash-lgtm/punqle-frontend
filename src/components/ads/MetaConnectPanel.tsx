@@ -197,7 +197,7 @@ export function MetaConnectPanel({ open, onClose }: { open: boolean; onClose: ()
                 className="flex w-full items-center justify-between rounded-xl border border-border bg-background p-3 text-left disabled:opacity-60"
               >
                 <span>
-                  <span className="block text-sm font-semibold text-foreground">{p.page_name}</span>
+                  <span className="block text-sm font-semibold text-foreground font-display">{p.page_name}</span>
                   <span className="block text-xs text-muted-foreground">
                     {p.has_instagram ? `Instagram: @${p.ig_username}` : "No linked Instagram account"}
                   </span>

@@ -222,7 +222,7 @@ export function VideoPostForm({
       <div className="rounded-2xl bg-card p-6" style={{ boxShadow: "var(--shadow-card)" }}>
         <div className="mb-6 flex flex-col items-center justify-center gap-3 text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm font-semibold text-foreground">Generating your video...</p>
+          <p className="text-sm font-semibold text-foreground font-display">Generating your video...</p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
             {minutes}:{seconds.toString().padStart(2, "0")} elapsed — usually takes 1-2 minutes

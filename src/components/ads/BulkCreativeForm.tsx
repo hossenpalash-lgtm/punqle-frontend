@@ -281,7 +281,7 @@ export function BulkCreativeForm({
                           <Package className="h-3.5 w-3.5" />
                         </div>
                       )}
-                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{p.name}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground font-display">{p.name}</span>
                     </button>
                   );
                 })}
@@ -316,7 +316,7 @@ export function BulkCreativeForm({
               style={contentType !== "social" ? { boxShadow: "var(--shadow-card)" } : undefined}
             >
               <ImageIcon className="h-6 w-6" />
-              <span className="text-sm font-semibold">Social Post</span>
+              <span className="text-sm font-semibold font-display">Social Post</span>
             </button>
             <button
               onClick={() => setContentType("ad")}
@@ -327,7 +327,7 @@ export function BulkCreativeForm({
               style={contentType !== "ad" ? { boxShadow: "var(--shadow-card)" } : undefined}
             >
               <Megaphone className="h-6 w-6" />
-              <span className="text-sm font-semibold">Image Ad</span>
+              <span className="text-sm font-semibold font-display">Image Ad</span>
             </button>
           </div>
 
@@ -348,7 +348,7 @@ export function BulkCreativeForm({
                         selected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
                       ].join(" ")}
                     >
-                      <span className="flex items-center gap-1.5 text-sm font-semibold">
+                      <span className="flex items-center gap-1.5 text-sm font-semibold font-display">
                         {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
                         {g.label}
                       </span>
@@ -474,7 +474,7 @@ export function BulkCreativeForm({
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-foreground">{r.productName}</p>
+                  <p className="truncate text-sm font-semibold text-foreground font-display">{r.productName}</p>
                   <p className="truncate text-xs text-muted-foreground">
                     {r.status === "success" ? r.caption : r.error}
                   </p>

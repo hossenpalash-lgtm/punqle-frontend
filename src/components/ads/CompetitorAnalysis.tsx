@@ -293,7 +293,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
       {!result && !loading && !error && (
         <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border py-16 text-center">
           <Binoculars className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm font-semibold text-muted-foreground">No analysis yet</p>
+          <p className="text-sm font-semibold text-muted-foreground font-display">No analysis yet</p>
           <p className="px-6 text-xs text-muted-foreground">
             Works on a Facebook/Instagram page too now — Punqle identifies the real brand and searches the open
             web for it, instead of only reading that one page.

@@ -1267,7 +1267,7 @@ function HomeScreen() {
           <Sparkles className="h-4 w-4 text-accent" />
           <span className="text-sm font-semibold text-foreground">Your credits</span>
         </div>
-        <span className="text-base font-extrabold text-primary">
+        <span className="text-base font-extrabold text-primary font-display">
           {credits === null ? "..." : credits}
         </span>
       </div>
@@ -2631,7 +2631,7 @@ function HomeScreen() {
                         product photo, it doesn't animate an actual box
                         being opened. */}
                     <div>
-                      <p className="text-sm font-bold text-foreground">Unboxing shot</p>
+                      <p className="text-sm font-bold text-foreground font-display">Unboxing shot</p>
                       <p className="text-xs text-muted-foreground">
                         A fresh, styled background for your product photo — like it's just been unboxed.
                       </p>
@@ -2731,7 +2731,7 @@ function HomeScreen() {
                         Upscale above — a bare 2-upload grid with no
                         heading didn't say what the pill makes. */}
                     <div>
-                      <p className="text-sm font-bold text-foreground">Show Your App</p>
+                      <p className="text-sm font-bold text-foreground font-display">Show Your App</p>
                       <p className="text-xs text-muted-foreground">
                         Puts your app on an actor's phone screen — a real person showing it off.
                       </p>
@@ -2926,7 +2926,7 @@ function HomeScreen() {
                         language heading before the upload box, not just a
                         bare drop zone) — same fix as Unboxing above. */}
                     <div>
-                      <p className="text-sm font-bold text-foreground">Upscale</p>
+                      <p className="text-sm font-bold text-foreground font-display">Upscale</p>
                       <p className="text-xs text-muted-foreground">
                         Sharpen and enlarge a blurry photo (4x) or video (up to 4K).
                       </p>

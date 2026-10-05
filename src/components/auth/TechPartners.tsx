@@ -33,7 +33,7 @@ function PartnerRun() {
     <div className="flex shrink-0 items-center">
       {PARTNERS.map((name, i) => (
         <span key={i} className="flex items-center">
-          <span className="whitespace-nowrap px-4 text-[15px] font-semibold text-secondary-foreground">{name}</span>
+          <span className="whitespace-nowrap px-4 text-[15px] font-semibold text-secondary-foreground font-display">{name}</span>
           <span className="h-1 w-1 rounded-full bg-border" aria-hidden="true" />
         </span>
       ))}

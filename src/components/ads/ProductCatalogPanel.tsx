@@ -310,7 +310,7 @@ export function ProductCatalogPanel({ open, onClose }: { open: boolean; onClose:
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-foreground">{p.name}</p>
+                    <p className="truncate text-sm font-semibold text-foreground font-display">{p.name}</p>
                     {p.price && <p className="text-xs text-muted-foreground">{p.price}</p>}
                   </div>
                 </div>

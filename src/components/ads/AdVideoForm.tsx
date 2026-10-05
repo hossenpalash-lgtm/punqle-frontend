@@ -1164,7 +1164,7 @@ export function AdVideoForm({
       <div className="rounded-2xl bg-card p-6" style={{ boxShadow: "var(--shadow-card)" }}>
         <div className="flex flex-col items-center justify-center gap-3 text-center">
           <Loader2 className="h-8 w-8 animate-spin text-foreground" />
-          <p className="text-sm font-semibold text-foreground">
+          <p className="text-sm font-semibold text-foreground font-display">
             {videoStyle === "avatar"
               ? "Generating your AI presenter video..."
               : videoStyle === "ai_actor"
@@ -1282,7 +1282,7 @@ export function AdVideoForm({
       <div className="rounded-2xl bg-card p-6" style={{ boxShadow: "var(--shadow-card)" }}>
         <div className="mb-6 flex flex-col items-center justify-center gap-3 text-center">
           <Loader2 className="h-8 w-8 animate-spin text-foreground" />
-          <p className="text-sm font-semibold text-foreground">Generating your video ad...</p>
+          <p className="text-sm font-semibold text-foreground font-display">Generating your video ad...</p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
             {minutes}:{seconds.toString().padStart(2, "0")} elapsed — usually takes 1-2 minutes
@@ -1422,7 +1422,7 @@ export function AdVideoForm({
                             selected ? "bg-foreground text-background" : "bg-card text-foreground",
                           ].join(" ")}
                         >
-                          <span className="flex items-center gap-1.5 text-sm font-semibold">
+                          <span className="flex items-center gap-1.5 text-sm font-semibold font-display">
                             {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
                             {t}
                           </span>

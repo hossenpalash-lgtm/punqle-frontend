@@ -571,7 +571,7 @@ export function VisualDirectionStep({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="mb-1 flex items-center gap-2">
-                  <span className="text-sm font-semibold text-foreground">{opt.label}</span>
+                  <span className="text-sm font-semibold text-foreground font-display">{opt.label}</span>
                   {isRecommended && (
                     <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">
                       Recommended

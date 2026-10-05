@@ -255,7 +255,7 @@ export function Sidebar({
           <div className="mb-1 flex flex-col gap-0.5">
             {projects.map((p) => (
               <div key={p.id} className="rounded-lg px-1.5 py-1.5">
-                <div className="truncate text-[13px] font-semibold text-foreground">{p.name}</div>
+                <div className="truncate text-[13px] font-semibold text-foreground font-display">{p.name}</div>
                 <div className="text-[11px] text-muted-foreground">
                   {new Date(p.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                 </div>
@@ -330,7 +330,7 @@ export function Sidebar({
             ].join(" ")}
             style={planActive ? GLASS_PILL_ACTIVE : GLASS_PILL_IDLE}
           >
-            <span className="flex items-center gap-1.5 text-[13px] font-bold">
+            <span className="flex items-center gap-1.5 text-[13px] font-bold font-display">
               <span
                 className={[
                   "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md",
@@ -452,7 +452,7 @@ export function Sidebar({
             className="mt-[68px] flex items-center justify-between rounded-xl border border-border bg-card px-2 py-1.5"
             style={{ boxShadow: "var(--shadow-card)" }}
           >
-            <span className="text-[13px] font-bold text-foreground">More</span>
+            <span className="text-[13px] font-bold text-foreground font-display">More</span>
             <ChevronDown
               className={[
                 "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
@@ -540,7 +540,7 @@ export function Sidebar({
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-[12px] font-bold text-foreground">
               <LogOut className="h-3.5 w-3.5" />
             </span>
-            <span className="text-[13px] font-semibold text-foreground">Sign out</span>
+            <span className="text-[13px] font-semibold text-foreground font-display">Sign out</span>
           </span>
         </button>
       </aside>

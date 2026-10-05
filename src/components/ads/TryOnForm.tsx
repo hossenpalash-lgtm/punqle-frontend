@@ -543,7 +543,7 @@ export function TryOnForm({
           </div>
         )}
         <div>
-          <p className="text-sm font-semibold text-foreground">Animating your look...</p>
+          <p className="text-sm font-semibold text-foreground font-display">Animating your look...</p>
           <p className="mt-1 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
             {minutes}:{seconds.toString().padStart(2, "0")} elapsed — usually takes 30-60 sec
@@ -565,7 +565,7 @@ export function TryOnForm({
           </div>
         )}
         <div>
-          <p className="text-sm font-semibold text-foreground">Generating your try-on...</p>
+          <p className="text-sm font-semibold text-foreground font-display">Generating your try-on...</p>
           <p className="mt-1 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
             {minutes}:{seconds.toString().padStart(2, "0")} elapsed — usually takes 15-30 sec
@@ -610,7 +610,7 @@ export function TryOnForm({
             ) : (
               <>
                 <User className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm font-semibold text-muted-foreground">Tap to upload a photo</span>
+                <span className="text-sm font-semibold text-muted-foreground font-display">Tap to upload a photo</span>
               </>
             )}
           </button>
@@ -692,7 +692,7 @@ export function TryOnForm({
                           <Shirt className="h-3.5 w-3.5" />
                         </div>
                       )}
-                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{p.name}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground font-display">{p.name}</span>
                     </button>
                   );
                 })}
@@ -717,7 +717,7 @@ export function TryOnForm({
                 ) : (
                   <>
                     <Camera className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm font-semibold text-muted-foreground">Tap to upload a product photo</span>
+                    <span className="text-sm font-semibold text-muted-foreground font-display">Tap to upload a product photo</span>
                   </>
                 )}
               </button>

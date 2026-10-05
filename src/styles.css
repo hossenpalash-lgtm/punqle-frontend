@@ -472,6 +472,21 @@
   font-synthesis: none;
 }
 
+/* 2026-10-06 (founder loved the Cal Sans headings and asked for it wherever it
+   fits): every heading tag uses the display font, so titles added later get it
+   without remembering the class. Titles that are not heading tags (card names,
+   option labels, big numbers) carry an explicit `font-display` class. Buttons,
+   captions, small labels and body text stay Inter for readability. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  font-synthesis: none;
+}
+
 /* Legal page prose (Privacy Policy / Terms / Data Deletion) — plain
    reference-document typography, distinct from the app's card-based UI. */
 .legal-prose h2 {

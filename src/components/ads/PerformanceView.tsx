@@ -185,7 +185,7 @@ export function PerformanceView() {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground">
+                <p className="text-sm font-semibold text-foreground font-display">
                   Your best post earned {formatMultiple(winner.score.multiple)} your {PLATFORM_LABEL[winner.post.platform]} average
                 </p>
                 <p className="mb-1 line-clamp-1 text-xs text-muted-foreground">{winner.post.caption || "(no caption)"}</p>
@@ -223,7 +223,7 @@ export function PerformanceView() {
           {groupRows.map((row) => (
             <div key={row.key} className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
               <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-foreground">{row.label}</p>
+                <p className="text-sm font-semibold text-foreground font-display">{row.label}</p>
                 <span className="text-xs text-muted-foreground">
                   {row.postCount} post{row.postCount === 1 ? "" : "s"}
                 </span>

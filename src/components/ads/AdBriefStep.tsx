@@ -97,7 +97,7 @@ export function AdBriefStep({
                   selected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
                 ].join(" ")}
               >
-                <span className="flex items-center gap-1.5 text-sm font-semibold">
+                <span className="flex items-center gap-1.5 text-sm font-semibold font-display">
                   {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
                   {g.label}
                 </span>

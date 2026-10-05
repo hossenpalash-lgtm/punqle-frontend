@@ -30,7 +30,7 @@ function Kpi({ label, value, hint }: { label: string; value: string; hint?: stri
   return (
     <div className="rounded-xl bg-secondary px-3 py-2.5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="text-lg font-bold leading-tight text-foreground">{value}</p>
+      <p className="text-lg font-bold leading-tight text-foreground font-display">{value}</p>
       {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
     </div>
   );
@@ -306,7 +306,7 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
               <div className="relative">
                 <Donut slices={typeSlices} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <p className="text-lg font-bold text-foreground">{data.analyzed_posts}</p>
+                  <p className="text-lg font-bold text-foreground font-display">{data.analyzed_posts}</p>
                   <p className="text-[10px] text-muted-foreground">posts</p>
                 </div>
               </div>

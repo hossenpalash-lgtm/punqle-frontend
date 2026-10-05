@@ -172,7 +172,7 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
                 key={tier}
                 className="flex flex-col rounded-2xl border border-input bg-background p-5"
               >
-                <p className="text-sm font-semibold text-foreground">{label}</p>
+                <p className="text-sm font-semibold text-foreground font-display">{label}</p>
                 <p className="mt-2 font-display text-2xl font-extrabold text-foreground">
                   {price}
                   <span className="text-sm font-medium text-muted-foreground">/mo</span>
@@ -199,7 +199,7 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
           <div className="mt-6 border-t border-input pt-5">
             <div className="mb-3 flex items-center gap-1.5">
               <Zap className="h-4 w-4 text-primary" />
-              <p className="text-sm font-semibold text-foreground">Need more credits this month?</p>
+              <p className="text-sm font-semibold text-foreground font-display">Need more credits this month?</p>
             </div>
             <p className="mb-3 text-xs text-muted-foreground">
               A one-time top-up, on top of whatever plan you're already on — no commitment.
@@ -212,7 +212,7 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
                   disabled={pendingPack !== null}
                   className="flex flex-col items-start rounded-2xl border border-input bg-background p-4 text-left disabled:opacity-60"
                 >
-                  <p className="text-sm font-semibold text-foreground">{label}</p>
+                  <p className="text-sm font-semibold text-foreground font-display">{label}</p>
                   <p className="mt-1 font-display text-lg font-extrabold text-foreground">{price}</p>
                   <span className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-primary">
                     {pendingPack === pack ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}

@@ -10,7 +10,7 @@ export const Route = createFileRoute("/privacy-policy")({
 
 function PrivacyPolicyPage() {
   return (
-    <LegalLayout title="Privacy Policy" effectiveDate="August 27, 2026">
+    <LegalLayout title="Privacy Policy" effectiveDate="October 12, 2026">
       <p>
         This Privacy Policy explains what information Punqle ("Punqle," "we," "us") collects when you use the
         Punqle app at punqle.com, how we use it, and what choices you have. Punqle is operated by HOSSEN, MD
@@ -33,8 +33,10 @@ function PrivacyPolicyPage() {
       <p><strong>Content we generate for you.</strong> We store the ad copy, captions, and images our AI generates for you, so you can view and reuse your recent posts. We keep your 20 most recently generated posts; older ones are automatically deleted as new ones are created.</p>
       <p><strong>Payment and subscription information.</strong> If you subscribe to a paid plan, payment is handled entirely by our payment processor, Stripe, on Stripe's own hosted checkout page. We never see or store your card number. We store only a Stripe customer/subscription reference, your plan tier, and billing status, so we know what you're subscribed to.</p>
       <p><strong>Shopify integration (optional).</strong> If you choose to connect a Shopify store, we store your store's domain and an access token that lets us read your product catalog, so we can import your products into Punqle. This only happens if you actively connect your store, and you can disconnect it at any time from within the app.</p>
-      <p><strong>YouTube integration (optional).</strong> If you choose to connect your YouTube channel, we store your channel's ID and title, along with an OAuth access token and refresh token, so we can identify your connected channel and publish, only at your explicit request, videos you create inside Punqle to it. See "Google User Data (YouTube Integration)" below for full details. This only happens if you actively connect your channel, and you can disconnect it at any time from within the app.</p>
-      <p><strong>Facebook and Instagram integration (optional).</strong> If you choose to connect a Facebook Page (and its linked Instagram account, if any), we store the Page's ID and name, a Page access token, and, if linked, the Instagram account's ID and username, so we can publish, only at your explicit request, ad content you create inside Punqle to those accounts. This only happens if you actively connect an account, and you can disconnect it at any time from within the app.</p>
+      <p><strong>YouTube integration (optional).</strong> If you choose to connect your YouTube channel, we store your channel's ID and title, along with an OAuth access token and refresh token, so we can identify your connected channel, publish, only at your explicit request, videos you create inside Punqle to it, and show you how those videos are performing (views, likes, comments, watch time, and how often their thumbnails were shown). See "Google User Data (YouTube Integration)" below for full details. This only happens if you actively connect your channel, and you can disconnect it at any time from within the app.</p>
+      <p><strong>Facebook and Instagram integration (optional).</strong> If you choose to connect a Facebook Page (and its linked Instagram account, if any), we store the Page's ID and name, a Page access token, and, if linked, the Instagram account's ID and username, so we can publish, only at your explicit request, ad content you create inside Punqle to those accounts, and show you how the posts you published through Punqle are performing (for example likes, comments, shares, saves, and how many people viewed or reached each post). We read these numbers only for posts you published through Punqle to your own connected Page or Instagram account, and only to show them to you. This only happens if you actively connect an account, and you can disconnect it at any time from within the app.</p>
+      <p><strong>TikTok integration (optional).</strong> If you choose to connect your TikTok account, we store your TikTok account's open ID and display name, along with an OAuth access token and refresh token, so we can publish, only at your explicit request, videos you create inside Punqle to your TikTok account, and show you how those videos are doing (views, likes, comments, and shares). We read these numbers only for videos you published through Punqle. This only happens if you actively connect your account, and you can disconnect it at any time from within the app.</p>
+      <p><strong>Performance numbers.</strong> For posts you publish through Punqle, we keep a short history of the performance numbers described above, so the Performance screen can show you what is working. These numbers are shown only to you, are never shared or sold, and are deleted if you delete your Punqle account.</p>
       <p><strong>Try-On (optional).</strong> If you use the Try-On feature, the photo you upload (of yourself or someone else with their permission) and a product photo are sent to FASHN AI to generate a preview. We do not store these photos — see "FASHN AI (Virtual Try-On)" below for full details.</p>
       <p><strong>Referral information.</strong> Punqle has an optional referral program. If you share your referral link, it contains your account ID. If someone signs up using it, we record that a referral occurred (linking the two account IDs) so we can grant referral credits. We do not share your email or other account details through this feature.</p>
       <p><strong>Credits.</strong> We keep a simple count of your remaining ad-generation credits.</p>
@@ -44,11 +46,12 @@ function PrivacyPolicyPage() {
       <ul>
         <li><strong>OpenAI</strong> — receives text you provide (such as product descriptions, business category, and post ideas) to generate ad copy and captions. We do not send images or your account details to OpenAI.</li>
         <li><strong>Google (Gemini API)</strong> — receives product photos you upload (if any) and text prompts, to generate or edit ad images and videos. This is separate from YouTube (see below) and never accesses your Google Account or YouTube channel.</li>
-        <li><strong>Google (YouTube Data API)</strong> — only if you connect your YouTube channel; see "YouTube integration" above and "Google User Data (YouTube Integration)" below for full details.</li>
+        <li><strong>Google (YouTube Data, Analytics and Reporting APIs)</strong> — only if you connect your YouTube channel; see "YouTube integration" above and "Google User Data (YouTube Integration)" below for full details.</li>
         <li><strong>Pexels</strong> — receives only a search term, if you choose to search their stock photo library instead of uploading your own photo. No personal information is sent.</li>
         <li><strong>Stripe</strong> — handles billing and payment directly; see "Payment and subscription information" above.</li>
         <li><strong>Shopify</strong> — only if you connect your store; see "Shopify integration" above.</li>
         <li><strong>Meta (Facebook and Instagram)</strong> — only if you connect a Facebook Page or Instagram account; see "Facebook and Instagram integration" above.</li>
+        <li><strong>TikTok</strong> — only if you connect a TikTok account; see "TikTok integration" above.</li>
         <li><strong>FASHN AI</strong> — only if you use the Try-On feature; see "FASHN AI (Virtual Try-On)" below for full details.</li>
         <li><strong>Supabase</strong> — our database and authentication provider, which securely hosts your account and the information described in this policy.</li>
       </ul>
@@ -84,18 +87,32 @@ function PrivacyPolicyPage() {
       <h2>6. Google User Data (YouTube Integration)</h2>
       <p>
         If you choose to connect your YouTube channel, Punqle requests the Google API scopes{" "}
-        <code>youtube.upload</code> and <code>youtube.readonly</code>. This section explains exactly how we
-        handle that access.
+        <code>youtube.upload</code>, <code>youtube.readonly</code> and <code>yt-analytics.readonly</code>. This
+        section explains exactly how we handle that access.
       </p>
       <p>
-        <strong>What we access.</strong> Your YouTube channel's ID and title, and the ability to upload videos
-        to your channel. We do not access, read, or display your existing videos, playlists, subscriptions,
-        comments, analytics, or any other Google Account data.
+        <strong>What we access.</strong> Your YouTube channel's ID and title; the ability to upload videos to
+        your channel; and, for videos you published through Punqle only, their public statistics (views, likes,
+        comments) and their analytics (estimated minutes watched, average view duration and percentage viewed,
+        subscribers gained, shares, and thumbnail impressions and click-through rate). We look these up by the
+        specific video IDs Punqle itself uploaded. We do not browse, read, or display your other videos,
+        playlists, subscriptions, comments, revenue or earnings data, audience demographics, or any other Google
+        Account data.
       </p>
       <p>
-        <strong>How we use it.</strong> To show which channel you're connected to inside Punqle, and to upload
-        a video to that channel only when you explicitly click "Publish" on a video you created inside Punqle.
-        We never publish anything without that explicit action.
+        <strong>How we use it.</strong> To show which channel you're connected to inside Punqle, to upload a
+        video to that channel only when you explicitly click "Publish" on a video you created inside Punqle
+        (we never publish anything without that explicit action), and to show you, in Punqle's Performance
+        screen, how the videos you published through Punqle are doing. We do not use this data for advertising,
+        and we do not use it to train AI models.
+      </p>
+      <p>
+        <strong>Limited Use.</strong> Punqle's use and transfer to any other app of information received from
+        Google APIs will adhere to the{" "}
+        <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">
+          Google API Services User Data Policy
+        </a>
+        , including the Limited Use requirements.
       </p>
       <p>
         <strong>Who we share it with.</strong> Nobody. We do not share, sell, transfer, or disclose your Google

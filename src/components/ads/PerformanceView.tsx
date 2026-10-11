@@ -16,7 +16,13 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { TikTokIcon } from "@/components/TikTokIcon";
-import { fetchOrganicPerformance, getMetaConnectUrl, type ApiPerformancePost } from "@/lib/api";
+import {
+  fetchOrganicPerformance,
+  getMetaConnectUrl,
+  getTikTokConnectUrl,
+  getYouTubeConnectUrl,
+  type ApiPerformancePost,
+} from "@/lib/api";
 import { bestWinner, groupLeaders, isWinner, scorePosts, type TagDimension } from "@/lib/performance-insights";
 
 function PlatformIcon({ platform, className }: { platform: ApiPerformancePost["platform"]; className: string }) {
@@ -55,6 +61,78 @@ function formatLabel(raw: string): string {
     .split(/[_-]/)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
+}
+
+type UnlockAction = NonNullable<ApiPerformancePost["metrics_action"]>;
+
+// Each "unlock" is a reconnect that asks the platform for one more permission.
+// `approved` flips to true when the platform has approved that permission for
+// every user: until then the reconnect only works for people with a role on our
+// app (the founder, and the reviewers), so the banner is hidden from everyone
+// else unless the page was opened with #insights-preview.
+//   Instagram  instagram_manage_insights — approved 2026-10-11
+//   Facebook   read_insights             — requested 2026-10-12
+//   YouTube    yt-analytics.readonly     — Google verification requested 2026-10-12
+//   TikTok     video.list                — TikTok revision requested 2026-10-12
+const UNLOCKS: Record<UnlockAction, { title: string; body: string; button: string; approved: boolean; start: () => Promise<{ authorize_url: string }> }> = {
+  unlock_instagram_insights: {
+    title: "See reach, views and saves for your Instagram posts",
+    body: "Likes and comments already show. Reconnect Instagram once to also see how many people each post reached.",
+    button: "Reconnect Instagram",
+    approved: true,
+    start: () => getMetaConnectUrl(true),
+  },
+  unlock_facebook_insights: {
+    title: "See reach and views for your Facebook posts",
+    body: "Likes, comments and shares already show. Reconnect Facebook once to also see how many people each post reached.",
+    button: "Reconnect Facebook",
+    approved: false,
+    start: () => getMetaConnectUrl(false, true),
+  },
+  unlock_youtube_analytics: {
+    title: "See watch time, retention and impressions for your YouTube videos",
+    body: "Views, likes and comments already show. Reconnect YouTube once to also see how long people watch and how often your thumbnail was shown.",
+    button: "Reconnect YouTube",
+    approved: false,
+    start: () => getYouTubeConnectUrl(true),
+  },
+  unlock_tiktok_stats: {
+    title: "See views, likes and shares for your TikTok posts",
+    body: "Reconnect TikTok once to let Punqle read how each of your posts is doing.",
+    button: "Reconnect TikTok",
+    approved: false,
+    start: () => getTikTokConnectUrl(true),
+  },
+};
+
+const PREVIEW_KEY = "punqle_insights_preview";
+function insightsPreviewOn(): boolean {
+  try {
+    if (window.location.hash.includes("insights-preview")) sessionStorage.setItem(PREVIEW_KEY, "1");
+    return sessionStorage.getItem(PREVIEW_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function formatSeconds(total: number): string {
+  const m = Math.floor(total / 60);
+  const s = Math.round(total % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// The longer YouTube numbers that don't fit as icons.
+function youtubeDetails(m: NonNullable<ApiPerformancePost["metrics"]>): string[] {
+  const parts: string[] = [];
+  if (m.watch_minutes !== null) parts.push(`${formatCount(Math.round(m.watch_minutes))} min watched`);
+  if (m.avg_view_seconds !== null) {
+    parts.push(`avg view ${formatSeconds(m.avg_view_seconds)}${m.avg_view_pct !== null ? ` (${Math.round(m.avg_view_pct)}%)` : ""}`);
+  }
+  if (m.subscribers_gained) parts.push(`+${m.subscribers_gained} subscriber${m.subscribers_gained === 1 ? "" : "s"}`);
+  if (m.impressions !== null) {
+    parts.push(`${formatCount(m.impressions)} impressions${m.ctr_pct !== null ? ` · ${m.ctr_pct}% clicked` : ""}`);
+  }
+  return parts;
 }
 
 type GroupBy = "none" | "angle" | "style" | "goal";
@@ -127,7 +205,8 @@ export function PerformanceView() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
-  const [unlocking, setUnlocking] = useState(false);
+  const [unlocking, setUnlocking] = useState<UnlockAction | null>(null);
+  const [preview] = useState(insightsPreviewOn);
 
   const load = (isRefresh: boolean) => {
     if (isRefresh) setRefreshing(true);
@@ -144,19 +223,23 @@ export function PerformanceView() {
 
   useEffect(() => load(false), []);
 
-  // Instagram connections made before Meta approved the insights permission
-  // hold a token without it — reconnecting once (the normal Connect now asks
-  // for it) is the whole fix.
-  const needsInstagramUnlock = posts.some((p) => p.metrics_action === "unlock_instagram_insights");
-  const handleUnlock = async () => {
+  // A connection made before a permission existed holds a token without it —
+  // reconnecting once (the normal Connect asks for approved permissions) is
+  // the whole fix. Platforms whose permission isn't approved yet only show
+  // their banner in preview mode (see UNLOCKS).
+  const wanted = new Set<UnlockAction>(posts.flatMap((p) => (p.metrics_action ? [p.metrics_action] : [])));
+  const visibleUnlocks = (Object.keys(UNLOCKS) as UnlockAction[]).filter((a) =>
+    UNLOCKS[a].approved ? wanted.has(a) : preview,
+  );
+  const handleUnlock = async (action: UnlockAction) => {
     if (unlocking) return;
-    setUnlocking(true);
+    setUnlocking(action);
     try {
-      const r = await getMetaConnectUrl(true);
+      const r = await UNLOCKS[action].start();
       window.location.href = r.authorize_url;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't start the Instagram permission step.");
-      setUnlocking(false);
+      setError(err instanceof Error ? err.message : "Couldn't start the permission step.");
+      setUnlocking(null);
     }
   };
 
@@ -208,27 +291,22 @@ export function PerformanceView() {
 
       {error && <p className="mb-4 text-sm font-medium text-destructive">{error}</p>}
 
-      {needsInstagramUnlock && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+      {visibleUnlocks.map((action) => (
+        <div key={action} className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground font-display">
-              <Instagram className="h-4 w-4" />
-              See reach, views and saves for your Instagram posts
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Likes and comments already show. Reconnect Instagram once to also see how many people each post reached.
-            </p>
+            <p className="text-sm font-semibold text-foreground font-display">{UNLOCKS[action].title}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{UNLOCKS[action].body}</p>
           </div>
           <button
-            onClick={() => void handleUnlock()}
-            disabled={unlocking}
+            onClick={() => void handleUnlock(action)}
+            disabled={unlocking !== null}
             className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
           >
-            {unlocking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />}
-            Reconnect Instagram
+            {unlocking === action ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />}
+            {UNLOCKS[action].button}
           </button>
         </div>
-      )}
+      ))}
 
       {!loading && posts.length > 0 && (winner || leaders.length > 0) && (
         <div className="mb-4 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
@@ -396,6 +474,10 @@ export function PerformanceView() {
                 ) : post.metrics_unavailable_reason ? (
                   <p className="text-xs text-muted-foreground">{post.metrics_unavailable_reason}</p>
                 ) : null}
+                {post.metrics && youtubeDetails(post.metrics).length > 0 && (
+                  <p className="mt-1.5 text-xs text-muted-foreground">{youtubeDetails(post.metrics).join(" · ")}</p>
+                )}
+                {post.metrics_note && <p className="mt-1 text-xs text-muted-foreground">{post.metrics_note}</p>}
               </div>
             </div>
           ))}

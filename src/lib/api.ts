@@ -1431,8 +1431,11 @@ export function syncShopifyProducts(): Promise<{ products: ApiImportedProduct[] 
   return apiFetch<{ products: ApiImportedProduct[] }>("/shopify/sync", { method: "POST" });
 }
 
-export function getMetaConnectUrl(insights = false): Promise<{ authorize_url: string }> {
-  return apiFetch<{ authorize_url: string }>(`/meta/connect-url${insights ? "?insights=true" : ""}`);
+// reach=true also asks for read_insights (Facebook post reach/views) — opt-in
+// until Meta approves it (requested 2026-10-12).
+export function getMetaConnectUrl(insights = false, reach = false): Promise<{ authorize_url: string }> {
+  const query = [insights ? "insights=true" : "", reach ? "reach=true" : ""].filter(Boolean).join("&");
+  return apiFetch<{ authorize_url: string }>(`/meta/connect-url${query ? `?${query}` : ""}`);
 }
 
 export interface ApiMetaStatus {
@@ -1524,8 +1527,10 @@ export function publishToMeta(
   });
 }
 
-export function getYouTubeConnectUrl(): Promise<{ authorize_url: string }> {
-  return apiFetch<{ authorize_url: string }>("/youtube/connect-url");
+// analytics=true also asks for yt-analytics.readonly (watch time, retention,
+// impressions) — opt-in until Google verifies the scope (requested 2026-10-12).
+export function getYouTubeConnectUrl(analytics = false): Promise<{ authorize_url: string }> {
+  return apiFetch<{ authorize_url: string }>(`/youtube/connect-url${analytics ? "?analytics=true" : ""}`);
 }
 
 export interface ApiYouTubeStatus {
@@ -1541,8 +1546,10 @@ export function disconnectYouTube(): Promise<void> {
   return apiFetch<void>("/youtube/disconnect", { method: "DELETE" });
 }
 
-export function getTikTokConnectUrl(): Promise<{ authorize_url: string }> {
-  return apiFetch<{ authorize_url: string }>("/tiktok/connect-url");
+// analytics=true also asks for video.list (a post's views/likes/comments/
+// shares) — opt-in until TikTok approves the scope (revision submitted 2026-10-12).
+export function getTikTokConnectUrl(analytics = false): Promise<{ authorize_url: string }> {
+  return apiFetch<{ authorize_url: string }>(`/tiktok/connect-url${analytics ? "?analytics=true" : ""}`);
 }
 
 export interface ApiTikTokStatus {
@@ -1744,6 +1751,13 @@ export interface ApiPostMetrics {
   reach: number | null;
   saves: number | null;
   total_interactions: number | null;
+  // YouTube (Analytics + Reporting APIs).
+  impressions: number | null;
+  ctr_pct: number | null;
+  watch_minutes: number | null;
+  avg_view_seconds: number | null;
+  avg_view_pct: number | null;
+  subscribers_gained: number | null;
   fetched_at: string | null;
 }
 
@@ -1758,7 +1772,13 @@ export interface ApiPerformancePost {
   metrics_unavailable_reason: string | null;
   // "unlock_instagram_insights": the Instagram connection predates the
   // insights permission, so reach/views/saves need a one-click reconnect.
-  metrics_action: "unlock_instagram_insights" | null;
+  metrics_action:
+    | "unlock_instagram_insights"
+    | "unlock_facebook_insights"
+    | "unlock_youtube_analytics"
+    | "unlock_tiktok_stats"
+    | null;
+  metrics_note: string | null;
   goal: string | null;
   angle: string | null;
   style: string | null;

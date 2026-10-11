@@ -71,7 +71,7 @@ type UnlockAction = NonNullable<ApiPerformancePost["metrics_action"]>;
 // app (the founder, and the reviewers), so the banner is hidden from everyone
 // else unless the page was opened with #insights-preview.
 //   Instagram  instagram_manage_insights — approved 2026-10-11
-//   Facebook   read_insights             — requested 2026-10-12
+//   Facebook   read_insights + pages_read_user_content — requested 2026-10-12
 //   YouTube    yt-analytics.readonly     — Google verification requested 2026-10-12
 //   TikTok     video.list                — TikTok revision requested 2026-10-12
 const UNLOCKS: Record<UnlockAction, { title: string; body: string; button: string; approved: boolean; start: () => Promise<{ authorize_url: string }> }> = {
@@ -83,8 +83,8 @@ const UNLOCKS: Record<UnlockAction, { title: string; body: string; button: strin
     start: () => getMetaConnectUrl(true),
   },
   unlock_facebook_insights: {
-    title: "See reach and views for your Facebook posts",
-    body: "Likes, comments and shares already show. Reconnect Facebook once to also see how many people each post reached.",
+    title: "See reach, views, likes and comments for your Facebook posts",
+    body: "Reconnect Facebook once to let Punqle read how many people each post reached and how many likes and comments it got.",
     button: "Reconnect Facebook",
     approved: false,
     start: () => getMetaConnectUrl(false, true),
@@ -450,14 +450,18 @@ export function PerformanceView() {
                         {formatCount(post.metrics.reach)}
                       </span>
                     )}
-                    <span className="flex items-center gap-1" title="Likes">
-                      <Heart className="h-3 w-3" />
-                      {formatCount(post.metrics.likes)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MessageCircle className="h-3 w-3" />
-                      {formatCount(post.metrics.comments)}
-                    </span>
+                    {post.metrics.likes !== null && (
+                      <span className="flex items-center gap-1" title="Likes">
+                        <Heart className="h-3 w-3" />
+                        {formatCount(post.metrics.likes)}
+                      </span>
+                    )}
+                    {post.metrics.comments !== null && (
+                      <span className="flex items-center gap-1" title="Comments">
+                        <MessageCircle className="h-3 w-3" />
+                        {formatCount(post.metrics.comments)}
+                      </span>
+                    )}
                     {post.metrics.shares !== null && (
                       <span className="flex items-center gap-1" title="Shares">
                         <Share2 className="h-3 w-3" />

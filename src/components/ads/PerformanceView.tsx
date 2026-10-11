@@ -1,7 +1,22 @@
-import { Eye, Facebook, Heart, Instagram, Loader2, MessageCircle, RefreshCw, Share2, Trophy, TrendingUp, Youtube } from "lucide-react";
+import {
+  Bookmark,
+  Eye,
+  Facebook,
+  Heart,
+  Instagram,
+  Loader2,
+  Lock,
+  MessageCircle,
+  RefreshCw,
+  Share2,
+  Trophy,
+  TrendingUp,
+  Users,
+  Youtube,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { TikTokIcon } from "@/components/TikTokIcon";
-import { fetchOrganicPerformance, type ApiPerformancePost } from "@/lib/api";
+import { fetchOrganicPerformance, getMetaConnectUrl, type ApiPerformancePost } from "@/lib/api";
 import { bestWinner, groupLeaders, isWinner, scorePosts, type TagDimension } from "@/lib/performance-insights";
 
 function PlatformIcon({ platform, className }: { platform: ApiPerformancePost["platform"]; className: string }) {
@@ -60,6 +75,8 @@ interface GroupRow {
   likes: number;
   comments: number;
   shares: number;
+  saves: number;
+  reach: number;
 }
 
 function groupPosts(posts: ApiPerformancePost[], by: Exclude<GroupBy, "none">): GroupRow[] {
@@ -69,7 +86,9 @@ function groupPosts(posts: ApiPerformancePost[], by: Exclude<GroupBy, "none">): 
     const key = raw || "untagged";
     const label = raw ? formatLabel(raw) : "Untagged (older post, or Social Content)";
     if (!rows.has(key)) {
-      rows.set(key, { key, label, postCount: 0, measuredCount: 0, views: 0, likes: 0, comments: 0, shares: 0 });
+      rows.set(key, {
+        key, label, postCount: 0, measuredCount: 0, views: 0, likes: 0, comments: 0, shares: 0, saves: 0, reach: 0,
+      });
     }
     const row = rows.get(key)!;
     row.postCount += 1;
@@ -79,18 +98,21 @@ function groupPosts(posts: ApiPerformancePost[], by: Exclude<GroupBy, "none">): 
       row.likes += post.metrics.likes ?? 0;
       row.comments += post.metrics.comments ?? 0;
       row.shares += post.metrics.shares ?? 0;
+      row.saves += post.metrics.saves ?? 0;
+      row.reach += post.metrics.reach ?? 0;
     }
   }
   return Array.from(rows.values()).sort(
-    (a, b) => b.views + b.likes + b.comments + b.shares - (a.views + a.likes + a.comments + a.shares),
+    (a, b) =>
+      b.views + b.likes + b.comments + b.shares + b.saves - (a.views + a.likes + a.comments + a.shares + a.saves),
   );
 }
 
 // Organic-only, deliberately — see fetchOrganicPerformance's backend
-// docstring (GET /performance/posts). Reach/impressions aren't fetched
-// anywhere for either platform: both need a permission Punqle has never
-// requested. No spend/CTR/conversions/ROAS exist here, and no
-// placeholder for them either — the one prior "Coming soon" stub found
+// docstring (GET /performance/posts). Instagram also shows reach, views and
+// saves (instagram_manage_insights, approved 2026-10-11); Facebook reach and
+// YouTube impressions still need permissions Punqle hasn't requested. No
+// spend/CTR/conversions/ROAS exist here, and no placeholder for them either — the one prior "Coming soon" stub found
 // in this codebase's own audit (PostKit.tsx's disabled Launch Campaign
 // button) is the precedent this page deliberately does not repeat.
 //
@@ -105,6 +127,7 @@ export function PerformanceView() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
+  const [unlocking, setUnlocking] = useState(false);
 
   const load = (isRefresh: boolean) => {
     if (isRefresh) setRefreshing(true);
@@ -120,6 +143,22 @@ export function PerformanceView() {
   };
 
   useEffect(() => load(false), []);
+
+  // Instagram connections made before Meta approved the insights permission
+  // hold a token without it — reconnecting once (the normal Connect now asks
+  // for it) is the whole fix.
+  const needsInstagramUnlock = posts.some((p) => p.metrics_action === "unlock_instagram_insights");
+  const handleUnlock = async () => {
+    if (unlocking) return;
+    setUnlocking(true);
+    try {
+      const r = await getMetaConnectUrl(true);
+      window.location.href = r.authorize_url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't start the Instagram permission step.");
+      setUnlocking(false);
+    }
+  };
 
   const scores = useMemo(() => scorePosts(posts), [posts]);
   const winner = useMemo(() => bestWinner(posts, scores), [posts, scores]);
@@ -169,6 +208,28 @@ export function PerformanceView() {
 
       {error && <p className="mb-4 text-sm font-medium text-destructive">{error}</p>}
 
+      {needsInstagramUnlock && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground font-display">
+              <Instagram className="h-4 w-4" />
+              See reach, views and saves for your Instagram posts
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Likes and comments already show. Reconnect Instagram once to also see how many people each post reached.
+            </p>
+          </div>
+          <button
+            onClick={() => void handleUnlock()}
+            disabled={unlocking}
+            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            {unlocking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />}
+            Reconnect Instagram
+          </button>
+        </div>
+      )}
+
       {!loading && posts.length > 0 && (winner || leaders.length > 0) && (
         <div className="mb-4 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
@@ -190,7 +251,7 @@ export function PerformanceView() {
                 </p>
                 <p className="mb-1 line-clamp-1 text-xs text-muted-foreground">{winner.post.caption || "(no caption)"}</p>
                 <p className="text-xs text-muted-foreground">
-                  {winner.score.engagement} likes, comments and shares combined
+                  {winner.score.engagement} interactions (likes, comments, shares, saves)
                 </p>
               </div>
             </div>
@@ -233,9 +294,15 @@ export function PerformanceView() {
               ) : (
                 <div className="flex flex-wrap gap-4 text-sm font-medium text-muted-foreground">
                   {row.views > 0 && (
-                    <span className="flex items-center gap-1.5">
+                    <span className="flex items-center gap-1.5" title="Views">
                       <Eye className="h-3.5 w-3.5" />
                       {formatCount(row.views)}
+                    </span>
+                  )}
+                  {row.reach > 0 && (
+                    <span className="flex items-center gap-1.5" title="Reach">
+                      <Users className="h-3.5 w-3.5" />
+                      {formatCount(row.reach)}
                     </span>
                   )}
                   <span className="flex items-center gap-1.5">
@@ -247,9 +314,15 @@ export function PerformanceView() {
                     {formatCount(row.comments)}
                   </span>
                   {row.shares > 0 && (
-                    <span className="flex items-center gap-1.5">
+                    <span className="flex items-center gap-1.5" title="Shares">
                       <Share2 className="h-3.5 w-3.5" />
                       {formatCount(row.shares)}
+                    </span>
+                  )}
+                  {row.saves > 0 && (
+                    <span className="flex items-center gap-1.5" title="Saves">
+                      <Bookmark className="h-3.5 w-3.5" />
+                      {formatCount(row.saves)}
                     </span>
                   )}
                 </div>
@@ -288,12 +361,18 @@ export function PerformanceView() {
                 {post.metrics ? (
                   <div className="flex flex-wrap gap-3 text-xs font-medium text-muted-foreground">
                     {post.metrics.views !== null && (
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1" title="Views">
                         <Eye className="h-3 w-3" />
                         {formatCount(post.metrics.views)}
                       </span>
                     )}
-                    <span className="flex items-center gap-1">
+                    {post.metrics.reach !== null && (
+                      <span className="flex items-center gap-1" title="Reach — people who saw it">
+                        <Users className="h-3 w-3" />
+                        {formatCount(post.metrics.reach)}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1" title="Likes">
                       <Heart className="h-3 w-3" />
                       {formatCount(post.metrics.likes)}
                     </span>
@@ -302,9 +381,15 @@ export function PerformanceView() {
                       {formatCount(post.metrics.comments)}
                     </span>
                     {post.metrics.shares !== null && (
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1" title="Shares">
                         <Share2 className="h-3 w-3" />
                         {formatCount(post.metrics.shares)}
+                      </span>
+                    )}
+                    {post.metrics.saves !== null && (
+                      <span className="flex items-center gap-1" title="Saves">
+                        <Bookmark className="h-3 w-3" />
+                        {formatCount(post.metrics.saves)}
                       </span>
                     )}
                   </div>

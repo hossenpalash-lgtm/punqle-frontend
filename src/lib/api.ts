@@ -1730,17 +1730,20 @@ export function deleteScheduledPost(id: string): Promise<{ deleted: boolean }> {
 }
 
 // ---- Organic Performance ----
-// Reach/impressions are deliberately absent — neither platform exposes
-// them with the permissions Punqle currently has (Facebook needs a
-// separate read_insights grant; YouTube's impression data lives only in
-// the distinct YouTube Analytics API). Only real, currently-fetchable
-// organic numbers are represented here.
+// Only real, currently-fetchable organic numbers are represented here.
+// Instagram adds reach / saves / total interactions (instagram_manage_insights,
+// approved 2026-10-11); Facebook reach/impressions and YouTube impressions
+// still need separate permissions and are not fetched.
 
 export interface ApiPostMetrics {
   views: number | null;
   likes: number | null;
   comments: number | null;
   shares: number | null;
+  // Instagram only.
+  reach: number | null;
+  saves: number | null;
+  total_interactions: number | null;
   fetched_at: string | null;
 }
 
@@ -1753,6 +1756,9 @@ export interface ApiPerformancePost {
   scheduled_time: string;
   metrics: ApiPostMetrics | null;
   metrics_unavailable_reason: string | null;
+  // "unlock_instagram_insights": the Instagram connection predates the
+  // insights permission, so reach/views/saves need a one-click reconnect.
+  metrics_action: "unlock_instagram_insights" | null;
   goal: string | null;
   angle: string | null;
   style: string | null;

@@ -2,9 +2,10 @@ import type { ApiPerformancePost } from "@/lib/api";
 
 // A "winner" is judged against the same platform's own average, never
 // across platforms — a YouTube like and a Facebook like come from
-// different audiences and aren't the same size of win. Views are left out
-// of the score for the same reason (only YouTube reports them); the score
-// is likes + comments + shares.
+// different audiences and aren't the same size of win. Views and reach are
+// left out of the score for the same reason (not every platform reports
+// them); the score is likes + comments + shares + saves (saves only exist
+// on Instagram, where they are the strongest "I want this" signal).
 //
 // The thresholds keep a tiny sample from crowning a winner: three
 // measured posts on a platform before any of them can be compared, a
@@ -22,7 +23,9 @@ export const LEADER_MULTIPLE = 1.3;
 
 export function engagementOf(post: ApiPerformancePost): number | null {
   if (!post.metrics) return null;
-  return (post.metrics.likes ?? 0) + (post.metrics.comments ?? 0) + (post.metrics.shares ?? 0);
+  return (
+    (post.metrics.likes ?? 0) + (post.metrics.comments ?? 0) + (post.metrics.shares ?? 0) + (post.metrics.saves ?? 0)
+  );
 }
 
 export interface PostScore {

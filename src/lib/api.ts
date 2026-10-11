@@ -1923,6 +1923,17 @@ export interface ApiIgTimelinePoint {
 // status is "ok" for real data; the others are expected, actionable states
 // (needs_unlock / no_instagram / unavailable_account / error) the UI renders
 // as explanations, not failures.
+export interface ApiIgOwnSummary {
+  username: string;
+  followers: number | null;
+  analyzed_posts: number;
+  posts_per_week: number | null;
+  avg_engagement: number | null;
+  engagement_rate_pct: number | null;
+  best_type: string | null;
+  best_type_avg: number | null;
+}
+
 export interface ApiInstagramStats {
   status: "ok" | "needs_unlock" | "no_instagram" | "unavailable_account" | "error";
   message: string;
@@ -1948,6 +1959,11 @@ export interface ApiInstagramStats {
   themes: ApiIgThemeStat[];
   top_posts: ApiIgTopPost[];
   takeaways: string[];
+  posts_per_week: number | null;
+  // "You vs them" — null when the user's own account couldn't be read;
+  // `compare` stays empty until they have enough posts of their own.
+  own: ApiIgOwnSummary | null;
+  compare: string[];
 }
 
 export function fetchInstagramStats(username: string): Promise<ApiInstagramStats> {

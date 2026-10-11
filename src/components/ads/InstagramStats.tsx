@@ -36,6 +36,30 @@ function Kpi({ label, value, hint }: { label: string; value: string; hint?: stri
   );
 }
 
+// One metric, two bars (you / them) scaled to the larger of the two, so the
+// longer bar is always the bigger number. Missing values show "—", no bar.
+function VersusRow({ label, mine, theirs, suffix = "" }: { label: string; mine: number | null; theirs: number | null; suffix?: string }) {
+  const max = Math.max(mine ?? 0, theirs ?? 0, 0.0001);
+  const bar = (value: number | null, color: string, who: string) => (
+    <div className="flex items-center gap-2">
+      <p className="w-10 shrink-0 text-[11px] text-muted-foreground">{who}</p>
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
+        {value !== null && <div className="h-full rounded-full" style={{ width: `${(value / max) * 100}%`, background: color }} />}
+      </div>
+      <p className="w-16 shrink-0 text-right text-xs font-semibold text-foreground">{value === null ? "—" : `${fmt(value)}${suffix}`}</p>
+    </div>
+  );
+  return (
+    <div>
+      <p className="mb-1 text-sm font-medium text-foreground">{label}</p>
+      <div className="space-y-1">
+        {bar(mine, COLORS[0], "You")}
+        {bar(theirs, COLORS[1], "Them")}
+      </div>
+    </div>
+  );
+}
+
 function Donut({ slices }: { slices: { value: number; color: string }[] }) {
   const total = slices.reduce((a, s) => a + s.value, 0) || 1;
   let offset = 0;
@@ -290,6 +314,34 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
                 ))}
               </ul>
             </Card>
+          )}
+
+          {data.own && data.own.analyzed_posts >= 3 && (
+            <Card
+              title={`You vs @${data.username}`}
+              note={`Your own Instagram${data.own.username ? ` (@${data.own.username})` : ""} against theirs, counted the same way`}
+            >
+              <div className="space-y-3">
+                <VersusRow label="Followers" mine={data.own.followers} theirs={data.followers} />
+                <VersusRow label="Posts per week" mine={data.own.posts_per_week} theirs={data.posts_per_week} />
+                <VersusRow label="Engagement per post" mine={data.own.avg_engagement} theirs={data.avg_engagement} />
+                <VersusRow label="Engagement rate" mine={data.own.engagement_rate_pct} theirs={data.engagement_rate_pct} suffix="%" />
+              </div>
+              {data.compare.length > 0 && (
+                <ul className="mt-3 space-y-1.5 border-t border-border pt-3">
+                  {data.compare.map((c, i) => (
+                    <li key={i} className="rounded-lg bg-secondary px-3 py-2 text-sm text-secondary-foreground">
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
+          {data.own && data.own.analyzed_posts < 3 && (
+            <p className="no-print rounded-xl bg-secondary px-3 py-2 text-xs text-secondary-foreground">
+              Your own Instagram has {data.own.analyzed_posts} post{data.own.analyzed_posts === 1 ? "" : "s"} so far. Once it has 3, you'll see how you compare with @{data.username} here.
+            </p>
           )}
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

@@ -386,6 +386,26 @@
   backdrop-filter: blur(14px) saturate(180%) !important;
 }
 
+/* GlassToast.tsx — a notice drops in from just above its resting place. */
+@keyframes toast-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.toast-drop {
+  animation: toast-drop 0.22s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-drop {
+    animation: none;
+  }
+}
+
 /* WorkflowShowcase.tsx's two cards — subtle fade + rise, staggered via
    each card's own inline animation-delay. */
 @keyframes fade-rise {

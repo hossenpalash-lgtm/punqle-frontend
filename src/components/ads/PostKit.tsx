@@ -143,6 +143,11 @@ export function PostKit({
     cta,
   };
   const [editorOpen, setEditorOpen] = useState(false);
+  // A short/wide image (e.g. a LinkedIn banner) can't carry a tall caption card on
+  // top of it without hiding the picture, so it gets only a slim glass Publish bar.
+  const [imageIsTall, setImageIsTall] = useState(true);
+  const scrollToPublish = () =>
+    document.getElementById("publish-block")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   // Section label — same small caps treatment used for all 3 blocks below.
   // Refined-hybrid polish pass (2026-09): the result screen used to be ~15
@@ -168,8 +173,53 @@ export function PostKit({
             one (the same reason photo/video tools use a neutral canvas,
             not a decoration). Nothing else on the page changes color. */}
         {compositedUrl && !editorOpen && (
-          <div className="mb-3 overflow-hidden rounded-2xl bg-[#1E1F24] p-3" style={{ boxShadow: "var(--shadow-card)" }}>
-            <img src={compositedUrl} alt="Your generated post" className="block w-full rounded-xl" />
+          <div className="relative mb-5 overflow-hidden rounded-2xl bg-[#1E1F24]" style={{ boxShadow: "var(--shadow-card)" }}>
+            <img
+              src={compositedUrl}
+              alt="Your generated post"
+              className="block w-full"
+              onLoad={(e) => setImageIsTall(e.currentTarget.naturalHeight / e.currentTarget.naturalWidth >= 0.85)}
+            />
+            {/* Glass controls sit ON the picture (founder, 2026-10-12): Download and Edit
+                top right, the caption and Publish in a frosted card along the bottom. */}
+            <div className="absolute right-3 top-3 flex gap-2">
+              <a
+                href={compositedUrl}
+                download="post.jpg"
+                className="glass-chip flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download
+              </a>
+              <button
+                onClick={() => setEditorOpen(true)}
+                className="glass-chip flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </button>
+            </div>
+            {imageIsTall ? (
+              <div className="glass-strong absolute inset-x-3 bottom-3 rounded-3xl p-3.5">
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Caption</p>
+                <p className="line-clamp-3 text-[13px] leading-snug text-foreground">{editedCaption}</p>
+                <button
+                  onClick={scrollToPublish}
+                  className="bg-primary mt-3 w-full rounded-full px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+                >
+                  Publish
+                </button>
+              </div>
+            ) : (
+              <div className="glass-strong absolute inset-x-3 bottom-3 rounded-full p-1.5">
+                <button
+                  onClick={scrollToPublish}
+                  className="bg-primary w-full rounded-full px-4 py-2 text-sm font-semibold text-primary-foreground"
+                >
+                  Publish
+                </button>
+              </div>
+            )}
           </div>
         )}
         {compositedUrl && editorOpen && (
@@ -185,13 +235,15 @@ export function PostKit({
             />
           </div>
         )}
-        <button
-          onClick={() => setEditorOpen((v) => !v)}
-          className="mb-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-secondary px-4 py-2.5 text-xs font-semibold text-secondary-foreground"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          {editorOpen ? "Done editing" : "Edit in Editor"}
-        </button>
+        {editorOpen && (
+          <button
+            onClick={() => setEditorOpen(false)}
+            className="mb-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-secondary px-4 py-2.5 text-xs font-semibold text-secondary-foreground"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Done editing
+          </button>
+        )}
 
         {/* Real-only readiness checklist — every row is a true/false fact
             about generated state, never an invented quality score. */}
@@ -283,7 +335,7 @@ export function PostKit({
       {/* ===== Block 3: Publish — the WhatsApp handoff, download, and
           every real publish action. The one clear "what happens next"
           zone, at the bottom, after the creative and caption are settled. ===== */}
-      <div className="border-t border-border pt-6">
+      <div id="publish-block" className="scroll-mt-20 border-t border-border pt-6">
         <SectionLabel>Publish</SectionLabel>
 
         <div className="mb-6 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>

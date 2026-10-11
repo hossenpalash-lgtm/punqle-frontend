@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Download,
   Facebook,
   Images,
   Instagram,
@@ -2024,14 +2025,28 @@ function HomeScreen() {
                 {videoPanel === "result" && homeGeneratedVideo ? (
                   <>
                     {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                    <video
-                      ref={videoResultRef}
-                      controls
-                      autoPlay
-                      loop
-                      className="max-h-[420px] w-full bg-[#1E1F24]"
-                      src={`data:video/mp4;base64,${homeGeneratedVideo}`}
-                    />
+                    <div className="relative">
+                      <video
+                        ref={videoResultRef}
+                        controls
+                        autoPlay
+                        loop
+                        className="max-h-[420px] w-full bg-[#1E1F24]"
+                        src={`data:video/mp4;base64,${homeGeneratedVideo}`}
+                      />
+                      {/* Glass chips on the picture; the player's own controls stay at the bottom. */}
+                      <span className="glass-chip pointer-events-none absolute left-3 top-3 rounded-full px-3 py-1.5 text-[12px] font-semibold">
+                        {IMAGE_VIDEO_MODEL_LABELS[videoModel]}
+                      </span>
+                      <a
+                        href={`data:video/mp4;base64,${homeGeneratedVideo}`}
+                        download="punqle-video.mp4"
+                        className="glass-chip absolute right-3 top-3 flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download
+                      </a>
+                    </div>
                     {videoVariants.length > 0 && (
                       <div className="flex gap-2 border-t border-border px-4 py-3">
                         {videoVariants.map((v, i) => (
@@ -2279,11 +2294,58 @@ function HomeScreen() {
               <>
                 {homeGeneratedImage ? (
                   <>
-                    <img
-                      src={`data:image/png;base64,${homeGeneratedImage}`}
-                      alt="Generated"
-                      className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
-                    />
+                    <div className="relative">
+                      <img
+                        src={`data:image/png;base64,${homeGeneratedImage}`}
+                        alt="Generated"
+                        className="max-h-[420px] w-full object-contain bg-[#1E1F24]"
+                      />
+                      {/* Glass controls sit ON the picture (founder, 2026-10-12): which
+                          model made it (top left), Download (top right), and the next
+                          steps in a frosted bar along the bottom. Black and white only. */}
+                      <span className="glass-chip absolute left-3 top-3 rounded-full px-3 py-1.5 text-[12px] font-semibold">
+                        {IMAGE_MODEL_LABELS[homeImageModel]}
+                      </span>
+                      <a
+                        href={`data:image/png;base64,${homeGeneratedImage}`}
+                        download="punqle-image.png"
+                        className="glass-chip absolute right-3 top-3 flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download
+                      </a>
+                      <div className="glass-strong absolute inset-x-3 bottom-3 flex flex-wrap items-center justify-center gap-2 rounded-3xl p-2.5">
+                        <button
+                          onClick={handleTurnImageIntoActor}
+                          className="glass-chip-light rounded-full px-4 py-2 text-xs font-semibold text-foreground"
+                        >
+                          Actor
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleOpenVideoComposer();
+                            setHomeMode("video");
+                          }}
+                          className="glass-chip-light rounded-full px-4 py-2 text-xs font-semibold text-foreground"
+                        >
+                          Make a video
+                        </button>
+                        <button
+                          onClick={handleHomeGenerateImage}
+                          title="Generate again with the same prompt and settings"
+                          className="glass-chip-light flex items-center gap-1 rounded-full px-4 py-2 text-xs font-semibold text-foreground"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Remix
+                        </button>
+                        <button
+                          onClick={handleResetHome}
+                          className="bg-primary rounded-full px-4 py-2 text-xs font-semibold text-primary-foreground"
+                        >
+                          Create another
+                        </button>
+                      </div>
+                    </div>
                     {homeImageVariants.length > 0 && (
                       <div className="flex gap-2 border-t border-border px-4 py-3">
                         {homeImageVariants.map((v, i) => (
@@ -2298,40 +2360,6 @@ function HomeScreen() {
                         ))}
                       </div>
                     )}
-                    <div className="flex items-center justify-between gap-2 px-4 py-3">
-                      <span className="text-xs text-muted-foreground">{IMAGE_MODEL_LABELS[homeImageModel]}</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={handleTurnImageIntoActor}
-                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                        >
-                          Actor
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleOpenVideoComposer();
-                            setHomeMode("video");
-                          }}
-                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                        >
-                          Make a video
-                        </button>
-                        <button
-                          onClick={handleHomeGenerateImage}
-                          title="Generate again with the same prompt and settings"
-                          className="flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                        >
-                          <RefreshCw className="h-3 w-3" />
-                          Remix
-                        </button>
-                        <button
-                          onClick={handleResetHome}
-                          className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                        >
-                          Create another
-                        </button>
-                      </div>
-                    </div>
                   </>
                 ) : (
                   <>
@@ -2451,14 +2479,28 @@ function HomeScreen() {
                 {videoPanel === "result" && homeGeneratedVideo ? (
                   <>
                     {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                    <video
-                      ref={videoResultRef}
-                      controls
-                      autoPlay
-                      loop
-                      className="max-h-[420px] w-full bg-[#1E1F24]"
-                      src={`data:video/mp4;base64,${homeGeneratedVideo}`}
-                    />
+                    <div className="relative">
+                      <video
+                        ref={videoResultRef}
+                        controls
+                        autoPlay
+                        loop
+                        className="max-h-[420px] w-full bg-[#1E1F24]"
+                        src={`data:video/mp4;base64,${homeGeneratedVideo}`}
+                      />
+                      {/* Glass chips on the picture; the player's own controls stay at the bottom. */}
+                      <span className="glass-chip pointer-events-none absolute left-3 top-3 rounded-full px-3 py-1.5 text-[12px] font-semibold">
+                        {IMAGE_VIDEO_MODEL_LABELS[videoModel]}
+                      </span>
+                      <a
+                        href={`data:video/mp4;base64,${homeGeneratedVideo}`}
+                        download="punqle-video.mp4"
+                        className="glass-chip absolute right-3 top-3 flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download
+                      </a>
+                    </div>
                     <div className="flex items-center justify-between gap-2 px-4 py-3">
                       <span className="text-xs text-muted-foreground">{IMAGE_VIDEO_MODEL_LABELS[videoModel]}</span>
                       <div className="flex items-center gap-2">

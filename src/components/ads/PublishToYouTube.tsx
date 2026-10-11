@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle2, Clock, Loader2, Youtube } from "lucide-react";
 import { useEffect, useState } from "react";
+import { showToast } from "@/components/GlassToast";
 import {
   fetchYouTubeStatus,
   getYouTubeConnectUrl,
@@ -53,6 +54,19 @@ export function PublishToYouTube({
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<ApiYouTubePublishResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Success floats as a glass notice (with a link to the video); a failure keeps its detail inline too.
+  useEffect(() => {
+    if (!result) return;
+    if (result.posted) {
+      showToast(result.scheduled ? "Scheduled on YouTube" : "Published to YouTube", {
+        tone: "success",
+        href: result.video_url ?? undefined,
+      });
+    } else {
+      showToast(`YouTube: ${result.error}`, { tone: "error" });
+    }
+  }, [result]);
 
   useEffect(() => {
     fetchYouTubeStatus()
@@ -216,21 +230,7 @@ export function PublishToYouTube({
 
       {result && (
         <div className="mb-3 text-sm">
-          {result.posted ? (
-            <p className="text-primary">
-              {result.scheduled ? "✓ Scheduled on YouTube" : "✓ Published to YouTube"}
-              {result.video_url && (
-                <>
-                  {" — "}
-                  <a href={result.video_url} target="_blank" rel="noreferrer" className="underline">
-                    view it
-                  </a>
-                </>
-              )}
-            </p>
-          ) : (
-            <p className="text-destructive">✗ {result.error}</p>
-          )}
+          {!result.posted && <p className="text-destructive">✗ {result.error}</p>}
         </div>
       )}
 

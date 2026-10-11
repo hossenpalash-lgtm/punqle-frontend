@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { showToast } from "@/components/GlassToast";
 import {
   fetchTikTokCreatorInfo,
   fetchTikTokStatus,
@@ -63,6 +64,12 @@ export function PublishToTikTok({
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<ApiTikTokPublishResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Success floats as a glass notice; a failure keeps its detail inline too.
+  useEffect(() => {
+    if (!result) return;
+    showToast(result.posted ? "Published to TikTok" : `TikTok: ${result.error}`, { tone: result.posted ? "success" : "error" });
+  }, [result]);
 
   useEffect(() => {
     fetchTikTokStatus()
@@ -347,11 +354,7 @@ export function PublishToTikTok({
 
       {result && (
         <div className="mb-3 text-sm">
-          {result.posted ? (
-            <p className="text-primary">✓ Published to TikTok</p>
-          ) : (
-            <p className="text-destructive">✗ {result.error}</p>
-          )}
+          {!result.posted && <p className="text-destructive">✗ {result.error}</p>}
         </div>
       )}
 

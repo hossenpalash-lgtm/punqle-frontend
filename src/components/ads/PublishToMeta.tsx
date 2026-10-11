@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle2, Clock, Facebook, Loader2 } from "lucide-reac
 import { useEffect, useState } from "react";
 import { fetchMetaStatus, getMetaConnectUrl, publishToMeta, type ApiMetaPublishResponse } from "@/lib/api";
 import { MIN_SCHEDULE_MINUTES, MAX_SCHEDULE_DAYS, toDatetimeLocalMin } from "@/lib/schedule-dates";
+import { showToast } from "@/components/GlassToast";
 
 // Inline in the Post Kit, next to Download/Schedule — not a modal, matching
 // CarouselBuilder's "tool sits right where the image already is" pattern.
@@ -36,6 +37,15 @@ export function PublishToMeta({
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<ApiMetaPublishResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Success floats as a glass notice; a failure keeps its detail inline below too.
+  useEffect(() => {
+    if (!result) return;
+    if (result.facebook?.posted) showToast(result.facebook.scheduled ? "Scheduled on Facebook" : "Posted to Facebook", { tone: "success" });
+    if (result.instagram?.posted) showToast("Posted to Instagram", { tone: "success" });
+    if (result.facebook && !result.facebook.posted) showToast(`Facebook: ${result.facebook.error}`, { tone: "error" });
+    if (result.instagram && !result.instagram.posted) showToast(`Instagram: ${result.instagram.error}`, { tone: "error" });
+  }, [result]);
 
   useEffect(() => {
     fetchMetaStatus()
@@ -199,19 +209,11 @@ export function PublishToMeta({
 
       {result && (
         <div className="mb-3 space-y-1 text-sm">
-          {result.facebook && (
-            <p className={result.facebook.posted ? "text-primary" : "text-destructive"}>
-              {result.facebook.posted
-                ? result.facebook.scheduled
-                  ? "✓ Scheduled on Facebook"
-                  : "✓ Posted to Facebook"
-                : `✗ Facebook: ${result.facebook.error}`}
-            </p>
+          {result.facebook && !result.facebook.posted && (
+            <p className="text-destructive">{`✗ Facebook: ${result.facebook.error}`}</p>
           )}
-          {result.instagram && (
-            <p className={result.instagram.posted ? "text-primary" : "text-destructive"}>
-              {result.instagram.posted ? "✓ Posted to Instagram" : `✗ Instagram: ${result.instagram.error}`}
-            </p>
+          {result.instagram && !result.instagram.posted && (
+            <p className="text-destructive">{`✗ Instagram: ${result.instagram.error}`}</p>
           )}
         </div>
       )}

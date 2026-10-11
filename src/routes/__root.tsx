@@ -15,6 +15,7 @@ import appCss from "../styles.css?url";
 import { supabase, signOut, type Session } from "../lib/supabase";
 import { redeemReferral } from "../lib/api";
 import { Sentry } from "../lib/sentry";
+import { GlassToaster } from "@/components/GlassToast";
 import { LoginScreen } from "../components/auth/LoginScreen";
 import { PunqleLogo } from "../components/PunqleLogo";
 import { LegalFooter } from "../components/LegalFooter";
@@ -327,6 +328,7 @@ function RootComponent() {
             <MetaConnectPanel open={metaConnectOpen} onClose={() => setMetaConnectOpen(false)} />
             <YouTubeConnectPanel open={youtubeConnectOpen} onClose={() => setYoutubeConnectOpen(false)} />
             <TikTokConnectPanel open={tiktokConnectOpen} onClose={() => setTiktokConnectOpen(false)} />
+            <GlassToaster />
           </>
         )}
       </div>

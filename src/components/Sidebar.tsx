@@ -655,7 +655,7 @@ export function Sidebar({
                 menu this size. */}
             <div className="fixed inset-0 z-30" onClick={() => setMoreOpen(false)} />
             <div
-              className="glass-nav absolute right-3 top-full z-40 mt-2 flex max-h-[70vh] w-64 flex-col gap-0.5 overflow-y-auto rounded-2xl p-3"
+              className="glass-strong absolute right-3 top-full z-40 mt-2 flex max-h-[70vh] w-64 flex-col gap-0.5 overflow-y-auto rounded-2xl p-3"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
               <span className="mb-1 px-2 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground/70">

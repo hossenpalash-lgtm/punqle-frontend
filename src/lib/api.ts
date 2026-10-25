@@ -255,6 +255,9 @@ export interface ApiAvatarOption {
   gender: string | null;
   preview_image_url: string | null;
   preview_video_url: string | null;
+  // Best engine tier HeyGen offers this presenter per video format. Empty
+  // while the server is still loading its catalog (treated as "available").
+  formats?: Partial<Record<"portrait" | "landscape", "standard" | "premium">>;
 }
 
 export interface ApiAvatarOptionsResponse {

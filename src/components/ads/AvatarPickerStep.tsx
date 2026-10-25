@@ -1,6 +1,13 @@
 import { AlertCircle, Check, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { ApiAvatarOption, ApiAvatarVoice, ApiAvatarVoicesResponse, AvatarLanguage, AvatarTier } from "@/lib/api";
+import type {
+  ApiAvatarOption,
+  ApiAvatarVoice,
+  ApiAvatarVoicesResponse,
+  AvatarLanguage,
+  AvatarTier,
+  VideoAspectRatio,
+} from "@/lib/api";
 
 const TIERS: { value: AvatarTier; label: string; description: string; credits: number }[] = [
   { value: "standard", label: "Standard", description: "Great quality, lower cost", credits: 4 },
@@ -24,14 +31,25 @@ const TIERS: { value: AvatarTier; label: string; description: string; credits: n
 // savings against a catalog this size, independent of the ghosting bug.
 const AVATAR_PAGE_SIZE = 24;
 
+// HeyGen renders a presenter in one fixed orientation per "look", and a
+// landscape look on a vertical video comes out as a small picture on a white
+// canvas. So which presenters are offered depends on the chosen video format
+// (about half of them have vertical looks) and, for Premium, on whether HeyGen
+// has a Premium look in that format. `formats` is empty while the server is
+// still loading its catalog after a restart — then everything is shown.
+export function avatarAvailable(a: ApiAvatarOption, aspectRatio: VideoAspectRatio, tier: AvatarTier): boolean {
+  const formats = a.formats ?? {};
+  if (Object.keys(formats).length === 0) return true;
+  const best = formats[aspectRatio === "9:16" ? "portrait" : "landscape"];
+  return best === "premium" || (best === "standard" && tier !== "premium");
+}
+
 // Video Ad's "AI Presenter" style — shown only when videoStyle === "avatar".
-// Tier is picked first since it changes the credit cost shown throughout;
-// any avatar in the catalog works at either tier (confirmed live against
-// HeyGen's real API — tier is a generation-time parameter, not a
-// per-avatar property), so the same grid is shown regardless of tier.
+// Tier is picked first since it changes the credit cost shown throughout.
 export function AvatarPickerStep({
   tier,
   onTierChange,
+  aspectRatio,
   avatars,
   loading,
   error,
@@ -47,6 +65,7 @@ export function AvatarPickerStep({
 }: {
   tier: AvatarTier;
   onTierChange: (t: AvatarTier) => void;
+  aspectRatio: VideoAspectRatio;
   avatars: ApiAvatarOption[];
   loading: boolean;
   error: string | null;
@@ -70,26 +89,15 @@ export function AvatarPickerStep({
         ...voices[language].male.map((v) => ({ ...v, gender: "male" as const })),
       ]
     : [];
-  // Confirmed live against HeyGen's real API: every "expressive"-named
-  // avatar (48 of 1264 in the catalog, ~4%) rejects Premium — 5/5 tested,
-  // 0 exceptions. Filtering these out when Premium is selected means a
-  // user picking Premium essentially never hits the tier-mismatch
-  // fallback at all, rather than relying on that fallback to paper over
-  // a mismatch that was preventable. The fallback itself stays in the
-  // backend as a safety net for any other undiscovered incompatible
-  // avatar — this is a belt-and-suspenders improvement, not a
-  // replacement for it.
   const filtered = avatars.filter(
-    (a) =>
-      (genderFilter === "all" || a.gender === genderFilter) &&
-      (tier !== "premium" || !a.avatar_id.toLowerCase().includes("expressive")),
+    (a) => (genderFilter === "all" || a.gender === genderFilter) && avatarAvailable(a, aspectRatio, tier),
   );
 
   // Resets whenever the visible set actually changes (gender/tier), not
   // on every render — a filter change means the previous "how many to
   // show" count no longer means anything.
   const [visibleCount, setVisibleCount] = useState(AVATAR_PAGE_SIZE);
-  useEffect(() => setVisibleCount(AVATAR_PAGE_SIZE), [genderFilter, tier]);
+  useEffect(() => setVisibleCount(AVATAR_PAGE_SIZE), [genderFilter, tier, aspectRatio]);
   const visible = filtered.slice(0, visibleCount);
 
   return (
@@ -136,6 +144,11 @@ export function AvatarPickerStep({
           </button>
         ))}
       </div>
+
+      <p className="mb-4 w-full text-left text-xs text-muted-foreground">
+        Showing presenters for {aspectRatio === "9:16" ? "vertical (9:16)" : "landscape (16:9)"} videos — change Format
+        below to see the others.
+      </p>
 
       {voiceOptions.length > 0 && (
         <div className="mb-4 w-full">

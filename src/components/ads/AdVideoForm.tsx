@@ -52,7 +52,7 @@ import {
 } from "@/lib/api";
 import { findVideoStyle, headlineFontStyleFor, type VideoStyle } from "@/lib/video-style";
 import { ANGLES, GOALS } from "./AdBriefStep";
-import { AvatarPickerStep } from "./AvatarPickerStep";
+import { AvatarPickerStep, avatarAvailable } from "./AvatarPickerStep";
 import { EditVideoPanel } from "./EditVideoPanel";
 import { ProductPicker } from "./ProductPicker";
 import { PublishToTikTok } from "./PublishToTikTok";
@@ -409,15 +409,18 @@ export function AdVideoForm({
     setSelectedAvatarGender(gender);
   };
 
-  // Switching tier can hide the currently-picked avatar (Premium filters
-  // out "expressive"-named avatars, confirmed to reject it) — clear the
+  // Switching tier or video format can hide the currently-picked presenter
+  // (not every one has a Premium / vertical / landscape look) — clear the
   // stale selection rather than leaving an invisible, soon-to-fail pick
   // sitting in state.
-  const handleAvatarTierChange = (t: AvatarTier) => {
-    setAvatarTier(t);
-    setSelectedAvatarId(null);
-    setSelectedAvatarGender(null);
-  };
+  useEffect(() => {
+    if (!selectedAvatarId) return;
+    const picked = avatarOptions.find((a) => a.avatar_id === selectedAvatarId);
+    if (picked && !avatarAvailable(picked, aspectRatio, avatarTier)) {
+      setSelectedAvatarId(null);
+      setSelectedAvatarGender(null);
+    }
+  }, [selectedAvatarId, avatarOptions, aspectRatio, avatarTier]);
 
   const poll = async (operation: ApiVideoOperation) => {
     try {
@@ -1367,7 +1370,8 @@ export function AdVideoForm({
             <div className="mb-4 rounded-2xl bg-card p-3">
               <AvatarPickerStep
                 tier={avatarTier}
-                onTierChange={handleAvatarTierChange}
+                onTierChange={setAvatarTier}
+                aspectRatio={aspectRatio}
                 avatars={avatarOptions}
                 loading={avatarOptionsLoading}
                 error={avatarOptionsError}

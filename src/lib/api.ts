@@ -223,6 +223,7 @@ export interface ApiVideoStatusResponse {
   done: boolean;
   video_base64: string | null;
   credits_remaining: number | null;
+  message?: string | null; // why a finished job has no video, when the server knows (e.g. Seedance's face filter)
 }
 
 // aspectRatio determines the logo overlay's target size server-side

@@ -1145,7 +1145,7 @@ function HomeScreen() {
           setVideoPanel("result");
         }
       } else {
-        setVideoError("The video didn't come back — please try again.");
+        setVideoError(r.message || "The video didn't come back — please try again.");
         setVideoPanel("composer");
       }
     } catch (err) {

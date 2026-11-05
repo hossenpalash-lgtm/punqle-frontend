@@ -197,14 +197,11 @@ const IMAGE_MODEL_LABELS: Record<ImageGenModel, string> = {
 // yet, and the ask was for a simple picker, not an exhaustive one. min/
 // max mirror the backend's own per-model duration clamp exactly (Veo's
 // real 4-8s hard cap vs. Kling/Seedance's 3-15s).
-const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
-// `durations` are the lengths each engine offers (the backend clamps to the same limits). Omni goes
-// 4-10 s in one call, then 20 and 30 s as chained 10 s extensions; Seedance 2.5 and Kling 4.0 reach 30 s.
-const IMAGE_VIDEO_MODEL_OPTIONS: { id: ImageVideoModel; label: string; blurb: string; durations: number[] }[] = [
-  { id: "omni", label: "Gemini Omni (best)", blurb: "Smooth and steady, best value.", durations: [...range(4, 10), 20, 30] },
-  { id: "kling_3_pro", label: "Kling 3.0 Pro", blurb: "Crisp motion with its own sound.", durations: range(3, 15) },
-  { id: "kling_4", label: "Kling 4.0", blurb: "Clean cuts and a steady setting.", durations: [...range(3, 10), 15, 20, 30] },
-  { id: "seedance_2_5", label: "Seedance 2.5", blurb: "The most cinematic, lifelike look.", durations: [5, 10, 15, 30] },
+const IMAGE_VIDEO_MODEL_OPTIONS: { id: ImageVideoModel; label: string; blurb: string }[] = [
+  { id: "omni", label: "Gemini Omni", blurb: "Smooth and steady. Best value." },
+  { id: "kling_3_pro", label: "Kling 3.0 Pro", blurb: "Crisp motion, up to 15 s." },
+  { id: "kling_4", label: "Kling 4.0", blurb: "Clean cuts in one steady setting." },
+  { id: "seedance_2_5", label: "Seedance 2.5", blurb: "The most cinematic, lifelike look." },
 ];
 const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
   omni: "Gemini Omni",
@@ -213,23 +210,32 @@ const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
   seedance_2_5: "Seedance 2.5",
 };
 // Display-only estimate, mirrors the backend's own per-second credit rates — the backend always
-// computes the real charge itself, this is just so the Generate button can show a cost upfront.
+// computes the real charge itself, this is just so the cards and the Generate button can show a cost upfront.
 const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
   omni: 3.75,
-  kling_3_pro: 9, // Kling now makes its own sound here; with a spoken narration it animates silently at 6/s (see videoCreditsPerSecond)
+  kling_3_pro: 9, // Kling now makes its own sound here; with a studio voice it animates silently at 6/s (see videoCreditsPerSecond)
   kling_4: 4,
   seedance_2_5: 6,
 };
-const videoCreditsPerSecond = (model: ImageVideoModel, withNarration: boolean) =>
-  model === "kling_3_pro" && withNarration ? 6 : IMAGE_VIDEO_CREDIT_PER_SECOND[model];
-// Spoken narration goes through Talking Video (Omni up to 10 s, Kling 3.0 Pro up to 15 s); the 30 s
-// engines add their own sound and speak the lines you write in the prompt.
-const NARRATION_MAX: Partial<Record<ImageVideoModel, number>> = { omni: 10, kling_3_pro: 15 };
-const durationsFor = (opt: { id: ImageVideoModel; durations: number[] }, withNarration: boolean) =>
-  withNarration ? opt.durations.filter((d) => d <= (NARRATION_MAX[opt.id] ?? 0)) : opt.durations;
-const snapDuration = (list: number[], d: number) => [...list].reverse().find((x) => x <= d) ?? list[0];
-const stepDuration = (list: number[], d: number, dir: 1 | -1) =>
-  list[Math.min(list.length - 1, Math.max(0, list.indexOf(snapDuration(list, d)) + dir))];
+const videoCreditsPerSecond = (model: ImageVideoModel, withStudioVoice: boolean) =>
+  model === "kling_3_pro" && withStudioVoice ? 6 : IMAGE_VIDEO_CREDIT_PER_SECOND[model];
+// Three length choices per tool (the lengths the tool does best), so nobody has to pick a number of seconds.
+// Omni goes to 30 s as chained 10 s extensions; Kling 4.0 and Seedance 2.5 reach 30 s in one request.
+const VIDEO_LENGTH_CHIPS: Record<ImageVideoModel, { label: string; seconds: number }[]> = {
+  omni: [{ label: "Short", seconds: 8 }, { label: "Medium", seconds: 20 }, { label: "Long", seconds: 30 }],
+  kling_3_pro: [{ label: "Short", seconds: 5 }, { label: "Medium", seconds: 10 }, { label: "Long", seconds: 15 }],
+  kling_4: [{ label: "Short", seconds: 8 }, { label: "Medium", seconds: 15 }, { label: "Long", seconds: 30 }],
+  seedance_2_5: [{ label: "Short", seconds: 5 }, { label: "Medium", seconds: 15 }, { label: "Long", seconds: 30 }],
+};
+// "Studio voice" (a separate ElevenLabs voice, lip-synced afterwards) is the old Talking Video path:
+// Omni up to 10 s, Kling 3.0 Pro up to 15 s. The normal way to make someone speak is the
+// "What should they say?" box — every tool speaks those lines itself.
+const STUDIO_VOICE_MAX: Partial<Record<ImageVideoModel, number>> = { omni: 10, kling_3_pro: 15 };
+const lengthChipsFor = (model: ImageVideoModel, studioVoice: boolean) =>
+  studioVoice ? VIDEO_LENGTH_CHIPS[model].filter((c) => c.seconds <= (STUDIO_VOICE_MAX[model] ?? 0)) : VIDEO_LENGTH_CHIPS[model];
+// TALKING_VIDEO_REDUB_SURCHARGE is declared right below this block.
+const videoCostFor = (model: ImageVideoModel, seconds: number, studioVoice: boolean) =>
+  Math.ceil(seconds * videoCreditsPerSecond(model, studioVoice)) + (studioVoice ? 18 : 0);
 // Mirrors the backend's own TALKING_VIDEO_REDUB_SURCHARGE — display only.
 const TALKING_VIDEO_REDUB_SURCHARGE = 18;
 // Mirrors the backend's own ACTOR_VIDEO_V2_CREDIT_COST (main.py) — same
@@ -336,7 +342,7 @@ function HomeScreen() {
   const [videoPrompt, setVideoPrompt] = useState("");
   const [videoModel, setVideoModel] = useState<ImageVideoModel>("omni");
   const [videoAspectRatio, setVideoAspectRatio] = useState<VideoAspectRatio>("1:1");
-  const [videoDuration, setVideoDuration] = useState(5);
+  const [videoDuration, setVideoDuration] = useState(8);
   // Up to 3 versions from one prompt, same idea as Ad Creation's own
   // versions picker -- the first becomes homeGeneratedVideo (primary),
   // the rest land in videoVariants for a small pick-one strip.
@@ -353,6 +359,7 @@ function HomeScreen() {
   // it (reuses Punqle Actors v2's own proven pre-bake+redub mechanics).
   const [videoNarrationEnabled, setVideoNarrationEnabled] = useState(false);
   const [videoNarration, setVideoNarration] = useState("");
+  const [videoLines, setVideoLines] = useState(""); // "What should they say?" — spoken by whichever tool is picked
   const [videoVoiceGender, setVideoVoiceGender] = useState<VoiceGender>("female");
   const [videoStage, setVideoStage] = useState<"animating" | "redubbing">("animating");
   // The "Product" action — attach a separate product photo to the
@@ -822,6 +829,7 @@ function HomeScreen() {
       return;
     }
     setVideoPrompt("");
+    setVideoLines("");
     setVideoModel("omni");
     setVideoAspectRatio("1:1");
     setVideoDuration(8);
@@ -870,14 +878,18 @@ function HomeScreen() {
   };
 
   const handleVideoModelChange = (m: ImageVideoModel) => {
+    // Switching tool keeps the same slot (Short / Medium / Long) rather than a number of seconds.
+    const slot = Math.max(0, VIDEO_LENGTH_CHIPS[videoModel].findIndex((c) => c.seconds === videoDuration));
+    const chips = lengthChipsFor(m, videoNarrationEnabled);
     setVideoModel(m);
-    const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === m);
-    if (opt) setVideoDuration((d) => snapDuration(durationsFor(opt, videoNarrationEnabled), d));
+    setVideoDuration((chips[Math.min(slot, chips.length - 1)] ?? chips[0]).seconds);
   };
-  const videoOption = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === videoModel) ?? IMAGE_VIDEO_MODEL_OPTIONS[0];
-  const videoDurationOptions = durationsFor(videoOption, videoNarrationEnabled);
+  const videoChips = lengthChipsFor(videoModel, videoNarrationEnabled);
   // Over 10 s a video costs real money and takes ~5 minutes, so it is always a single version.
   const effectiveVideoVersions = videoDuration > 10 ? 1 : videoVersions;
+  // The spoken lines go into the prompt in quotes, which is how every tool is told what to say.
+  const videoLinesClean = videoLines.trim().replace(/"/g, "'");
+  const videoFullPrompt = videoPrompt.trim() + (videoLinesClean ? ` The person says: "${videoLinesClean}"` : "");
 
   const handleProductFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProductFile(e.target.files?.[0] || null);
@@ -1205,7 +1217,7 @@ function HomeScreen() {
       const r = await generateImageVideo(
         videoRefImage.base64,
         videoRefImage.mimeType,
-        videoPrompt.trim(),
+        videoFullPrompt,
         videoModel,
         videoDuration,
         videoAspectRatio,
@@ -2156,38 +2168,57 @@ function HomeScreen() {
                     </div>
 
                     {!videoNarrationEnabled && (
-                      <textarea
-                        value={videoPrompt}
-                        onChange={(e) => setVideoPrompt(e.target.value)}
-                        placeholder="Describe the motion… (e.g. she walks towards the camera, notices near the end, and does a pose)"
-                        rows={2}
-                        className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-                      />
+                      <>
+                        <textarea
+                          value={videoPrompt}
+                          onChange={(e) => setVideoPrompt(e.target.value)}
+                          placeholder="Describe your ad: who is in it and what happens… (e.g. a woman with dry hair tries a new shampoo, rinses, and her hair looks smooth and shiny)"
+                          rows={3}
+                          className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                        />
+                        <div>
+                          <textarea
+                            value={videoLines}
+                            onChange={(e) => setVideoLines(e.target.value)}
+                            placeholder='What should they say? (optional) e.g. "My hair has been so dry lately. Two weeks in, and look at it."'
+                            rows={2}
+                            className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                          />
+                          <p className="mt-1 text-[12px] text-muted-foreground">
+                            Leave empty for no speech. Keep it short — about 2–3 words per second. English works best.
+                          </p>
+                        </div>
+                      </>
                     )}
 
                     <div>
-                      <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Model</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {IMAGE_VIDEO_MODEL_OPTIONS.filter((m) => !videoNarrationEnabled || NARRATION_MAX[m.id] !== undefined).map((m) => (
-                          <button
-                            key={m.id}
-                            onClick={() => handleVideoModelChange(m.id)}
-                            className={[
-                              "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
-                              videoModel === m.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                            ].join(" ")}
-                          >
-                            {videoModel === m.id && <Check className="h-3 w-3" />}
-                            {m.label}
-                          </button>
-                        ))}
+                      <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Tool</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {IMAGE_VIDEO_MODEL_OPTIONS.filter((m) => !videoNarrationEnabled || STUDIO_VOICE_MAX[m.id] !== undefined).map((m) => {
+                          const selected = videoModel === m.id;
+                          return (
+                            <button
+                              key={m.id}
+                              onClick={() => handleVideoModelChange(m.id)}
+                              className={[
+                                "rounded-2xl px-3 py-2.5 text-left transition-colors",
+                                selected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                              ].join(" ")}
+                            >
+                              <span className="flex items-center gap-1 text-sm font-semibold">
+                                {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
+                                {m.label}
+                              </span>
+                              <span className={["mt-0.5 block text-[11px]", selected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}>
+                                {m.blurb}
+                              </span>
+                              <span className="mt-1 block text-[11px] font-semibold">
+                                from {videoCostFor(m.id, lengthChipsFor(m.id, videoNarrationEnabled)[0].seconds, videoNarrationEnabled)} credits
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
-                      {!videoNarrationEnabled && (
-                        <p className="mt-1.5 text-xs text-muted-foreground">
-                          {videoOption.blurb} Up to {Math.max(...videoOption.durations)} s · {IMAGE_VIDEO_CREDIT_PER_SECOND[videoModel]} credits/s · sound included.
-                          {videoDuration > 10 ? " Videos over 10 s are 720p and take about 5 minutes." : ""}
-                        </p>
-                      )}
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -2208,23 +2239,33 @@ function HomeScreen() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-muted-foreground">Length</p>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setVideoDuration((d) => stepDuration(videoDurationOptions, d, -1))}
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
-                        >
-                          −
-                        </button>
-                        <span className="w-10 text-center text-sm font-semibold text-foreground">{videoDuration}s</span>
-                        <button
-                          onClick={() => setVideoDuration((d) => stepDuration(videoDurationOptions, d, 1))}
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
-                        >
-                          +
-                        </button>
+                    <div>
+                      <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Length</p>
+                      <div className={["grid gap-2", videoChips.length === 3 ? "grid-cols-3" : videoChips.length === 2 ? "grid-cols-2" : "grid-cols-1"].join(" ")}>
+                        {videoChips.map((c) => {
+                          const selected = videoDuration === c.seconds;
+                          return (
+                            <button
+                              key={c.seconds}
+                              onClick={() => setVideoDuration(c.seconds)}
+                              className={[
+                                "rounded-2xl px-3 py-2 text-center transition-colors",
+                                selected ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                              ].join(" ")}
+                            >
+                              <span className="block text-xs font-semibold">
+                                {c.label} · {c.seconds} s
+                              </span>
+                              <span className={["block text-[11px]", selected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}>
+                                {videoCostFor(videoModel, c.seconds, videoNarrationEnabled)} credits
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
+                      {videoDuration > 10 && (
+                        <p className="mt-1.5 text-xs text-muted-foreground">Videos over 10 s are 720p and take about 5 minutes.</p>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -2248,55 +2289,59 @@ function HomeScreen() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between border-t border-border pt-3">
-                      <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                        <input
-                          type="checkbox"
-                          checked={videoNarrationEnabled}
-                          onChange={(e) => {
-                            const on = e.target.checked;
-                            setVideoNarrationEnabled(on);
-                            if (on) {
-                              const m = NARRATION_MAX[videoModel] !== undefined ? videoModel : "omni";
-                              setVideoModel(m);
-                              const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === m)!;
-                              setVideoDuration((d) => snapDuration(durationsFor(opt, true), d));
-                            }
-                          }}
-                          className="h-4 w-4"
-                        />
-                        Add spoken narration
-                      </label>
-                    </div>
-
-                    {videoNarrationEnabled && (
-                      <div className="space-y-2 rounded-xl bg-secondary/50 p-3">
-                        <textarea
-                          value={videoNarration}
-                          onChange={(e) => setVideoNarration(e.target.value)}
-                          placeholder="What should they say?… (e.g. This bottle is very durable and keeps your drink cold all day.)"
-                          rows={2}
-                          className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-                        />
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-semibold text-muted-foreground">Voice</p>
-                          <div className="flex gap-1.5">
-                            {(["female", "male"] as const).map((g) => (
-                              <button
-                                key={g}
-                                onClick={() => setVideoVoiceGender(g)}
-                                className={[
-                                  "rounded-full px-3 py-1.5 text-xs font-semibold capitalize",
-                                  videoVoiceGender === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                                ].join(" ")}
-                              >
-                                {g}
-                              </button>
-                            ))}
+                    <details className="border-t border-border pt-3">
+                      <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
+                        Advanced: studio voice (a separate recorded voice, lip-synced)
+                      </summary>
+                      <div className="mt-2 space-y-2">
+                        <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                          <input
+                            type="checkbox"
+                            checked={videoNarrationEnabled}
+                            onChange={(e) => {
+                              const on = e.target.checked;
+                              setVideoNarrationEnabled(on);
+                              if (on) {
+                                const m = STUDIO_VOICE_MAX[videoModel] !== undefined ? videoModel : "omni";
+                                setVideoModel(m);
+                                const chips = lengthChipsFor(m, true);
+                                setVideoDuration((d) => (chips.some((c) => c.seconds === d) ? d : chips[0].seconds));
+                              }
+                            }}
+                            className="h-4 w-4"
+                          />
+                          Use a studio voice instead (Omni and Kling 3.0 Pro, up to {STUDIO_VOICE_MAX.omni}–{STUDIO_VOICE_MAX.kling_3_pro} s, +18 credits)
+                        </label>
+                        {videoNarrationEnabled && (
+                          <div className="space-y-2 rounded-xl bg-secondary/50 p-3">
+                            <textarea
+                              value={videoNarration}
+                              onChange={(e) => setVideoNarration(e.target.value)}
+                              placeholder="What should they say?… (e.g. This bottle is very durable and keeps your drink cold all day.)"
+                              rows={2}
+                              className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                            />
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs font-semibold text-muted-foreground">Voice</p>
+                              <div className="flex gap-1.5">
+                                {(["female", "male"] as const).map((g) => (
+                                  <button
+                                    key={g}
+                                    onClick={() => setVideoVoiceGender(g)}
+                                    className={[
+                                      "rounded-full px-3 py-1.5 text-xs font-semibold capitalize",
+                                      videoVoiceGender === g ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                                    ].join(" ")}
+                                  >
+                                    {g}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
-                    )}
+                    </details>
 
                     <div className="flex items-center justify-between gap-2 pt-1">
                       <button
@@ -2314,7 +2359,7 @@ function HomeScreen() {
                         className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
                         style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                       >
-                        Generate ({(Math.ceil(videoDuration * videoCreditsPerSecond(videoModel, videoNarrationEnabled)) + (videoNarrationEnabled ? TALKING_VIDEO_REDUB_SURCHARGE : 0)) * effectiveVideoVersions} credits)
+                        Generate ({videoCostFor(videoModel, videoDuration, videoNarrationEnabled) * effectiveVideoVersions} credits)
                       </button>
                     </div>
                   </div>

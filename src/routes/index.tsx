@@ -197,23 +197,39 @@ const IMAGE_MODEL_LABELS: Record<ImageGenModel, string> = {
 // yet, and the ask was for a simple picker, not an exhaustive one. min/
 // max mirror the backend's own per-model duration clamp exactly (Veo's
 // real 4-8s hard cap vs. Kling/Seedance's 3-15s).
-const IMAGE_VIDEO_MODEL_OPTIONS: { id: ImageVideoModel; label: string; min: number; max: number }[] = [
-  { id: "omni", label: "Gemini Omni (best)", min: 4, max: 10 },
-  { id: "kling_3_pro", label: "Kling 3.0 Pro", min: 3, max: 15 },
+const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
+// `durations` are the lengths each engine offers (the backend clamps to the same limits). Omni goes
+// 4-10 s in one call, then 20 and 30 s as chained 10 s extensions; Seedance 2.5 and Kling 4.0 reach 30 s.
+const IMAGE_VIDEO_MODEL_OPTIONS: { id: ImageVideoModel; label: string; blurb: string; durations: number[] }[] = [
+  { id: "omni", label: "Gemini Omni (best)", blurb: "Smooth and steady, best value.", durations: [...range(4, 10), 20, 30] },
+  { id: "kling_3_pro", label: "Kling 3.0 Pro", blurb: "Crisp motion with its own sound.", durations: range(3, 15) },
+  { id: "kling_4", label: "Kling 4.0", blurb: "Clean cuts and a steady setting.", durations: [...range(3, 10), 15, 20, 30] },
+  { id: "seedance_2_5", label: "Seedance 2.5", blurb: "The most cinematic, lifelike look.", durations: [5, 10, 15, 30] },
 ];
 const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
   omni: "Gemini Omni",
   kling_3_pro: "Kling 3.0 Pro",
+  kling_4: "Kling 4.0",
+  seedance_2_5: "Seedance 2.5",
 };
-// Display-only estimate, mirrors the backend's own provisional per-
-// second credit rates — the backend always computes the real charge
-// itself, this is just so the Generate button can show a cost upfront.
+// Display-only estimate, mirrors the backend's own per-second credit rates — the backend always
+// computes the real charge itself, this is just so the Generate button can show a cost upfront.
 const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
   omni: 3.75,
   kling_3_pro: 9, // Kling now makes its own sound here; with a spoken narration it animates silently at 6/s (see videoCreditsPerSecond)
+  kling_4: 4,
+  seedance_2_5: 6,
 };
 const videoCreditsPerSecond = (model: ImageVideoModel, withNarration: boolean) =>
   model === "kling_3_pro" && withNarration ? 6 : IMAGE_VIDEO_CREDIT_PER_SECOND[model];
+// Spoken narration goes through Talking Video (Omni up to 10 s, Kling 3.0 Pro up to 15 s); the 30 s
+// engines add their own sound and speak the lines you write in the prompt.
+const NARRATION_MAX: Partial<Record<ImageVideoModel, number>> = { omni: 10, kling_3_pro: 15 };
+const durationsFor = (opt: { id: ImageVideoModel; durations: number[] }, withNarration: boolean) =>
+  withNarration ? opt.durations.filter((d) => d <= (NARRATION_MAX[opt.id] ?? 0)) : opt.durations;
+const snapDuration = (list: number[], d: number) => [...list].reverse().find((x) => x <= d) ?? list[0];
+const stepDuration = (list: number[], d: number, dir: 1 | -1) =>
+  list[Math.min(list.length - 1, Math.max(0, list.indexOf(snapDuration(list, d)) + dir))];
 // Mirrors the backend's own TALKING_VIDEO_REDUB_SURCHARGE — display only.
 const TALKING_VIDEO_REDUB_SURCHARGE = 18;
 // Mirrors the backend's own ACTOR_VIDEO_V2_CREDIT_COST (main.py) — same
@@ -856,8 +872,12 @@ function HomeScreen() {
   const handleVideoModelChange = (m: ImageVideoModel) => {
     setVideoModel(m);
     const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === m);
-    if (opt) setVideoDuration((d) => Math.min(opt.max, Math.max(opt.min, d)));
+    if (opt) setVideoDuration((d) => snapDuration(durationsFor(opt, videoNarrationEnabled), d));
   };
+  const videoOption = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === videoModel) ?? IMAGE_VIDEO_MODEL_OPTIONS[0];
+  const videoDurationOptions = durationsFor(videoOption, videoNarrationEnabled);
+  // Over 10 s a video costs real money and takes ~5 minutes, so it is always a single version.
+  const effectiveVideoVersions = videoDuration > 10 ? 1 : videoVersions;
 
   const handleProductFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProductFile(e.target.files?.[0] || null);
@@ -1092,6 +1112,7 @@ function HomeScreen() {
     operation: ApiVideoOperation | null,
     versionIndex: number = 1,
     totalVersions: number = 1,
+    errorsInARow: number = 0,
   ) => {
     try {
       const r = await checkImageVideoStatus(jobId, operation);
@@ -1116,6 +1137,10 @@ function HomeScreen() {
         setVideoPanel("composer");
       }
     } catch (err) {
+      if (errorsInARow < 3) {
+        videoPollRef.current = setTimeout(() => pollImageVideo(jobId, operation, versionIndex, totalVersions, errorsInARow + 1), 8000);
+        return;
+      }
       setVideoError(err instanceof Error ? err.message : "Couldn't check the video's status.");
       setVideoPanel("composer");
     }
@@ -1198,7 +1223,7 @@ function HomeScreen() {
     setVideoError(null);
     setVideoVariants([]);
     setVideoPanel("generating");
-    await startVideoVersion(1, videoVersions);
+    await startVideoVersion(1, effectiveVideoVersions);
   };
 
   const handleSelectVideoVariant = (index: number) => {
@@ -2107,7 +2132,9 @@ function HomeScreen() {
                         ? videoStage === "animating"
                           ? "Animating your video…"
                           : "Adding the voice…"
-                        : "Generating your video… this can take a minute or two."
+                        : videoDuration > 10
+                          ? `Making your ${videoDuration}-second video… this takes about 5 minutes. You can keep this page open.`
+                          : "Generating your video… this can take a minute or two."
                     }
                   />
                 ) : (
@@ -2141,7 +2168,7 @@ function HomeScreen() {
                     <div>
                       <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Model</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {IMAGE_VIDEO_MODEL_OPTIONS.map((m) => (
+                        {IMAGE_VIDEO_MODEL_OPTIONS.filter((m) => !videoNarrationEnabled || NARRATION_MAX[m.id] !== undefined).map((m) => (
                           <button
                             key={m.id}
                             onClick={() => handleVideoModelChange(m.id)}
@@ -2157,7 +2184,8 @@ function HomeScreen() {
                       </div>
                       {!videoNarrationEnabled && (
                         <p className="mt-1.5 text-xs text-muted-foreground">
-                          Both add their own sound. Omni: up to 10 s, {IMAGE_VIDEO_CREDIT_PER_SECOND.omni} credits/s. Kling: up to 15 s, {IMAGE_VIDEO_CREDIT_PER_SECOND.kling_3_pro} credits/s.
+                          {videoOption.blurb} Up to {Math.max(...videoOption.durations)} s · {IMAGE_VIDEO_CREDIT_PER_SECOND[videoModel]} credits/s · sound included.
+                          {videoDuration > 10 ? " Videos over 10 s are 720p and take about 5 minutes." : ""}
                         </p>
                       )}
                     </div>
@@ -2184,20 +2212,14 @@ function HomeScreen() {
                       <p className="text-xs font-semibold text-muted-foreground">Length</p>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => {
-                            const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === videoModel)!;
-                            setVideoDuration((d) => Math.max(opt.min, d - 1));
-                          }}
+                          onClick={() => setVideoDuration((d) => stepDuration(videoDurationOptions, d, -1))}
                           className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
                         >
                           −
                         </button>
                         <span className="w-10 text-center text-sm font-semibold text-foreground">{videoDuration}s</span>
                         <button
-                          onClick={() => {
-                            const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === videoModel)!;
-                            setVideoDuration((d) => Math.min(opt.max, d + 1));
-                          }}
+                          onClick={() => setVideoDuration((d) => stepDuration(videoDurationOptions, d, 1))}
                           className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
                         >
                           +
@@ -2209,13 +2231,15 @@ function HomeScreen() {
                       <p className="text-xs font-semibold text-muted-foreground">Versions</p>
                       <div className="flex items-center gap-2">
                         <button
+                          disabled={videoDuration > 10}
                           onClick={() => setVideoVersions((v) => (v > 1 ? ((v - 1) as 1 | 2 | 3) : v))}
                           className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
                         >
                           −
                         </button>
-                        <span className="w-10 text-center text-sm font-semibold text-foreground">{videoVersions}</span>
+                        <span className="w-10 text-center text-sm font-semibold text-foreground">{effectiveVideoVersions}</span>
                         <button
+                          disabled={videoDuration > 10}
                           onClick={() => setVideoVersions((v) => (v < 3 ? ((v + 1) as 1 | 2 | 3) : v))}
                           className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
                         >
@@ -2229,7 +2253,16 @@ function HomeScreen() {
                         <input
                           type="checkbox"
                           checked={videoNarrationEnabled}
-                          onChange={(e) => setVideoNarrationEnabled(e.target.checked)}
+                          onChange={(e) => {
+                            const on = e.target.checked;
+                            setVideoNarrationEnabled(on);
+                            if (on) {
+                              const m = NARRATION_MAX[videoModel] !== undefined ? videoModel : "omni";
+                              setVideoModel(m);
+                              const opt = IMAGE_VIDEO_MODEL_OPTIONS.find((o) => o.id === m)!;
+                              setVideoDuration((d) => snapDuration(durationsFor(opt, true), d));
+                            }
+                          }}
                           className="h-4 w-4"
                         />
                         Add spoken narration
@@ -2281,7 +2314,7 @@ function HomeScreen() {
                         className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
                         style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                       >
-                        Generate ({(Math.ceil(videoDuration * videoCreditsPerSecond(videoModel, videoNarrationEnabled)) + (videoNarrationEnabled ? TALKING_VIDEO_REDUB_SURCHARGE : 0)) * videoVersions} credits)
+                        Generate ({(Math.ceil(videoDuration * videoCreditsPerSecond(videoModel, videoNarrationEnabled)) + (videoNarrationEnabled ? TALKING_VIDEO_REDUB_SURCHARGE : 0)) * effectiveVideoVersions} credits)
                       </button>
                     </div>
                   </div>

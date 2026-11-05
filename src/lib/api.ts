@@ -822,7 +822,7 @@ export function generateImageDirect(
 // reference + pick a model + pick a length + generate), matching a real
 // competitor's own simplest tool. Only 3 real, working models are
 // offered — see ImageVideoModel.
-export type ImageVideoModel = "omni" | "kling_3_pro"; // Veo retired 2026-10-22; Gemini Omni (1080p, sound included) is the default engine
+export type ImageVideoModel = "omni" | "kling_3_pro" | "kling_4" | "seedance_2_5"; // Veo retired 2026-10-22; Gemini Omni is the default; Kling 4.0 / Seedance 2.5 / Omni reach 30 s
 
 export interface ApiImageVideoStartResponse {
   job_id: string;

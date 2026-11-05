@@ -2000,9 +2000,11 @@ function HomeScreen() {
                           />
                           Add emotions — AI adds natural delivery cues before generating
                         </label>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Audio settings
-                        </p>
+                        <details className="group">
+                        <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Audio settings <span className="font-normal normal-case tracking-normal">(optional: speed, stability…)</span>
+                        </summary>
+                        <div className="mt-3 space-y-4">
                         {[
                           { label: "Speed", value: elevenlabsSpeed, set: setElevenlabsSpeed, min: 0.5, max: 1.5 },
                           { label: "Stability", value: elevenlabsStability, set: setElevenlabsStability, min: 0, max: 1 },
@@ -2025,6 +2027,8 @@ function HomeScreen() {
                             />
                           </div>
                         ))}
+                        </div>
+                        </details>
                       </div>
                     )}
 

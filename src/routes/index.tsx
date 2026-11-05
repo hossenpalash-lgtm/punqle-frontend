@@ -511,7 +511,7 @@ function HomeScreen() {
   // which reuses this same actor catalog as a "pick an actor" option
   // (matches Arcads' own "Presets" picker on their Product tab).
   useEffect(() => {
-    if (homeMode !== "talking_actors" && homeMode !== "product") return;
+    if (homeMode !== "talking_actors" && homeMode !== "product" && homeMode !== "video") return;
     if (actors.length === 0 && !actorsLoading) {
       setActorsLoading(true);
       fetchImageActors()
@@ -857,6 +857,17 @@ function HomeScreen() {
   // Skips AI image generation entirely — pick your own photo from your
   // computer and go straight to the Video composer with it as the
   // reference. No credits spent until an actual video is generated.
+  const startVideoFromImage = (base64: string, mimeType: string, aspect: VideoAspectRatio) => {
+    setVideoRefImage({ mimeType, base64 });
+    setVideoPrompt("");
+    setVideoLines("");
+    setVideoModel("omni");
+    setVideoAspectRatio(aspect);
+    setVideoDuration(8);
+    setVideoError(null);
+    setVideoPanel("composer");
+  };
+
   const handleUploadOwnImageForVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -866,16 +877,13 @@ function HomeScreen() {
       const result = reader.result as string;
       const match = result.match(/^data:(.*?);base64,(.*)$/);
       if (!match) return;
-      setVideoRefImage({ mimeType: match[1], base64: match[2] });
-      setVideoPrompt("");
-      setVideoModel("omni");
-      setVideoAspectRatio("1:1");
-      setVideoDuration(8);
-      setVideoError(null);
-      setVideoPanel("composer");
+      startVideoFromImage(match[2], match[1], "1:1");
     };
     reader.readAsDataURL(file);
   };
+
+  // One of Punqle's own AI actors as the first frame — fully synthetic people, free to use in any ad.
+  const handlePickActorForVideo = (previewImageBase64: string) => startVideoFromImage(previewImageBase64, "image/jpeg", "9:16");
 
   const handleVideoModelChange = (m: ImageVideoModel) => {
     // Switching tool keeps the same slot (Short / Medium / Long) rather than a number of seconds.
@@ -2136,6 +2144,28 @@ function HomeScreen() {
                       Upload a photo
                       <input type="file" accept="image/*" className="hidden" onChange={handleUploadOwnImageForVideo} />
                     </label>
+                    {actors.length > 0 && (
+                      <div className="mt-2 w-full border-t border-border pt-4 text-left">
+                        <p className="mb-2 text-xs font-semibold text-muted-foreground">Or start from a Punqle actor</p>
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                          {actors.map((a) => (
+                            <button
+                              key={a.id}
+                              onClick={() => handlePickActorForVideo(a.preview_image_base64)}
+                              title={a.name}
+                              className="shrink-0 text-center"
+                            >
+                              <img
+                                src={`data:image/jpeg;base64,${a.preview_image_base64}`}
+                                alt={a.name}
+                                className="h-24 w-[72px] rounded-xl object-cover"
+                              />
+                              <span className="mt-1 block max-w-[72px] truncate text-[11px] font-semibold text-foreground">{a.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : videoPanel === "generating" ? (
                   <GeneratingGlow

@@ -213,12 +213,12 @@ const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
 // computes the real charge itself, this is just so the cards and the Generate button can show a cost upfront.
 const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
   omni: 3.75,
-  kling_3_pro: 9, // Kling now makes its own sound here; with a studio voice it animates silently at 6/s (see videoCreditsPerSecond)
+  kling_3_pro: 5, // Kling now makes its own sound here; with a studio voice it animates silently at 4/s (see videoCreditsPerSecond)
   kling_4: 4,
   seedance_2_5: 6,
 };
 const videoCreditsPerSecond = (model: ImageVideoModel, withStudioVoice: boolean) =>
-  model === "kling_3_pro" && withStudioVoice ? 6 : IMAGE_VIDEO_CREDIT_PER_SECOND[model];
+  model === "kling_3_pro" && withStudioVoice ? 4 : IMAGE_VIDEO_CREDIT_PER_SECOND[model];
 // Three length choices per tool (the lengths the tool does best), so nobody has to pick a number of seconds.
 // Omni goes to 30 s as chained 10 s extensions; Kling 4.0 and Seedance 2.5 reach 30 s in one request.
 const VIDEO_LENGTH_CHIPS: Record<ImageVideoModel, { label: string; seconds: number }[]> = {

@@ -72,7 +72,7 @@ type UnlockAction = NonNullable<ApiPerformancePost["metrics_action"]>;
 // else unless the page was opened with #insights-preview.
 //   Instagram  instagram_manage_insights — approved 2026-10-11
 //   Facebook   read_insights + pages_read_user_content — requested 2026-10-12
-//   YouTube    yt-analytics.readonly     — Google verification requested 2026-10-12
+//   YouTube    yt-analytics.readonly     — non-sensitive scope, no verification needed (live 2026-11-05)
 //   TikTok     video.list                — TikTok revision requested 2026-10-12
 const UNLOCKS: Record<UnlockAction, { title: string; body: string; button: string; approved: boolean; start: () => Promise<{ authorize_url: string }> }> = {
   unlock_instagram_insights: {
@@ -93,7 +93,7 @@ const UNLOCKS: Record<UnlockAction, { title: string; body: string; button: strin
     title: "See watch time, retention and impressions for your YouTube videos",
     body: "Views, likes and comments already show. Reconnect YouTube once to also see how long people watch and how often your thumbnail was shown.",
     button: "Reconnect YouTube",
-    approved: false,
+    approved: true,
     start: () => getYouTubeConnectUrl(true),
   },
   unlock_tiktok_stats: {

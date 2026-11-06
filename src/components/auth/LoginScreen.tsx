@@ -123,7 +123,7 @@ export function LoginScreen() {
       <div className="relative z-10 mt-6 flex w-full max-w-[820px] flex-col items-center gap-4 text-center">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
           <Sparkles className="h-3 w-3" />
-          AI ads for small businesses
+          AI ads for every business
         </span>
         <h1 className="text-balance font-display text-[34px] font-extrabold leading-[1.05] sm:text-[52px]">
           Ads that don't look <span className="italic text-accent">AI-made.</span>

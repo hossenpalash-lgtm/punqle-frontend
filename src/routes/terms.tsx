@@ -19,7 +19,7 @@ function TermsPage() {
 
       <h2>1. The Service</h2>
       <p>
-        Punqle helps small businesses generate ad copy, images, video, and content plans using AI, based on
+        Punqle helps businesses generate ad copy, images, video, and content plans using AI, based on
         information you provide (such as product descriptions and photos). You can also import products from a
         connected Shopify store and manage a simple credit-based billing plan.
       </p>

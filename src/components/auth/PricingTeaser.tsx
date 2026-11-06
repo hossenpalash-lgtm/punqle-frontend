@@ -15,7 +15,7 @@ export function PricingTeaser() {
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-3.5 text-center">
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-accent">
           <BadgeDollarSign className="h-3.5 w-3.5" />
-          Priced for small business, not enterprise
+          Simple pricing for every business
         </span>
         <h2 className="font-display text-3xl font-extrabold sm:text-4xl">Start from $5.99 a month.</h2>
       </div>

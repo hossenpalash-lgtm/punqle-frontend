@@ -358,12 +358,12 @@ function HomeScreen() {
   // animates the image, then Sync Labs-redubs real TTS narration onto
   // it (reuses Punqle Actors v2's own proven pre-bake+redub mechanics).
   const [videoNarrationEnabled, setVideoNarrationEnabled] = useState(false);
-  // "Punqle Enhancer": on by default; the choice is remembered in this browser (best effort)
-  const [videoEnhance, setVideoEnhanceState] = useState(true);
+  // "Punqle Enhancer": opt-in, off by default (the engines keep their own natural motion); the choice is remembered in this browser (best effort)
+  const [videoEnhance, setVideoEnhanceState] = useState(false);
   useEffect(() => {
     try {
-      if (window.localStorage.getItem("punqle_video_enhancer") === "off") setVideoEnhanceState(false);
-    } catch { /* storage can be blocked; the default (on) is fine */ }
+      if (window.localStorage.getItem("punqle_video_enhancer") === "on") setVideoEnhanceState(true);
+    } catch { /* storage can be blocked; the default (off) is fine */ }
   }, []);
   const setVideoEnhance = (on: boolean) => {
     setVideoEnhanceState(on);
@@ -2339,7 +2339,7 @@ function HomeScreen() {
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground">Punqle Enhancer</p>
-                          <p className="text-[11px] text-muted-foreground">People look like real phone footage</p>
+                          <p className="text-[11px] text-muted-foreground">Real phone look for people, cleaner product shots</p>
                         </div>
                         <button
                           type="button"

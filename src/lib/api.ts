@@ -837,7 +837,7 @@ export function generateImageVideo(
   model: ImageVideoModel,
   durationSeconds: number,
   aspectRatio: VideoAspectRatio = "9:16",
-  enhance: boolean = true, // "Punqle Enhancer": real-phone look for videos with people
+  enhance: boolean = false, // "Punqle Enhancer" (opt-in): real-phone look for people, cleaner product shots
 ): Promise<ApiImageVideoStartResponse> {
   return apiFetch<ApiImageVideoStartResponse>("/ads/generate-image-video", {
     method: "POST",

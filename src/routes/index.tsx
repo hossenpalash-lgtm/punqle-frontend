@@ -40,6 +40,7 @@ import {
   checkActorVideoV2Status,
   checkAiActorVideoStatus,
   checkImageVideoStatus,
+  fetchRecentVideos,
   checkTalkingVideoStatus,
   checkVideoUpscaleStatus,
   combineActorAndAppScreenshot,
@@ -87,6 +88,7 @@ import { WeeklyPlanForm } from "@/components/ads/WeeklyPlanForm";
 import { ImageChoiceCard } from "@/components/ads/ImageChoiceCard";
 import { GeneratingGlow } from "@/components/GeneratingGlow";
 import { COMPARE_CHIPS, COMPARE_MODELS, VideoCompare, startCompareJobs } from "@/components/ads/VideoCompare";
+import { RecentVideos } from "@/components/ads/RecentVideos";
 import type { CompareJob } from "@/components/ads/VideoCompare";
 
 type Tab = "home" | "single" | "plan" | "calendar" | "performance" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative" | "tryon";
@@ -360,13 +362,25 @@ function HomeScreen() {
   // animates the image, then Sync Labs-redubs real TTS narration onto
   // it (reuses Punqle Actors v2's own proven pre-bake+redub mechanics).
   const [videoNarrationEnabled, setVideoNarrationEnabled] = useState(false);
+  // Finished videos are kept for 14 days when the server has saving switched on ("Recent videos"); then leaving the page is safe.
+  const [recentSaved, setRecentSaved] = useState(false);
+  const [recentCount, setRecentCount] = useState(0);
+  const [showRecent, setShowRecent] = useState(false);
+  useEffect(() => {
+    if (homeMode !== "video") return;
+    let cancelled = false;
+    fetchRecentVideos()
+      .then((r) => { if (!cancelled) { setRecentSaved(r.available); setRecentCount(r.videos.length); } })
+      .catch(() => { /* best effort: without it the page simply asks the user to stay */ });
+    return () => { cancelled = true; };
+  }, [homeMode, videoPanel]);
   // While a video is being made the page must stay open (it is what collects the finished video); ask the browser to warn before a refresh or tab close.
   useEffect(() => {
-    if (videoPanel !== "generating") return;
+    if (videoPanel !== "generating" || recentSaved) return;
     const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [videoPanel]);
+  }, [videoPanel, recentSaved]);
   // "Compare all": same photo + words in three tools at once (see components/ads/VideoCompare.tsx)
   const [videoCompare, setVideoCompare] = useState(false);
   const [compareJobs, setCompareJobs] = useState<CompareJob[] | null>(null);
@@ -2187,6 +2201,8 @@ function HomeScreen() {
                       </div>
                     </div>
                   </>
+                ) : !videoRefImage && showRecent ? (
+                  <RecentVideos onClose={() => setShowRecent(false)} />
                 ) : !videoRefImage ? (
                   <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
                     <Video className="h-8 w-8 text-muted-foreground" />
@@ -2196,6 +2212,11 @@ function HomeScreen() {
                       Upload a photo
                       <input type="file" accept="image/*" className="hidden" onChange={handleUploadOwnImageForVideo} />
                     </label>
+                    {recentSaved && recentCount > 0 && (
+                      <button onClick={() => setShowRecent(true)} className="text-xs font-semibold text-muted-foreground underline underline-offset-2">
+                        Recent videos ({recentCount})
+                      </button>
+                    )}
                     {actors.length > 0 && (
                       <div className="mt-2 w-full border-t border-border pt-4 text-left">
                         <p className="mb-2 text-xs font-semibold text-muted-foreground">Or start from a Punqle actor</p>
@@ -2223,6 +2244,7 @@ function HomeScreen() {
                   <VideoCompare
                     jobs={compareJobs}
                     starting={compareStarting}
+                    saved={recentSaved}
                     aspect={videoAspectRatio}
                     seconds={videoDuration}
                     onCredits={setCredits}
@@ -2246,8 +2268,8 @@ function HomeScreen() {
                           ? "Animating your video…"
                           : "Adding the voice…"
                         : videoDuration > 10
-                          ? `Making your ${videoDuration}-second video… keep this page open until it is ready.`
-                          : "Generating your video… keep this page open until it is ready."
+                          ? `Making your ${videoDuration}-second video… ${recentSaved ? "if you leave, it will be waiting in Recent videos." : "keep this page open until it is ready."}`
+                          : `Generating your video… ${recentSaved ? "if you leave, it will be waiting in Recent videos." : "keep this page open until it is ready."}`
                     }
                   />
                 ) : (

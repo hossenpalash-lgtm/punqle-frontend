@@ -293,6 +293,13 @@ export interface ApiImageActorsResponse {
   actors: ApiImageActor[];
 }
 
+export interface ApiRecentVideo { id: string; model: string; duration_seconds: number; created_at: string; url: string }
+export interface ApiRecentVideos { available: boolean; videos: ApiRecentVideo[] }
+// The user's videos from the last 14 days (links valid for an hour); available=false until the server has saving switched on.
+export function fetchRecentVideos(): Promise<ApiRecentVideos> {
+  return apiFetch<ApiRecentVideos>("/ads/recent-videos");
+}
+
 export function fetchImageActors(): Promise<ApiImageActorsResponse> {
   return apiFetch<ApiImageActorsResponse>("/ads/image-actors");
 }

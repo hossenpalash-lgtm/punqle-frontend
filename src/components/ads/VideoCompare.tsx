@@ -42,6 +42,7 @@ type CardState = { status: "making" | "done" | "failed"; video?: string; message
 export function VideoCompare({
   jobs,
   starting,
+  saved,
   aspect,
   seconds,
   onCredits,
@@ -50,6 +51,7 @@ export function VideoCompare({
 }: {
   jobs: CompareJob[] | null;
   starting: boolean;
+  saved: boolean; // true when finished videos are kept in "Recent videos", so leaving the page is safe
   aspect: VideoAspectRatio;
   seconds: number;
   onCredits: (n: number) => void;
@@ -106,11 +108,11 @@ export function VideoCompare({
 
   // The page is what collects the finished videos, so warn before a refresh or tab close while any is still being made.
   useEffect(() => {
-    if (allSettled || !jobs) return;
+    if (allSettled || !jobs || saved) return;
     const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [allSettled, jobs]);
+  }, [allSettled, jobs, saved]);
 
   return (
     <div className="space-y-3 px-4 py-3">
@@ -157,7 +159,11 @@ export function VideoCompare({
         <button onClick={onBack} className="rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground">
           {allSettled ? "Back" : "Leave"}
         </button>
-        {!allSettled && <p className="text-[11px] text-muted-foreground">Keep this page open until they are ready.</p>}
+        {!allSettled && (
+          <p className="text-[11px] text-muted-foreground">
+            {saved ? "If you leave, they will be waiting in Recent videos." : "Keep this page open until they are ready."}
+          </p>
+        )}
       </div>
     </div>
   );

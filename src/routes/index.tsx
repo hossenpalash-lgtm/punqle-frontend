@@ -203,12 +203,14 @@ const IMAGE_MODEL_LABELS: Record<ImageGenModel, string> = {
 // real 4-8s hard cap vs. Kling/Seedance's 3-15s).
 const IMAGE_VIDEO_MODEL_OPTIONS: { id: ImageVideoModel; label: string; blurb: string }[] = [
   { id: "omni", label: "Gemini Omni", blurb: "Smooth and steady. Best value." },
+  { id: "wan_3", label: "Wan 3.0", blurb: "Natural motion, up to 30 s. Great price." },
   { id: "kling_3_pro", label: "Kling 3.0 Pro", blurb: "Crisp motion, up to 15 s." },
   { id: "kling_4", label: "Kling 4.0", blurb: "Clean cuts in one steady setting." },
   { id: "seedance_2_5", label: "Seedance 2.5", blurb: "The most cinematic, lifelike look." },
 ];
 const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
   omni: "Gemini Omni",
+  wan_3: "Wan 3.0",
   kling_3_pro: "Kling 3.0 Pro",
   kling_4: "Kling 4.0",
   seedance_2_5: "Seedance 2.5",
@@ -217,6 +219,7 @@ const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
 // computes the real charge itself, this is just so the cards and the Generate button can show a cost upfront.
 const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
   omni: 3.75,
+  wan_3: 3,
   kling_3_pro: 5, // Kling now makes its own sound here; with a studio voice it animates silently at 4/s (see videoCreditsPerSecond)
   kling_4: 4,
   seedance_2_5: 6,
@@ -227,6 +230,7 @@ const videoCreditsPerSecond = (model: ImageVideoModel, withStudioVoice: boolean)
 // Omni goes to 30 s as chained 10 s extensions; Kling 4.0 and Seedance 2.5 reach 30 s in one request.
 const VIDEO_LENGTH_CHIPS: Record<ImageVideoModel, { label: string; seconds: number }[]> = {
   omni: [{ label: "Short", seconds: 8 }, { label: "Medium", seconds: 20 }, { label: "Long", seconds: 30 }],
+  wan_3: [{ label: "Short", seconds: 8 }, { label: "Medium", seconds: 15 }, { label: "Long", seconds: 30 }],
   kling_3_pro: [{ label: "Short", seconds: 5 }, { label: "Medium", seconds: 10 }, { label: "Long", seconds: 15 }],
   kling_4: [{ label: "Short", seconds: 8 }, { label: "Medium", seconds: 15 }, { label: "Long", seconds: 30 }],
   seedance_2_5: [{ label: "Short", seconds: 5 }, { label: "Medium", seconds: 15 }, { label: "Long", seconds: 30 }],
@@ -2345,7 +2349,7 @@ function HomeScreen() {
                           <button
                             onClick={handlePickCompare}
                             className={[
-                              "col-span-2 rounded-2xl px-3 py-2.5 text-left transition-colors",
+                              "rounded-2xl px-3 py-2.5 text-left transition-colors",
                               videoCompare ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
                             ].join(" ")}
                           >
@@ -2354,7 +2358,7 @@ function HomeScreen() {
                               Compare all 3
                             </span>
                             <span className={["mt-0.5 block text-[11px]", videoCompare ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}>
-                              Omni, Kling 4.0 and Seedance side by side. Pick your favourite.
+                              Wan, Kling 4.0 and Seedance side by side. Pick your favourite.
                             </span>
                             <span className="mt-1 block text-[11px] font-semibold">from {compareCostFor(COMPARE_CHIPS[0].seconds)} credits</span>
                           </button>

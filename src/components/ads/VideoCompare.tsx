@@ -8,12 +8,12 @@ import type { ImageVideoModel, VideoAspectRatio } from "@/lib/api";
 // that fails costs nothing. Jobs are STARTED by a click handler (startCompareJobs), never by an effect,
 // so a re-render can never start them twice.
 
-export const COMPARE_MODELS: ImageVideoModel[] = ["omni", "kling_4", "seedance_2_5"];
+export const COMPARE_MODELS: ImageVideoModel[] = ["wan_3", "kling_4", "seedance_2_5"];
 export const COMPARE_CHIPS = [
   { label: "Short", seconds: 10 },
   { label: "Long", seconds: 15 },
 ];
-const LABELS: Record<string, string> = { omni: "Gemini Omni", kling_4: "Kling 4.0", seedance_2_5: "Seedance 2.5" };
+const LABELS: Record<string, string> = { omni: "Gemini Omni", wan_3: "Wan 3.0", kling_4: "Kling 4.0", seedance_2_5: "Seedance 2.5" };
 const ASPECT_CLASS: Record<VideoAspectRatio, string> = { "9:16": "aspect-[9/16]", "16:9": "aspect-video", "1:1": "aspect-square" };
 
 export type CompareJob = { model: ImageVideoModel; jobId: string | null; error: string | null };

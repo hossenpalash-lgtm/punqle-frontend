@@ -358,6 +358,17 @@ function HomeScreen() {
   // animates the image, then Sync Labs-redubs real TTS narration onto
   // it (reuses Punqle Actors v2's own proven pre-bake+redub mechanics).
   const [videoNarrationEnabled, setVideoNarrationEnabled] = useState(false);
+  // "Punqle Enhancer": on by default; the choice is remembered in this browser (best effort)
+  const [videoEnhance, setVideoEnhanceState] = useState(true);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("punqle_video_enhancer") === "off") setVideoEnhanceState(false);
+    } catch { /* storage can be blocked; the default (on) is fine */ }
+  }, []);
+  const setVideoEnhance = (on: boolean) => {
+    setVideoEnhanceState(on);
+    try { window.localStorage.setItem("punqle_video_enhancer", on ? "on" : "off"); } catch { /* ignore */ }
+  };
   const [videoNarration, setVideoNarration] = useState("");
   const [videoLines, setVideoLines] = useState(""); // "What should they say?" — spoken by whichever tool is picked
   const [videoVoiceGender, setVideoVoiceGender] = useState<VoiceGender>("female");
@@ -1229,6 +1240,7 @@ function HomeScreen() {
         videoModel,
         videoDuration,
         videoAspectRatio,
+        videoEnhance,
       );
       videoPollRef.current = setTimeout(() => pollImageVideo(r.job_id, r.operation, versionIndex, totalVersions), 8000);
     } catch (err) {
@@ -2322,6 +2334,27 @@ function HomeScreen() {
                         </button>
                       </div>
                     </div>
+
+                    {!videoNarrationEnabled && (
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground">Punqle Enhancer</p>
+                          <p className="text-[11px] text-muted-foreground">People look like real phone footage</p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={videoEnhance}
+                          aria-label="Punqle Enhancer"
+                          onClick={() => setVideoEnhance(!videoEnhance)}
+                          className={["relative h-6 w-10 shrink-0 rounded-full transition-colors", videoEnhance ? "bg-primary" : "bg-secondary"].join(" ")}
+                        >
+                          <span
+                            className={["absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all", videoEnhance ? "left-[18px]" : "left-0.5"].join(" ")}
+                          />
+                        </button>
+                      </div>
+                    )}
 
                     <details className="border-t border-border pt-3">
                       <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">

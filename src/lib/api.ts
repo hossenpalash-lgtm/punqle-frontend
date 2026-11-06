@@ -837,6 +837,7 @@ export function generateImageVideo(
   model: ImageVideoModel,
   durationSeconds: number,
   aspectRatio: VideoAspectRatio = "9:16",
+  enhance: boolean = true, // "Punqle Enhancer": real-phone look for videos with people
 ): Promise<ApiImageVideoStartResponse> {
   return apiFetch<ApiImageVideoStartResponse>("/ads/generate-image-video", {
     method: "POST",
@@ -848,6 +849,7 @@ export function generateImageVideo(
       model,
       duration_seconds: durationSeconds,
       aspect_ratio: aspectRatio,
+      enhance,
     }),
   });
 }

@@ -10,9 +10,8 @@ import type { ImageVideoModel, VideoAspectRatio } from "@/lib/api";
 
 export const COMPARE_MODELS: ImageVideoModel[] = ["omni", "kling_4", "seedance_2_5"];
 export const COMPARE_CHIPS = [
-  { label: "Short", seconds: 5 },
-  { label: "Medium", seconds: 8 },
-  { label: "Long", seconds: 10 },
+  { label: "Short", seconds: 10 },
+  { label: "Long", seconds: 15 },
 ];
 const LABELS: Record<string, string> = { omni: "Gemini Omni", kling_4: "Kling 4.0", seedance_2_5: "Seedance 2.5" };
 const WAIT: Record<string, string> = { omni: "about 1–2 minutes", kling_4: "about 4–5 minutes", seedance_2_5: "about 3–5 minutes" };
@@ -30,7 +29,7 @@ export async function startCompareJobs(args: {
   return Promise.all(
     COMPARE_MODELS.map(async (model): Promise<CompareJob> => {
       try {
-        const r = await generateImageVideo(args.image.base64, args.image.mimeType, args.prompt, model, args.seconds, args.aspect, args.enhance);
+        const r = await generateImageVideo(args.image.base64, args.image.mimeType, args.prompt, model, args.seconds, args.aspect, args.enhance, true);
         return { model, jobId: r.job_id, error: null };
       } catch (e) {
         return { model, jobId: null, error: e instanceof Error ? e.message : "Couldn't start this one." };
@@ -130,7 +129,7 @@ export function VideoCompare({
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center text-xs text-white/80">
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    {starting || !c ? "Starting…" : `Making it… ${WAIT[m]}`}
+                    {starting || !c ? "Starting…" : `Making it… ${seconds > 10 ? "about 5 minutes" : WAIT[m]}`}
                   </div>
                 )}
               </div>

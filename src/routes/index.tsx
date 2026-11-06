@@ -915,7 +915,7 @@ function HomeScreen() {
   const handlePickCompare = () => {
     setVideoCompare(true);
     setVideoNarrationEnabled(false);
-    if (!COMPARE_CHIPS.some((c) => c.seconds === videoDuration)) setVideoDuration(COMPARE_CHIPS[1].seconds);
+    if (!COMPARE_CHIPS.some((c) => c.seconds === videoDuration)) setVideoDuration(COMPARE_CHIPS[0].seconds);
   };
   const handleGenerateCompare = async () => {
     if (!videoRefImage || !videoPrompt.trim()) return;
@@ -2375,7 +2375,7 @@ function HomeScreen() {
                           );
                         })}
                       </div>
-                      {!videoCompare && videoDuration > 10 && (
+                      {videoDuration > 10 && (
                         <p className="mt-1.5 text-xs text-muted-foreground">Videos over 10 s are 720p and take about 5 minutes.</p>
                       )}
                     </div>

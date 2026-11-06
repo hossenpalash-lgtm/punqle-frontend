@@ -300,6 +300,20 @@ export function fetchRecentVideos(): Promise<ApiRecentVideos> {
   return apiFetch<ApiRecentVideos>("/ads/recent-videos");
 }
 
+// Free taster: one free 3-engine comparison (4 s, 720p, watermarked) per account, switched on by the server.
+export interface ApiFreeTasterStatus { available: boolean; reason: string; seconds: number; models: ImageVideoModel[] }
+export interface ApiFreeTasterJob { model: ImageVideoModel; job_id: string | null; error: string | null }
+export function fetchFreeTasterStatus(): Promise<ApiFreeTasterStatus> {
+  return apiFetch<ApiFreeTasterStatus>("/ads/free-taster");
+}
+export function startFreeTaster(imageBase64: string, imageMimeType: string, prompt: string): Promise<{ jobs: ApiFreeTasterJob[]; seconds: number }> {
+  return apiFetch("/ads/free-taster", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image_base64: imageBase64, image_mime_type: imageMimeType, prompt }),
+  });
+}
+
 export function fetchImageActors(): Promise<ApiImageActorsResponse> {
   return apiFetch<ApiImageActorsResponse>("/ads/image-actors");
 }

@@ -41,6 +41,8 @@ import {
   checkAiActorVideoStatus,
   checkImageVideoStatus,
   fetchRecentVideos,
+  fetchFreeTasterStatus,
+  startFreeTaster,
   checkTalkingVideoStatus,
   checkVideoUpscaleStatus,
   combineActorAndAppScreenshot,
@@ -389,6 +391,18 @@ function HomeScreen() {
   const [videoCompare, setVideoCompare] = useState(false);
   const [compareJobs, setCompareJobs] = useState<CompareJob[] | null>(null);
   const [compareStarting, setCompareStarting] = useState(false);
+  // Free taster: one free 4-second, 720p, watermarked comparison per new account. The server decides who may use it
+  // (and whether it is switched on at all); the card only shows when it says yes.
+  const [tasterAvailable, setTasterAvailable] = useState(false);
+  const [tasterMode, setTasterMode] = useState(false);
+  const refreshTasterStatus = () => {
+    fetchFreeTasterStatus().then((s) => setTasterAvailable(s.available)).catch(() => setTasterAvailable(false));
+  };
+  useEffect(() => {
+    if (homeMode !== "video") return;
+    refreshTasterStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeMode]);
   // "Punqle Enhancer": opt-in, off by default (the engines keep their own natural motion); the choice is remembered in this browser (best effort)
   const [videoEnhance, setVideoEnhanceState] = useState(false);
   useEffect(() => {
@@ -956,6 +970,26 @@ function HomeScreen() {
     const jobs = await startCompareJobs({ image: videoRefImage, prompt: videoFullPrompt, seconds: videoDuration, aspect: videoAspectRatio, enhance: videoEnhance });
     setCompareJobs(jobs);
     setCompareStarting(false);
+  };
+  const handleStartFreeTaster = async () => {
+    if (!videoRefImage || !videoPrompt.trim()) return;
+    setVideoError(null);
+    setCompareJobs(null);
+    setCompareStarting(true);
+    setTasterMode(true);
+    setVideoPanel("compare");
+    try {
+      const r = await startFreeTaster(videoRefImage.base64, videoRefImage.mimeType, videoFullPrompt);
+      setCompareJobs(r.jobs.map((j) => ({ model: j.model, jobId: j.job_id, error: j.error })));
+      setTasterAvailable(false);
+    } catch (e) {
+      setTasterMode(false);
+      setVideoPanel("composer");
+      setVideoError(e instanceof Error ? e.message : "Couldn't start the free comparison.");
+      refreshTasterStatus();
+    } finally {
+      setCompareStarting(false);
+    }
   };
   const videoChips = videoCompare ? COMPARE_CHIPS : lengthChipsFor(videoModel, videoNarrationEnabled);
   // Over 10 s a video costs real money and takes ~5 minutes, so it is always a single version.
@@ -2250,17 +2284,20 @@ function HomeScreen() {
                     starting={compareStarting}
                     saved={recentSaved}
                     aspect={videoAspectRatio}
-                    seconds={videoDuration}
+                    seconds={tasterMode ? 4 : videoDuration}
+                    taster={tasterMode}
                     onCredits={setCredits}
                     onUse={(video, model) => {
                       setHomeGeneratedVideo(video);
                       setVideoModel(model);
                       setVideoVariants([]);
                       setCompareJobs(null);
+                      setTasterMode(false);
                       setVideoPanel("result");
                     }}
                     onBack={() => {
                       setCompareJobs(null);
+                      setTasterMode(false);
                       setVideoPanel("composer");
                     }}
                   />
@@ -2508,6 +2545,22 @@ function HomeScreen() {
                         )}
                       </div>
                     </details>
+
+                    {tasterAvailable && !videoNarrationEnabled && (
+                      <div className="flex items-center justify-between gap-3 rounded-2xl bg-secondary px-3 py-2.5">
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-foreground">Free: compare all 3 tools</p>
+                          <p className="text-[11px] text-muted-foreground">One free try. 4 seconds, 720p, with a Punqle watermark.</p>
+                        </div>
+                        <button
+                          onClick={handleStartFreeTaster}
+                          disabled={!videoRefImage || !videoPrompt.trim()}
+                          className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+                        >
+                          Try free
+                        </button>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between gap-2 pt-1">
                       <button

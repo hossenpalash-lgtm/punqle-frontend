@@ -5,6 +5,7 @@ import { useScrolled } from "@/lib/use-scrolled";
 import { RealFilmstrip } from "@/components/auth/RealFilmstrip";
 import { FormatSwitcher } from "@/components/auth/FormatSwitcher";
 import { TechPartners } from "@/components/auth/TechPartners";
+import { EngineCompareSection } from "@/components/auth/EngineCompareSection";
 import { ReadyActorsSection } from "@/components/auth/ReadyActorsSection";
 import { FormatGrid } from "@/components/auth/FormatGrid";
 import { LanguageSection } from "@/components/auth/LanguageSection";
@@ -224,6 +225,7 @@ export function LoginScreen() {
       </div>
 
       <RealFilmstrip />
+      <EngineCompareSection onTry={openForm} />
       <ReadyActorsSection />
       <FormatGrid />
       <LanguageSection />

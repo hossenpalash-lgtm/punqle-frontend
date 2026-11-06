@@ -45,12 +45,14 @@ export function VideoCompare({
   saved,
   aspect,
   seconds,
+  taster = false,
   onCredits,
   onUse,
   onBack,
 }: {
   jobs: CompareJob[] | null;
   starting: boolean;
+  taster?: boolean; // the free comparison: short, 720p, watermarked, no credits involved
   saved: boolean; // true when finished videos are kept in "Recent videos", so leaving the page is safe
   aspect: VideoAspectRatio;
   seconds: number;
@@ -117,9 +119,11 @@ export function VideoCompare({
   return (
     <div className="space-y-3 px-4 py-3">
       <div>
-        <p className="font-display text-sm font-extrabold text-foreground">Comparing 3 tools</p>
+        <p className="font-display text-sm font-extrabold text-foreground">{taster ? "Your free comparison" : "Comparing 3 tools"}</p>
         <p className="text-xs text-muted-foreground">
-          Same photo, same words, {seconds} seconds. You pay only for the videos that come back. Pick your favourite.
+          {taster
+            ? `Same photo, same words, ${seconds} seconds, 720p with a Punqle watermark. It's free. Pick your favourite.`
+            : `Same photo, same words, ${seconds} seconds. You pay only for the videos that come back. Pick your favourite.`}
         </p>
       </div>
 
@@ -148,12 +152,18 @@ export function VideoCompare({
                 className="flex items-center justify-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-30"
               >
                 <Check className="h-3.5 w-3.5" />
-                Use this one
+                {taster ? "I like this one" : "Use this one"}
               </button>
             </div>
           );
         })}
       </div>
+
+      {taster && allSettled && (
+        <p className="rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground">
+          Want your favourite in 1080p, without the watermark and longer? Pick that tool in the Video screen and make it with credits.
+        </p>
+      )}
 
       <div className="flex items-center justify-between pt-1">
         <button onClick={onBack} className="rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground">

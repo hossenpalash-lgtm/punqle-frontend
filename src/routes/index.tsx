@@ -86,6 +86,8 @@ import { VideoPostForm } from "@/components/ads/VideoPostForm";
 import { WeeklyPlanForm } from "@/components/ads/WeeklyPlanForm";
 import { ImageChoiceCard } from "@/components/ads/ImageChoiceCard";
 import { GeneratingGlow } from "@/components/GeneratingGlow";
+import { COMPARE_CHIPS, COMPARE_MODELS, VideoCompare, startCompareJobs } from "@/components/ads/VideoCompare";
+import type { CompareJob } from "@/components/ads/VideoCompare";
 
 type Tab = "home" | "single" | "plan" | "calendar" | "performance" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative" | "tryon";
 
@@ -338,7 +340,7 @@ function HomeScreen() {
   // small state machine instead of several booleans: closed (showing the
   // Actions row) -> composer (prompt + model + length) -> generating ->
   // result (the video itself, replacing the image in the same card).
-  const [videoPanel, setVideoPanel] = useState<"closed" | "composer" | "generating" | "result">("closed");
+  const [videoPanel, setVideoPanel] = useState<"closed" | "composer" | "generating" | "compare" | "result">("closed");
   const [videoPrompt, setVideoPrompt] = useState("");
   const [videoModel, setVideoModel] = useState<ImageVideoModel>("omni");
   const [videoAspectRatio, setVideoAspectRatio] = useState<VideoAspectRatio>("1:1");
@@ -358,6 +360,10 @@ function HomeScreen() {
   // animates the image, then Sync Labs-redubs real TTS narration onto
   // it (reuses Punqle Actors v2's own proven pre-bake+redub mechanics).
   const [videoNarrationEnabled, setVideoNarrationEnabled] = useState(false);
+  // "Compare all": same photo + words in three tools at once (see components/ads/VideoCompare.tsx)
+  const [videoCompare, setVideoCompare] = useState(false);
+  const [compareJobs, setCompareJobs] = useState<CompareJob[] | null>(null);
+  const [compareStarting, setCompareStarting] = useState(false);
   // "Punqle Enhancer": opt-in, off by default (the engines keep their own natural motion); the choice is remembered in this browser (best effort)
   const [videoEnhance, setVideoEnhanceState] = useState(false);
   useEffect(() => {
@@ -872,6 +878,7 @@ function HomeScreen() {
     setVideoRefImage({ mimeType, base64 });
     setVideoPrompt("");
     setVideoLines("");
+    setVideoCompare(false);
     setVideoModel("omni");
     setVideoAspectRatio(aspect);
     setVideoDuration(8);
@@ -900,10 +907,32 @@ function HomeScreen() {
     // Switching tool keeps the same slot (Short / Medium / Long) rather than a number of seconds.
     const slot = Math.max(0, VIDEO_LENGTH_CHIPS[videoModel].findIndex((c) => c.seconds === videoDuration));
     const chips = lengthChipsFor(m, videoNarrationEnabled);
+    setVideoCompare(false);
     setVideoModel(m);
     setVideoDuration((chips[Math.min(slot, chips.length - 1)] ?? chips[0]).seconds);
   };
-  const videoChips = lengthChipsFor(videoModel, videoNarrationEnabled);
+  const compareCostFor = (seconds: number) => COMPARE_MODELS.reduce((sum, m) => sum + videoCostFor(m, seconds, false), 0);
+  const handlePickCompare = () => {
+    setVideoCompare(true);
+    setVideoNarrationEnabled(false);
+    if (!COMPARE_CHIPS.some((c) => c.seconds === videoDuration)) setVideoDuration(COMPARE_CHIPS[1].seconds);
+  };
+  const handleGenerateCompare = async () => {
+    if (!videoRefImage || !videoPrompt.trim()) return;
+    const cost = compareCostFor(videoDuration);
+    if (credits !== null && credits < cost) {
+      setVideoError(`Comparing needs ${cost} credits — you have ${credits}.`);
+      return;
+    }
+    setVideoError(null);
+    setCompareJobs(null);
+    setCompareStarting(true);
+    setVideoPanel("compare");
+    const jobs = await startCompareJobs({ image: videoRefImage, prompt: videoFullPrompt, seconds: videoDuration, aspect: videoAspectRatio, enhance: videoEnhance });
+    setCompareJobs(jobs);
+    setCompareStarting(false);
+  };
+  const videoChips = videoCompare ? COMPARE_CHIPS : lengthChipsFor(videoModel, videoNarrationEnabled);
   // Over 10 s a video costs real money and takes ~5 minutes, so it is always a single version.
   const effectiveVideoVersions = videoDuration > 10 ? 1 : videoVersions;
   // The spoken lines go into the prompt in quotes, which is how every tool is told what to say.
@@ -2183,6 +2212,25 @@ function HomeScreen() {
                       </div>
                     )}
                   </div>
+                ) : videoPanel === "compare" ? (
+                  <VideoCompare
+                    jobs={compareJobs}
+                    starting={compareStarting}
+                    aspect={videoAspectRatio}
+                    seconds={videoDuration}
+                    onCredits={setCredits}
+                    onUse={(video, model) => {
+                      setHomeGeneratedVideo(video);
+                      setVideoModel(model);
+                      setVideoVariants([]);
+                      setCompareJobs(null);
+                      setVideoPanel("result");
+                    }}
+                    onBack={() => {
+                      setCompareJobs(null);
+                      setVideoPanel("composer");
+                    }}
+                  />
                 ) : videoPanel === "generating" ? (
                   <GeneratingGlow
                     label={
@@ -2241,7 +2289,7 @@ function HomeScreen() {
                       <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Tool</p>
                       <div className="grid grid-cols-2 gap-2">
                         {IMAGE_VIDEO_MODEL_OPTIONS.filter((m) => !videoNarrationEnabled || STUDIO_VOICE_MAX[m.id] !== undefined).map((m) => {
-                          const selected = videoModel === m.id;
+                          const selected = !videoCompare && videoModel === m.id;
                           return (
                             <button
                               key={m.id}
@@ -2264,6 +2312,24 @@ function HomeScreen() {
                             </button>
                           );
                         })}
+                        {!videoNarrationEnabled && (
+                          <button
+                            onClick={handlePickCompare}
+                            className={[
+                              "col-span-2 rounded-2xl px-3 py-2.5 text-left transition-colors",
+                              videoCompare ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                            ].join(" ")}
+                          >
+                            <span className="flex items-center gap-1 text-sm font-semibold">
+                              {videoCompare && <Check className="h-3.5 w-3.5 shrink-0" />}
+                              Compare all 3
+                            </span>
+                            <span className={["mt-0.5 block text-[11px]", videoCompare ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}>
+                              Omni, Kling 4.0 and Seedance side by side. Pick your favourite.
+                            </span>
+                            <span className="mt-1 block text-[11px] font-semibold">from {compareCostFor(COMPARE_CHIPS[0].seconds)} credits</span>
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -2303,18 +2369,18 @@ function HomeScreen() {
                                 {c.label} · {c.seconds} s
                               </span>
                               <span className={["block text-[11px]", selected ? "text-primary-foreground/80" : "text-muted-foreground"].join(" ")}>
-                                {videoCostFor(videoModel, c.seconds, videoNarrationEnabled)} credits
+                                {videoCompare ? compareCostFor(c.seconds) : videoCostFor(videoModel, c.seconds, videoNarrationEnabled)} credits
                               </span>
                             </button>
                           );
                         })}
                       </div>
-                      {videoDuration > 10 && (
+                      {!videoCompare && videoDuration > 10 && (
                         <p className="mt-1.5 text-xs text-muted-foreground">Videos over 10 s are 720p and take about 5 minutes.</p>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between">
+                    <div className={["flex items-center justify-between", videoCompare ? "hidden" : ""].join(" ")}>
                       <p className="text-xs font-semibold text-muted-foreground">Versions</p>
                       <div className="flex items-center gap-2">
                         <button
@@ -2356,7 +2422,7 @@ function HomeScreen() {
                       </div>
                     )}
 
-                    <details className="border-t border-border pt-3">
+                    <details className={["border-t border-border pt-3", videoCompare ? "hidden" : ""].join(" ")}>
                       <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
                         Advanced: studio voice (a separate recorded voice, lip-synced)
                       </summary>
@@ -2418,7 +2484,7 @@ function HomeScreen() {
                         Cancel
                       </button>
                       <button
-                        onClick={handleGenerateVideo}
+                        onClick={videoCompare ? handleGenerateCompare : handleGenerateVideo}
                         disabled={
                           !videoRefImage ||
                           (videoNarrationEnabled ? !videoNarration.trim() : !videoPrompt.trim())
@@ -2426,7 +2492,9 @@ function HomeScreen() {
                         className="rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
                         style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                       >
-                        Generate ({videoCostFor(videoModel, videoDuration, videoNarrationEnabled) * effectiveVideoVersions} credits)
+                        {videoCompare
+                          ? `Compare all 3 (${compareCostFor(videoDuration)} credits)`
+                          : `Generate (${videoCostFor(videoModel, videoDuration, videoNarrationEnabled) * effectiveVideoVersions} credits)`}
                       </button>
                     </div>
                   </div>

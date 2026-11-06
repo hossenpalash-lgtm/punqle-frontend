@@ -219,9 +219,9 @@ const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
 // computes the real charge itself, this is just so the cards and the Generate button can show a cost upfront.
 const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
   omni: 3.75,
-  wan_3: 3,
+  wan_3: 5, // Wan 3.0 and Kling 4.0 run at 1080p
   kling_3_pro: 5, // Kling now makes its own sound here; with a studio voice it animates silently at 4/s (see videoCreditsPerSecond)
-  kling_4: 4,
+  kling_4: 6,
   seedance_2_5: 6,
 };
 const videoCreditsPerSecond = (model: ImageVideoModel, withStudioVoice: boolean) =>
@@ -2408,8 +2408,8 @@ function HomeScreen() {
                           );
                         })}
                       </div>
-                      {videoDuration > 10 && (
-                        <p className="mt-1.5 text-xs text-muted-foreground">Videos over 10 s are 720p.</p>
+                      {!videoCompare && (videoModel === "seedance_2_5" || (videoModel === "omni" && videoDuration > 10)) && (
+                        <p className="mt-1.5 text-xs text-muted-foreground">This tool makes 720p videos.</p>
                       )}
                     </div>
 

@@ -14,7 +14,6 @@ export const COMPARE_CHIPS = [
   { label: "Long", seconds: 15 },
 ];
 const LABELS: Record<string, string> = { omni: "Gemini Omni", kling_4: "Kling 4.0", seedance_2_5: "Seedance 2.5" };
-const WAIT: Record<string, string> = { omni: "about 1–2 minutes", kling_4: "about 4–5 minutes", seedance_2_5: "about 3–5 minutes" };
 const ASPECT_CLASS: Record<VideoAspectRatio, string> = { "9:16": "aspect-[9/16]", "16:9": "aspect-video", "1:1": "aspect-square" };
 
 export type CompareJob = { model: ImageVideoModel; jobId: string | null; error: string | null };
@@ -129,7 +128,7 @@ export function VideoCompare({
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center text-xs text-white/80">
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    {starting || !c ? "Starting…" : `Making it… ${seconds > 10 ? "about 5 minutes" : WAIT[m]}`}
+                    {starting || !c ? "Starting…" : "Making it…"}
                   </div>
                 )}
               </div>
@@ -150,7 +149,6 @@ export function VideoCompare({
         <button onClick={onBack} className="rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground">
           {allSettled ? "Back" : "Leave"}
         </button>
-        {!allSettled && <p className="text-[11px] text-muted-foreground">Keep this page open until they finish.</p>}
       </div>
     </div>
   );

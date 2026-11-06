@@ -2239,7 +2239,7 @@ function HomeScreen() {
                           ? "Animating your video…"
                           : "Adding the voice…"
                         : videoDuration > 10
-                          ? `Making your ${videoDuration}-second video… this takes about 5 minutes. You can keep this page open.`
+                          ? `Making your ${videoDuration}-second video…`
                           : "Generating your video… this can take a minute or two."
                     }
                   />
@@ -2376,7 +2376,7 @@ function HomeScreen() {
                         })}
                       </div>
                       {videoDuration > 10 && (
-                        <p className="mt-1.5 text-xs text-muted-foreground">Videos over 10 s are 720p and take about 5 minutes.</p>
+                        <p className="mt-1.5 text-xs text-muted-foreground">Videos over 10 s are 720p.</p>
                       )}
                     </div>
 

@@ -2475,7 +2475,7 @@ function HomeScreen() {
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground">Punqle Enhancer</p>
-                          <p className="text-[11px] text-muted-foreground">Real phone look for people, cleaner product shots</p>
+                          <p className="text-[11px] text-muted-foreground">A more natural, human look, and it fills in what your description leaves out</p>
                         </div>
                         <button
                           type="button"

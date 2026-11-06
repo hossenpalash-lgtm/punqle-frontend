@@ -119,7 +119,10 @@ export function VideoCompare({
   return (
     <div className="space-y-3 px-4 py-3">
       <div>
-        <p className="font-display text-sm font-extrabold text-foreground">{taster ? "Your free comparison" : "Comparing 3 tools"}</p>
+        <p className="flex flex-wrap items-center gap-2 font-display text-sm font-extrabold text-foreground">
+          {taster ? "Your free comparison" : "Comparing 3 tools"}
+          {taster && <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Enhanced by Punqle</span>}
+        </p>
         <p className="text-xs text-muted-foreground">
           {taster
             ? `Same photo, same words, ${seconds} seconds, 720p with a Punqle watermark. It's free. Pick your favourite.`

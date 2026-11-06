@@ -360,6 +360,13 @@ function HomeScreen() {
   // animates the image, then Sync Labs-redubs real TTS narration onto
   // it (reuses Punqle Actors v2's own proven pre-bake+redub mechanics).
   const [videoNarrationEnabled, setVideoNarrationEnabled] = useState(false);
+  // While a video is being made the page must stay open (it is what collects the finished video); ask the browser to warn before a refresh or tab close.
+  useEffect(() => {
+    if (videoPanel !== "generating") return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [videoPanel]);
   // "Compare all": same photo + words in three tools at once (see components/ads/VideoCompare.tsx)
   const [videoCompare, setVideoCompare] = useState(false);
   const [compareJobs, setCompareJobs] = useState<CompareJob[] | null>(null);
@@ -2239,8 +2246,8 @@ function HomeScreen() {
                           ? "Animating your video…"
                           : "Adding the voice…"
                         : videoDuration > 10
-                          ? `Making your ${videoDuration}-second video…`
-                          : "Generating your video… this can take a minute or two."
+                          ? `Making your ${videoDuration}-second video… keep this page open until it is ready.`
+                          : "Generating your video… keep this page open until it is ready."
                     }
                   />
                 ) : (

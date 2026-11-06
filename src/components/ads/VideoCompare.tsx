@@ -104,6 +104,14 @@ export function VideoCompare({
 
   const allSettled = !starting && jobs !== null && COMPARE_MODELS.every((m) => cards[m] && cards[m].status !== "making");
 
+  // The page is what collects the finished videos, so warn before a refresh or tab close while any is still being made.
+  useEffect(() => {
+    if (allSettled || !jobs) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [allSettled, jobs]);
+
   return (
     <div className="space-y-3 px-4 py-3">
       <div>
@@ -149,6 +157,7 @@ export function VideoCompare({
         <button onClick={onBack} className="rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground">
           {allSettled ? "Back" : "Leave"}
         </button>
+        {!allSettled && <p className="text-[11px] text-muted-foreground">Keep this page open until they are ready.</p>}
       </div>
     </div>
   );

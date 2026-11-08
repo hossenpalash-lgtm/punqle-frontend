@@ -224,12 +224,16 @@ export function Sidebar({
           Publish, More, and account-level items, per the approved
           wireframe. Mobile's own header below is untouched. */}
       <aside className="glass-panel hidden shrink-0 px-3.5 py-5 lg:sticky lg:top-3 lg:m-3 lg:flex lg:h-[calc(100vh-1.5rem)] lg:w-60 lg:flex-col lg:rounded-[28px]">
+        {/* The brand is a full pill, like the other white-glass rows below it (founder, 2026-11-09). The logo tile is a
+            circle here, the same as the mobile header's. It is the Home button, so it is never the black "you are here" pill. */}
         <button
           onClick={() => onNavigate("home")}
-          className="mb-6 flex shrink-0 items-center gap-2 px-1.5"
+          aria-label="Home"
+          className="mb-6 flex shrink-0 items-center gap-2.5 self-start rounded-full py-1.5 pl-1.5 pr-5 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+          style={GLASS_PILL_IDLE}
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background">
-            <PunqleLogo className="h-3.5 w-3.5" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background">
+            <PunqleLogo className="h-4 w-4" />
           </div>
           <span className="font-display text-base font-extrabold text-foreground">Punqle</span>
         </button>

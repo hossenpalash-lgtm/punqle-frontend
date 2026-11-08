@@ -26,11 +26,41 @@ import {
 } from "@/lib/api";
 import { bestWinner, groupLeaders, isWinner, scorePosts, type TagDimension } from "@/lib/performance-insights";
 
-function PlatformIcon({ platform, className }: { platform: ApiPerformancePost["platform"]; className: string }) {
-  if (platform === "youtube") return <Youtube className={className} />;
+function PlatformIcon({ platform, className, filled = false }: { platform: ApiPerformancePost["platform"]; className: string; filled?: boolean }) {
+  if (platform === "youtube") return <Youtube className={className} fill={filled ? "currentColor" : "none"} />;
   if (platform === "tiktok") return <TikTokIcon className={className} />;
   if (platform === "instagram") return <Instagram className={className} />;
-  return <Facebook className={className} />;
+  return <Facebook className={className} fill={filled ? "currentColor" : "none"} />;
+}
+
+// The platform's own brand colour in a small tile, the same fills the sidebar's four platform buttons use,
+// so "where was this posted" reads at a glance (founder, 2026-11-09).
+const PLATFORM_BRAND: Record<ApiPerformancePost["platform"], string> = {
+  facebook: "#1877F2",
+  instagram: "linear-gradient(45deg, #FEDA75, #FA7E1E, #D62976, #962FBF, #4F5BD5)",
+  tiktok: "#000000",
+  youtube: "#FF0000",
+};
+const PLATFORM_NAME: Record<ApiPerformancePost["platform"], string> = {
+  facebook: "Facebook",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  youtube: "YouTube",
+};
+function PlatformBadge({ platform, size }: { platform: ApiPerformancePost["platform"]; size: "sm" | "md" | "lg" }) {
+  const box = size === "lg" ? "h-11 w-11 rounded-xl" : size === "md" ? "h-8 w-8 rounded-lg" : "h-5 w-5 rounded-md";
+  const icon = size === "lg" ? "h-6 w-6" : size === "md" ? "h-4 w-4" : "h-3 w-3";
+  return (
+    <span
+      role="img"
+      aria-label={PLATFORM_NAME[platform]}
+      title={PLATFORM_NAME[platform]}
+      className={`inline-flex shrink-0 items-center justify-center text-white ${box}`}
+      style={{ background: PLATFORM_BRAND[platform] }}
+    >
+      <PlatformIcon platform={platform} className={icon} filled />
+    </span>
+  );
 }
 
 const PLATFORM_LABEL: Record<ApiPerformancePost["platform"], string> = {
@@ -333,7 +363,7 @@ export function PerformanceView() {
                 {winner.post.image_base64 ? (
                   <img src={`data:image/jpeg;base64,${winner.post.image_base64}`} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <PlatformIcon platform={winner.post.platform} className="h-5 w-5 text-muted-foreground" />
+                  <PlatformBadge platform={winner.post.platform} size="md" />
                 )}
               </div>
               <div className="min-w-0 flex-1">
@@ -403,12 +433,12 @@ export function PerformanceView() {
                 {post.image_base64 ? (
                   <img src={`data:image/jpeg;base64,${post.image_base64}`} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <PlatformIcon platform={post.platform} className="h-6 w-6 text-muted-foreground" />
+                  <PlatformBadge platform={post.platform} size="lg" />
                 )}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold text-foreground/80">
-                  <PlatformIcon platform={post.platform} className="h-3.5 w-3.5 text-foreground" />
+                  <PlatformBadge platform={post.platform} size="sm" />
                   {formatDate(post.scheduled_time)}
                   {isWinner(scores.get(post.id)) && (
                     <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">

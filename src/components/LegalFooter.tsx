@@ -27,6 +27,12 @@ export function LegalFooter({ className = "" }: { className?: string }) {
       <span className="text-border" aria-hidden="true">
         &middot;
       </span>
+      <Link to="/tools" className="hover:text-foreground">
+        Free tools
+      </Link>
+      <span className="text-border" aria-hidden="true">
+        &middot;
+      </span>
       <a href="mailto:hossenpalash@gmail.com" className="hover:text-foreground">
         Contact
       </a>

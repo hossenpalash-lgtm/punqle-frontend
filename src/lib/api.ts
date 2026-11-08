@@ -314,6 +314,26 @@ export function startFreeTaster(imageBase64: string, imageMimeType: string, prom
   });
 }
 
+// Free no-login tool behind punqle.com/tools: deliberately NOT apiFetch (no session, no Authorization header).
+export interface ApiPhotoCaptions { photo: string; captions: string[]; hashtags: string[]; headlines: string[] }
+export async function generatePublicPhotoCaptions(photo: Blob, businessType: string, note: string): Promise<ApiPhotoCaptions> {
+  const form = new FormData();
+  form.append("file", photo, "photo.jpg");
+  form.append("business_type", businessType);
+  form.append("note", note);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/public/photo-captions`, { method: "POST", body: form });
+  } catch {
+    throw new Error("Could not reach the server. Check your internet connection.");
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(typeof body?.detail === "string" ? body.detail : "Something went wrong. Please try again.");
+  }
+  return res.json() as Promise<ApiPhotoCaptions>;
+}
+
 export function fetchImageActors(): Promise<ApiImageActorsResponse> {
   return apiFetch<ApiImageActorsResponse>("/ads/image-actors");
 }

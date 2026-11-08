@@ -149,7 +149,8 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isPublicRoute = PUBLIC_ROUTES.has(pathname);
+  // /tools and /tools/<slug> are the free SEO tool pages (no login, server-rendered).
+  const isPublicRoute = PUBLIC_ROUTES.has(pathname) || /^\/tools(\/|$)/.test(pathname);
   // undefined = still checking for an existing session, null = signed out
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   // The auth check usually resolves almost instantly (localStorage, not a

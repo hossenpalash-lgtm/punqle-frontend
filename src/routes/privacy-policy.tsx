@@ -10,7 +10,7 @@ export const Route = createFileRoute("/privacy-policy")({
 
 function PrivacyPolicyPage() {
   return (
-    <LegalLayout title="Privacy Policy" effectiveDate="October 12, 2026">
+    <LegalLayout title="Privacy Policy" effectiveDate="November 9, 2026">
       <p>
         This Privacy Policy explains what information Punqle ("Punqle," "we," "us") collects when you use the
         Punqle app at punqle.com, how we use it, and what choices you have. Punqle is operated by HOSSEN, MD
@@ -44,7 +44,7 @@ function PrivacyPolicyPage() {
       <h2>2. How We Use Third-Party AI and Service Providers</h2>
       <p>To provide Punqle's features, we send certain information to the following third-party providers. We only send what each provider needs to do its specific job:</p>
       <ul>
-        <li><strong>OpenAI</strong> — receives text you provide (such as product descriptions, business category, and post ideas) to generate ad copy and captions. We do not send images or your account details to OpenAI.</li>
+        <li><strong>OpenAI</strong> — receives text you provide (such as product descriptions, business category, and post ideas) to generate ad copy and captions. For features that need to look at a photo (the free caption tool on our /tools pages, which needs no account, and the video prompt helper), the photo you choose is also sent to OpenAI, once, solely to write the result; Punqle does not keep the photo from the free tool. We never send your account details to OpenAI.</li>
         <li><strong>Google (Gemini API)</strong> — receives product photos you upload (if any) and text prompts, to generate or edit ad images and videos. This is separate from YouTube (see below) and never accesses your Google Account or YouTube channel.</li>
         <li><strong>Google (YouTube Data, Analytics and Reporting APIs)</strong> — only if you connect your YouTube channel; see "YouTube integration" above and "Google User Data (YouTube Integration)" below for full details.</li>
         <li><strong>Pexels</strong> — receives only a search term, if you choose to search their stock photo library instead of uploading your own photo. No personal information is sent.</li>

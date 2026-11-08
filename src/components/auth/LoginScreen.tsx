@@ -8,7 +8,6 @@ import { TechPartners } from "@/components/auth/TechPartners";
 import { EngineCompareSection } from "@/components/auth/EngineCompareSection";
 import { ReadyActorsSection } from "@/components/auth/ReadyActorsSection";
 import { FormatGrid } from "@/components/auth/FormatGrid";
-import { LanguageSection } from "@/components/auth/LanguageSection";
 import { PublishSection } from "@/components/auth/PublishSection";
 import { BeyondTheAd } from "@/components/auth/BeyondTheAd";
 import { PricingTeaser } from "@/components/auth/PricingTeaser";
@@ -22,7 +21,7 @@ import { LegalFooter } from "@/components/LegalFooter";
 // avatar), an interactive proof panel built from the app's actual home
 // bar, a moving filmstrip of real generated ads + real actor photos, and
 // dedicated sections for the two claims research found most defensible —
-// the real-actor pipeline and Bangla/English support — before the
+// the real-actor pipeline and the 3-engine compare — before the
 // existing real-ad gallery and sign-up form. The sign-in/sign-up form
 // logic below is entirely unchanged from before this redesign.
 
@@ -131,7 +130,7 @@ export function LoginScreen() {
         </h1>
         <p className="max-w-xl text-[17px] leading-relaxed text-muted-foreground">
           One real filmed actor, your own product photo, or a blank page — Punqle turns any of them into
-          ready-to-post ads for Facebook, Instagram, TikTok and YouTube. In English or বাংলা.
+          ready-to-post ads for Facebook, Instagram, TikTok and YouTube.
         </p>
 
         {!formVisible ? (
@@ -228,7 +227,6 @@ export function LoginScreen() {
       <EngineCompareSection onTry={openForm} />
       <ReadyActorsSection />
       <FormatGrid />
-      <LanguageSection />
       <PublishSection />
       <BeyondTheAd />
       <PricingTeaser />

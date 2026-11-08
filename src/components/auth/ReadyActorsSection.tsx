@@ -26,7 +26,7 @@ const STEPS = [
   {
     n: "03",
     title: "Redub your words",
-    body: "Write a script. Punqle redubs it in the actor's own voice — English or বাংলা — for every business that uses that scene.",
+    body: "Write a script. Punqle redubs it in the actor's own voice, for every business that uses that scene.",
   },
 ];
 

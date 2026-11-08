@@ -28,6 +28,7 @@ import {
 import { useEffect, useState } from "react";
 import { PunqleLogo } from "@/components/PunqleLogo";
 import { TikTokIcon } from "@/components/TikTokIcon";
+import { YouTubeIcon } from "@/components/YouTubeIcon";
 import { type ApiProject, createProject, fetchProjects } from "@/lib/api";
 import { useScrolled } from "@/lib/use-scrolled";
 
@@ -409,7 +410,7 @@ export function Sidebar({
               className="flex h-7 w-7 items-center justify-center rounded-lg text-white"
               style={{ background: "#FF0000" }}
             >
-              <Youtube className="h-3.5 w-3.5" fill="currentColor" />
+              <YouTubeIcon className="h-3.5 w-3.5" />
             </button>
           </div>
 

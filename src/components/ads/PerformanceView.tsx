@@ -17,6 +17,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { TikTokIcon } from "@/components/TikTokIcon";
+import { YouTubeIcon } from "@/components/YouTubeIcon";
 import {
   fetchOrganicPerformance,
   getMetaConnectUrl,
@@ -27,7 +28,7 @@ import {
 import { bestWinner, groupLeaders, isWinner, scorePosts, type TagDimension } from "@/lib/performance-insights";
 
 function PlatformIcon({ platform, className, filled = false }: { platform: ApiPerformancePost["platform"]; className: string; filled?: boolean }) {
-  if (platform === "youtube") return <Youtube className={className} fill={filled ? "currentColor" : "none"} />;
+  if (platform === "youtube") return filled ? <YouTubeIcon className={className} /> : <Youtube className={className} />;
   if (platform === "tiktok") return <TikTokIcon className={className} />;
   if (platform === "instagram") return <Instagram className={className} />;
   return <Facebook className={className} fill={filled ? "currentColor" : "none"} />;

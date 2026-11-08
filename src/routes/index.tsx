@@ -19,7 +19,6 @@ import {
   Settings2,
   Shirt,
   Smartphone,
-  Gift,
   Sparkles,
   Upload,
   UserRound,
@@ -550,7 +549,6 @@ function HomeScreen() {
   // Drives the hero's "try every core tool free" banner — null while
   // loading (banner stays hidden), 0 once every trial's been claimed
   // (banner disappears, no point advertising something used up).
-  const remainingTrialsCount = featureTrials ? Object.values(featureTrials).filter(Boolean).length : null;
 
   useEffect(() => {
     return () => {
@@ -1458,19 +1456,6 @@ function HomeScreen() {
               What are we creating today?
             </h1>
             <p className="max-w-md text-sm text-muted-foreground">Pick a tool below, describe what you need, and Punqle makes it.</p>
-            {/* "Try every core tool free" banner (2026-09-25) — the
-                per-button "Try free" labels below only announce
-                themselves one mode/pill at a time, so a brand-new user
-                landing here has no upfront signal that 7 core tools each
-                carry one guaranteed-free generation. Hidden once every
-                trial's claimed (remainingTrialsCount === 0) — advertising
-                a free try that no longer exists would just be confusing. */}
-            {remainingTrialsCount !== null && remainingTrialsCount > 0 && (
-              <div className="glass-chip-light mt-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-foreground">
-                <Gift className="h-3.5 w-3.5" />
-                Try every core tool free — once each
-              </div>
-            )}
           </div>
 
           <div className="flex flex-1 items-center justify-center py-8">

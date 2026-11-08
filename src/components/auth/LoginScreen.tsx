@@ -6,6 +6,8 @@ import { RealFilmstrip } from "@/components/auth/RealFilmstrip";
 import { FormatSwitcher } from "@/components/auth/FormatSwitcher";
 import { TechPartners } from "@/components/auth/TechPartners";
 import { EngineCompareSection } from "@/components/auth/EngineCompareSection";
+import { EnhancerShowcase } from "@/components/auth/EnhancerShowcase";
+import { CompetitiveEdgeShowcase } from "@/components/auth/CompetitiveEdgeShowcase";
 import { ReadyActorsSection } from "@/components/auth/ReadyActorsSection";
 import { FormatGrid } from "@/components/auth/FormatGrid";
 import { PublishSection } from "@/components/auth/PublishSection";
@@ -225,6 +227,9 @@ export function LoginScreen() {
 
       <RealFilmstrip />
       <EngineCompareSection onTry={openForm} />
+      <EnhancerShowcase onTry={openForm} />
+      {/* Reserved: renders nothing until a real Competitive Edge result is added (see the file). */}
+      <CompetitiveEdgeShowcase onTry={openForm} />
       <ReadyActorsSection />
       <FormatGrid />
       <PublishSection />

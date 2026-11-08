@@ -174,9 +174,13 @@ export function Sidebar({
   const [newProjectName, setNewProjectName] = useState("");
   const [creatingProject, setCreatingProject] = useState(false);
   const [planPublishOpen, setPlanPublishOpen] = useState(() => PLAN_PUBLISH_ITEMS.some((i) => i.tab === tab));
+  // One black pill = where the user is. While Brand Kit / Product Catalog is open on top of a page, that
+  // item is the black pill and the page underneath (e.g. Bulk Creative) goes back to normal; it lights up
+  // again when the panel closes (founder, 2026-11-09: the old pill stayed black behind the panel).
+  const shown: NavTab | null = brandKitOpen || productCatalogOpen ? null : tab;
   // Which of the two big glass pills is the current section (black = selected).
-  const adActive = tab === "ad" || tab === "ad-video";
-  const planActive = PLAN_PUBLISH_ITEMS.some((i) => i.tab === tab);
+  const adActive = shown === "ad" || shown === "ad-video";
+  const planActive = PLAN_PUBLISH_ITEMS.some((i) => i.tab === shown);
   // The header reads as selected (black) while its section is open too, not only when
   // one of its pages is the current screen.
   const planSelected = planActive || planPublishOpen;
@@ -351,7 +355,7 @@ export function Sidebar({
                   onClick={() => onNavigate(t)}
                   className={[
                     "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                    tab === t ? "bg-foreground text-background" : "text-foreground hover:bg-white/60",
+                    shown === t ? "bg-foreground text-background" : "text-foreground hover:bg-white/60",
                   ].join(" ")}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -416,7 +420,7 @@ export function Sidebar({
           </div>
           <div className="flex flex-col gap-1.5">
             {INSIGHTS_ITEMS.map(({ tab: t, label, icon: Icon }) => {
-              const selected = tab === t;
+              const selected = shown === t;
               return (
                 <button
                   key={t}
@@ -465,7 +469,7 @@ export function Sidebar({
                 onClick={() => onNavigate("bulk-creative")}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  tab === "bulk-creative" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-white/60",
+                  shown === "bulk-creative" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-white/60",
                 ].join(" ")}
               >
                 <Layers className="h-3.5 w-3.5" />
@@ -495,7 +499,7 @@ export function Sidebar({
                 onClick={() => onNavigate("history")}
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                  tab === "history" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-white/60",
+                  shown === "history" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-white/60",
                 ].join(" ")}
               >
                 <Clock className="h-3.5 w-3.5" />
@@ -585,7 +589,7 @@ export function Sidebar({
               onClick={() => onNavigate("single")}
               className={[
                 "flex items-center gap-1.5 rounded-full px-2.5 py-2 text-xs font-semibold",
-                tab === "single" || tab === "video"
+                shown === "single" || shown === "video"
                   ? "bg-primary text-primary-foreground"
                   : "text-secondary-foreground hover:bg-white/60",
               ].join(" ")}
@@ -597,7 +601,7 @@ export function Sidebar({
               onClick={() => onNavigate("ad")}
               className={[
                 "flex items-center gap-1.5 rounded-full px-2.5 py-2 text-xs font-semibold",
-                tab === "ad" || tab === "ad-video"
+                shown === "ad" || shown === "ad-video"
                   ? "bg-primary text-primary-foreground"
                   : "text-secondary-foreground hover:bg-white/60",
               ].join(" ")}
@@ -609,7 +613,7 @@ export function Sidebar({
               onClick={() => onNavigate("bulk-creative")}
               className={[
                 "flex items-center gap-1.5 rounded-full px-2.5 py-2 text-xs font-semibold",
-                tab === "bulk-creative"
+                shown === "bulk-creative"
                   ? "bg-primary text-primary-foreground"
                   : "text-secondary-foreground hover:bg-white/60",
               ].join(" ")}
@@ -625,7 +629,7 @@ export function Sidebar({
               onClick={() => onNavigate("tryon")}
               className={[
                 "flex items-center gap-1.5 rounded-full px-2.5 py-2 text-xs font-semibold",
-                tab === "tryon"
+                shown === "tryon"
                   ? "bg-primary text-primary-foreground"
                   : "border border-accent text-accent hover:bg-white/60",
               ].join(" ")}
@@ -670,7 +674,7 @@ export function Sidebar({
                   }}
                   className={[
                     "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
-                    tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-white/60",
+                    shown === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-white/60",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -690,7 +694,7 @@ export function Sidebar({
                   }}
                   className={[
                     "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
-                    tab === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-white/60",
+                    shown === t ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-white/60",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -772,7 +776,7 @@ export function Sidebar({
                 }}
                 className={[
                   "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
-                  tab === "history" ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-white/60",
+                  shown === "history" ? "bg-primary text-primary-foreground" : "text-secondary-foreground hover:bg-white/60",
                 ].join(" ")}
               >
                 <Clock className="h-4 w-4" />

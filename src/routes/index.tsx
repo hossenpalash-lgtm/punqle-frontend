@@ -1451,14 +1451,14 @@ function HomeScreen() {
           below instead (same Social Content grid it's always shown). */}
       {tab === "home" && (
         <div className="hidden flex-1 lg:flex lg:flex-col">
-          <div className="flex flex-col items-center pt-4 text-center">
-            <h1 className="font-display mb-3 text-4xl leading-[1.05] tracking-[-0.02em] text-foreground xl:text-5xl">
+          <div className="flex flex-col items-center pt-6 text-center">
+            <h1 className="font-display mb-4 text-4xl leading-[1.05] tracking-[-0.02em] text-foreground xl:text-5xl">
               What are we creating today?
             </h1>
             <p className="max-w-md text-sm text-muted-foreground">Pick a tool below, describe what you need, and Punqle makes it.</p>
           </div>
 
-          <div className="flex flex-1 items-center justify-center py-8">
+          <div className="flex flex-1 items-center justify-center py-9">
             {homeIdle && (
               <HomeShowcase
                 cards={[
@@ -1487,7 +1487,7 @@ function HomeScreen() {
             // No backdrop-blur here: a backdrop-filter on this track would make it the
             // containing block of the See-more menu's full-screen tap-outside backdrop
             // (`fixed inset-0`), so tapping outside stopped closing the menu.
-            className="mx-auto mb-3 flex w-fit flex-wrap items-center justify-center gap-1 rounded-full border border-white/70 p-1.5"
+            className="mx-auto mb-5 flex w-fit flex-wrap items-center justify-center gap-1 rounded-full border border-white/70 p-1.5"
             style={{ background: "oklch(1 0 0 / 72%)", boxShadow: "var(--shadow-card)" }}
           >
             <button

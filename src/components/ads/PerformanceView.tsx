@@ -14,6 +14,7 @@ import {
   Users,
   Youtube,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { TikTokIcon } from "@/components/TikTokIcon";
 import {
@@ -54,6 +55,18 @@ function formatCount(n: number | null): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
+}
+
+// One number with its icon AND a word ("4 views"): icon-only rows were hard to read (founder, 2026-11-09) and the
+// hover titles do not exist on a phone. Bold dark digits, a heavier icon, a plain-language label.
+function Metric({ icon: Icon, value, one, many, title }: { icon: LucideIcon; value: number | null; one: string; many: string; title?: string }) {
+  return (
+    <span className="flex items-center gap-1.5" title={title}>
+      <Icon className="h-4 w-4 text-foreground" strokeWidth={2.25} aria-hidden="true" />
+      <span className="text-sm font-bold tabular-nums text-foreground">{formatCount(value)}</span>
+      <span className="text-[13px] text-foreground/75">{value === 1 ? one : many}</span>
+    </span>
+  );
 }
 
 function formatLabel(raw: string): string {
@@ -370,39 +383,13 @@ export function PerformanceView() {
               {row.measuredCount === 0 ? (
                 <p className="text-xs text-muted-foreground">No metrics available yet for this group.</p>
               ) : (
-                <div className="flex flex-wrap gap-4 text-sm font-medium text-muted-foreground">
-                  {row.views > 0 && (
-                    <span className="flex items-center gap-1.5" title="Views">
-                      <Eye className="h-3.5 w-3.5" />
-                      {formatCount(row.views)}
-                    </span>
-                  )}
-                  {row.reach > 0 && (
-                    <span className="flex items-center gap-1.5" title="Reach">
-                      <Users className="h-3.5 w-3.5" />
-                      {formatCount(row.reach)}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1.5">
-                    <Heart className="h-3.5 w-3.5" />
-                    {formatCount(row.likes)}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <MessageCircle className="h-3.5 w-3.5" />
-                    {formatCount(row.comments)}
-                  </span>
-                  {row.shares > 0 && (
-                    <span className="flex items-center gap-1.5" title="Shares">
-                      <Share2 className="h-3.5 w-3.5" />
-                      {formatCount(row.shares)}
-                    </span>
-                  )}
-                  {row.saves > 0 && (
-                    <span className="flex items-center gap-1.5" title="Saves">
-                      <Bookmark className="h-3.5 w-3.5" />
-                      {formatCount(row.saves)}
-                    </span>
-                  )}
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  {row.views > 0 && <Metric icon={Eye} value={row.views} one="view" many="views" title="Views" />}
+                  {row.reach > 0 && <Metric icon={Users} value={row.reach} one="reached" many="reached" title="Reach" />}
+                  <Metric icon={Heart} value={row.likes} one="like" many="likes" />
+                  <Metric icon={MessageCircle} value={row.comments} one="comment" many="comments" />
+                  {row.shares > 0 && <Metric icon={Share2} value={row.shares} one="share" many="shares" title="Shares" />}
+                  {row.saves > 0 && <Metric icon={Bookmark} value={row.saves} one="save" many="saves" title="Saves" />}
                 </div>
               )}
             </div>
@@ -420,8 +407,8 @@ export function PerformanceView() {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="mb-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <PlatformIcon platform={post.platform} className="h-3 w-3" />
+                <div className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold text-foreground/80">
+                  <PlatformIcon platform={post.platform} className="h-3.5 w-3.5 text-foreground" />
                   {formatDate(post.scheduled_time)}
                   {isWinner(scores.get(post.id)) && (
                     <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
@@ -435,53 +422,23 @@ export function PerformanceView() {
                     </span>
                   )}
                 </div>
-                <p className="mb-2 line-clamp-2 text-sm text-foreground">{post.caption || "(no caption)"}</p>
+                <p className="mb-2 line-clamp-2 text-[15px] leading-snug text-foreground">{post.caption || "(no caption)"}</p>
                 {post.metrics ? (
-                  <div className="flex flex-wrap gap-3 text-xs font-medium text-muted-foreground">
-                    {post.metrics.views !== null && (
-                      <span className="flex items-center gap-1" title="Views">
-                        <Eye className="h-3 w-3" />
-                        {formatCount(post.metrics.views)}
-                      </span>
-                    )}
-                    {post.metrics.reach !== null && (
-                      <span className="flex items-center gap-1" title="Reach — people who saw it">
-                        <Users className="h-3 w-3" />
-                        {formatCount(post.metrics.reach)}
-                      </span>
-                    )}
-                    {post.metrics.likes !== null && (
-                      <span className="flex items-center gap-1" title="Likes">
-                        <Heart className="h-3 w-3" />
-                        {formatCount(post.metrics.likes)}
-                      </span>
-                    )}
-                    {post.metrics.comments !== null && (
-                      <span className="flex items-center gap-1" title="Comments">
-                        <MessageCircle className="h-3 w-3" />
-                        {formatCount(post.metrics.comments)}
-                      </span>
-                    )}
-                    {post.metrics.shares !== null && (
-                      <span className="flex items-center gap-1" title="Shares">
-                        <Share2 className="h-3 w-3" />
-                        {formatCount(post.metrics.shares)}
-                      </span>
-                    )}
-                    {post.metrics.saves !== null && (
-                      <span className="flex items-center gap-1" title="Saves">
-                        <Bookmark className="h-3 w-3" />
-                        {formatCount(post.metrics.saves)}
-                      </span>
-                    )}
+                  <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+                    {post.metrics.views !== null && <Metric icon={Eye} value={post.metrics.views} one="view" many="views" title="Views" />}
+                    {post.metrics.reach !== null && <Metric icon={Users} value={post.metrics.reach} one="reached" many="reached" title="Reach — people who saw it" />}
+                    {post.metrics.likes !== null && <Metric icon={Heart} value={post.metrics.likes} one="like" many="likes" title="Likes" />}
+                    {post.metrics.comments !== null && <Metric icon={MessageCircle} value={post.metrics.comments} one="comment" many="comments" title="Comments" />}
+                    {post.metrics.shares !== null && <Metric icon={Share2} value={post.metrics.shares} one="share" many="shares" title="Shares" />}
+                    {post.metrics.saves !== null && <Metric icon={Bookmark} value={post.metrics.saves} one="save" many="saves" title="Saves" />}
                   </div>
                 ) : post.metrics_unavailable_reason ? (
-                  <p className="text-xs text-muted-foreground">{post.metrics_unavailable_reason}</p>
+                  <p className="text-[13px] text-foreground/75">{post.metrics_unavailable_reason}</p>
                 ) : null}
                 {post.metrics && youtubeDetails(post.metrics).length > 0 && (
-                  <p className="mt-1.5 text-xs text-muted-foreground">{youtubeDetails(post.metrics).join(" · ")}</p>
+                  <p className="mt-1.5 text-[13px] text-foreground/75">{youtubeDetails(post.metrics).join(" · ")}</p>
                 )}
-                {post.metrics_note && <p className="mt-1 text-xs text-muted-foreground">{post.metrics_note}</p>}
+                {post.metrics_note && <p className="mt-1 text-[13px] text-foreground/75">{post.metrics_note}</p>}
               </div>
             </div>
           ))}

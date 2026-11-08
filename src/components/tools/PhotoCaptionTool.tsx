@@ -5,6 +5,7 @@ import { generatePublicPhotoCaptions, type ApiPhotoCaptions } from "@/lib/api";
 import type { BusinessType } from "@/lib/tool-pages";
 
 const BUSINESS_OPTIONS: { value: BusinessType; label: string }[] = [
+  { value: "ecommerce", label: "Online store or product seller" },
   { value: "cafe", label: "Cafe or coffee shop" },
   { value: "hair_salon", label: "Hair salon or barber" },
   { value: "boutique", label: "Boutique or gift shop" },
@@ -233,6 +234,24 @@ export function PhotoCaptionTool({ defaultType }: { defaultType: BusinessType })
               </button>
             </div>
           </div>
+
+          {result.description && (
+            <>
+              <div className="mt-6 flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-foreground">Product description</h3>
+                <CopyButton text={result.description} />
+              </div>
+              <p className="mt-2 rounded-2xl border border-border bg-background p-3.5 text-[15px] leading-relaxed text-foreground">
+                {result.description}
+              </p>
+              {result.details_to_add && result.details_to_add.length > 0 && (
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  <span className="font-semibold text-foreground">Add these yourself before you publish: </span>
+                  {result.details_to_add.join(", ")}. A photo can't show them, so we left them out instead of guessing.
+                </p>
+              )}
+            </>
+          )}
 
           <h3 className="mt-6 text-sm font-semibold text-foreground">Captions</h3>
           <ul className="mt-2 flex flex-col gap-2">

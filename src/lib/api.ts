@@ -315,7 +315,7 @@ export function startFreeTaster(imageBase64: string, imageMimeType: string, prom
 }
 
 // Free no-login tool behind punqle.com/tools: deliberately NOT apiFetch (no session, no Authorization header).
-export interface ApiPhotoCaptions { photo: string; captions: string[]; hashtags: string[]; headlines: string[] }
+export interface ApiPhotoCaptions { photo: string; captions: string[]; hashtags: string[]; headlines: string[]; description?: string; details_to_add?: string[] }
 export async function generatePublicPhotoCaptions(photo: Blob, businessType: string, note: string): Promise<ApiPhotoCaptions> {
   const form = new FormData();
   form.append("file", photo, "photo.jpg");

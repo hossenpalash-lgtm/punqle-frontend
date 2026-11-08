@@ -4,7 +4,7 @@
 
 export const SITE_ORIGIN = "https://www.punqle.com";
 
-export type BusinessType = "cafe" | "hair_salon" | "boutique" | "restaurant" | "gym" | "other";
+export type BusinessType = "cafe" | "hair_salon" | "boutique" | "restaurant" | "gym" | "ecommerce" | "other";
 
 export interface CaptionGroup {
   title: string;
@@ -21,6 +21,11 @@ export interface ToolPageData {
   h1: string;
   intro: string[];
   groups: CaptionGroup[];
+  /** Heading above the ready-made lines; defaults to "30 captions to copy". */
+  listTitle?: string;
+  listIntro?: string;
+  /** Closing call-to-action; defaults to the generic "Captions are the easy part" block. */
+  cta?: { title: string; body: string };
   tips: { title: string; body: string }[];
   faq: { q: string; a: string }[];
 }
@@ -576,6 +581,301 @@ export const TOOL_PAGES: Record<string, ToolPageData> = {
       {
         q: "Does it work for yoga or pilates studios?",
         a: "Yes. Choose the gym or fitness studio type; the captions and the tool both suit yoga, pilates and group classes.",
+      },
+      ...PHOTO_FAQ,
+    ],
+  },
+
+  "product-description-generator-from-photo": {
+    slug: "product-description-generator-from-photo",
+    businessType: "ecommerce",
+    label: "Product descriptions",
+    metaTitle: "Free Product Description Generator From Photo | Punqle",
+    metaDescription:
+      "Upload a product photo and get a product description, Instagram captions, hashtags and ad headlines. Free, no login. Plus 12 examples to adapt.",
+    h1: "Product description generator from photo",
+    intro: [
+      "Upload one photo of your product and get a product description written from what is actually in the picture, plus five Instagram captions, hashtags and three ad headlines. It also lists the facts a photo cannot show, such as size, material and price, so you know exactly what to add before you publish.",
+      "Use it for Shopify, Etsy, Instagram shops or your own site. The tool never invents materials, ingredients, results or certifications. If you tell it something in the note, it will use it; if not, it leaves it out.",
+    ],
+    listTitle: "12 product description examples to adapt",
+    listIntro: "Replace every [bracket] with your own facts, and delete any line that is not true for your product.",
+    groups: [
+      {
+        title: "Clothing and accessories",
+        captions: [
+          "A relaxed [fit] [garment] in [color], cut from [fabric]. It sits at [length] and works with jeans or a skirt. Available in [sizes]. Machine wash cold.",
+          "Meet the [name]: a [color] [type of bag] with room for your phone, wallet and keys. [Closure], one inner pocket and a [length] strap. Measures [dimensions].",
+          "Soft and easy to layer. This [color] [scarf or knit] is made from [material] and measures [size]. Wear it long, wrapped or tucked into a coat.",
+        ],
+      },
+      {
+        title: "Beauty and skincare",
+        captions: [
+          "A lightweight [product type] with [key ingredient, as listed on your label]. Smooth it over clean skin, morning or night. [Size] ml. Patch test before first use.",
+          "[Product name] is a [texture] [product type] in a [color] glass bottle. Scent: [notes]. How to use: [steps]. Made in [place]. Full ingredient list below.",
+          "A gentle [product type] for daily use. Add one pump to damp skin, massage in and rinse. [Size] ml. Ingredients are listed in full on the pack.",
+        ],
+      },
+      {
+        title: "Home and gifts",
+        captions: [
+          "A [wax type] candle in a [color] [vessel]. Scent: [notes]. Burn time about [hours] hours. [Weight]. Trim the wick to 5 mm before each burn.",
+          "A [material] [item] in [color], [dimensions]. It looks good on a shelf and works as a gift. Arrives in [packaging].",
+          "A set of [number] [items]: [list them]. Arrives wrapped in [packaging], with a note card if you ask. Ships from [place] within [number] business days.",
+        ],
+      },
+      {
+        title: "Pets and food",
+        captions: [
+          "A sturdy [material] [toy or collar] in [color] for [size] dogs. [Dimensions]. Wipes clean. Always supervise play.",
+          "[Product name]: [flavor] [type] made with [main ingredients]. [Weight] pack. Store in a cool, dry place. Best before [date format].",
+          "A cozy [bed or blanket] for cats and small dogs. [Dimensions], [material], machine washable at [temperature].",
+        ],
+      },
+    ],
+    cta: {
+      title: "Do your whole catalog, not just one product",
+      body: "Punqle imports your Shopify or CSV products and makes a ready-to-post ad for each one, using your brand kit.",
+    },
+    tips: [
+      {
+        title: "Start with what the buyer sees",
+        body: "Say what the product is and what it looks like in the first sentence. Shoppers decide in seconds, and the photo already shows them most of it.",
+      },
+      {
+        title: "Add the facts a photo cannot show",
+        body: "Size, material, price, care and shipping answer the questions that stop people buying. The tool lists the ones to add for your product.",
+      },
+      {
+        title: "Write for one person",
+        body: "Picture a single customer and answer their questions. A plain description beats a long one full of adjectives.",
+      },
+      {
+        title: "Only claim what you can prove",
+        body: "Words such as organic, handmade, vegan or anything about results on skin or health need to be true and, in many places, allowed. When unsure, leave them out.",
+      },
+    ],
+    faq: [
+      {
+        q: "What should a product description include?",
+        a: "What it is, what it looks like, who or what it is for, the key facts (size, material, how to use or care for it) and how it ships. Keep each as one short line.",
+      },
+      {
+        q: "How long should a product description be?",
+        a: "Long enough to answer a buyer's questions and no longer. Many small-shop items work well in 50 to 100 words, with more for products that need explaining.",
+      },
+      {
+        q: "Can I paste the result into Shopify or Etsy?",
+        a: "Yes. Copy it into any store, but read it first and add your own facts, such as size and price, so every word is true for your product.",
+      },
+      ...PHOTO_FAQ,
+    ],
+  },
+
+  "new-arrival-captions-for-instagram": {
+    slug: "new-arrival-captions-for-instagram",
+    businessType: "ecommerce",
+    label: "New arrivals",
+    metaTitle: "New Arrival Captions for Instagram: 30 to Copy + Free Tool",
+    metaDescription:
+      "30 original captions for new arrivals, restocks and product drops, plus a free tool that writes captions from your own product photo.",
+    h1: "New arrival captions for Instagram",
+    intro: [
+      "New arrivals are the posts your followers are most likely to act on, so the caption should do three things: say what is new, make it easy to picture, and tell people what to do next. Here are 30 you can copy and tweak.",
+      "Have the product photo ready? Upload it to the free tool and it writes captions about that exact item, plus hashtags, a product description and three ad headlines.",
+    ],
+    groups: [
+      {
+        title: "Short and punchy",
+        captions: [
+          "New in.",
+          "Just landed.",
+          "Fresh drop, now online.",
+          "New arrivals, sorted.",
+          "Say hello to the new collection.",
+          "Meet the newest arrivals.",
+        ],
+      },
+      {
+        title: "Teasers before the launch",
+        captions: [
+          "Something new is coming on [day]. Can you guess what?",
+          "Three days to go. Here's a small peek.",
+          "We've been keeping this one quiet.",
+          "Photos from the studio. The drop is almost here.",
+          "Set a reminder: new arrivals go live [day] at [time].",
+          "What would you like to see in the next drop? Tell us below.",
+        ],
+      },
+      {
+        title: "Restocks and sell-outs",
+        captions: [
+          "Back in stock: the one you kept asking about.",
+          "Restocked. Some sizes are limited, so don't wait too long.",
+          "Sold out last time. Back today.",
+          "Small batch, so when it's gone, it's gone.",
+          "Want to know when it's back? Send us a message.",
+          "You asked, we restocked.",
+        ],
+      },
+      {
+        title: "Details and styling",
+        captions: [
+          "Three ways to wear the new [item].",
+          "Close-up of the [fabric or finish]: this is what you get.",
+          "Real photo, no filter. Colors may look slightly different on your screen.",
+          "What goes with it? Everything in the second photo.",
+          "Measurements are on the last slide.",
+          "Packed by us and posted within [number] business days.",
+        ],
+      },
+      {
+        title: "Gentle calls to action",
+        captions: [
+          "Shop the new arrivals: link in bio.",
+          "Tap the product tags to see price and sizes.",
+          "Order today and we'll ship it on [day].",
+          "Questions about sizing? Message us.",
+          "Free shipping on orders over $[amount] this week.",
+          "Buying for someone else? We can add a note.",
+        ],
+      },
+    ],
+    cta: {
+      title: "Announce every new product in minutes",
+      body: "Add your products once. Punqle makes a ready-to-post ad for each new arrival, so a drop takes minutes, not an afternoon.",
+    },
+    tips: [
+      {
+        title: "Lead with the product, not the news",
+        body: "Show the item clearly in the first photo. The caption can say \"new\", but the picture has to earn the stop.",
+      },
+      {
+        title: "Give the facts people ask for",
+        body: "Price, sizes and shipping are the three most common questions. Answer them in the caption or on the last slide.",
+      },
+      {
+        title: "Tease, drop, restock",
+        body: "One product can earn three posts: a peek before the launch, the drop itself, and a restock later. Reuse the same photo set differently.",
+      },
+      {
+        title: "Do not promise what you do not have",
+        body: "Lines such as \"limited\" or \"free shipping\" are only fair if they are true. Edit every caption to match your shop.",
+      },
+    ],
+    faq: [
+      {
+        q: "How often should I post new arrivals?",
+        a: "As often as you really have something new. A steady rhythm, such as one drop a week or a month, works better than posting everything at once.",
+      },
+      {
+        q: "Should new arrival posts be reels or photos?",
+        a: "Both work. A clear photo or carousel shows detail; a short reel shows movement, texture and fit. Try one of each and see what your followers respond to.",
+      },
+      ...PHOTO_FAQ,
+    ],
+  },
+
+  "skincare-captions-for-instagram": {
+    slug: "skincare-captions-for-instagram",
+    businessType: "ecommerce",
+    label: "Skincare brands",
+    metaTitle: "Skincare Captions for Instagram: 30 to Copy + Free Tool",
+    metaDescription:
+      "30 original Instagram captions for skincare and beauty brands that stay honest (no medical claims), plus a free tool that writes captions from your product photo.",
+    h1: "Skincare captions for Instagram",
+    intro: [
+      "Skincare is a trust business. The best captions explain how to use the product, show the ingredients openly and never promise results the product cannot guarantee. Here are 30 captions written that way, ready to copy and tweak.",
+      "For captions and a product description about your exact product, upload its photo to the free tool.",
+    ],
+    groups: [
+      {
+        title: "Short and punchy",
+        captions: [
+          "Skin first.",
+          "Simple routine, steady habit.",
+          "One step at a time.",
+          "Cleanse. Moisturize. Repeat.",
+          "Soft light, clean skin, calm morning.",
+          "Your evening ritual, in one bottle.",
+        ],
+      },
+      {
+        title: "Routines and how to use",
+        captions: [
+          "Morning routine: cleanse, moisturize, sunscreen. That's it.",
+          "Evening routine: take your time. Skin likes consistency.",
+          "How we use it: two pumps on damp skin, press in, done.",
+          "Patch test first, always. Here's how.",
+          "Layering order for beginners: thinnest texture first.",
+          "Sunday reset: slow, quiet and no phone.",
+        ],
+      },
+      {
+        title: "Ingredients and honesty",
+        captions: [
+          "The full ingredient list is in the last slide.",
+          "What's in it, why it's in there, how to use it. Swipe.",
+          "Results vary from person to person, so we never promise a timeline.",
+          "Every skin is different. Start slowly and see how yours responds.",
+          "Questions about an ingredient? Send us a message.",
+          "Close-up of the texture, shot without a filter.",
+        ],
+      },
+      {
+        title: "Questions that get comments",
+        captions: [
+          "What's your one non-negotiable skincare step?",
+          "Morning or night person, skincare edition?",
+          "Cleanser first or toner first? Settle it for us.",
+          "How many steps is too many?",
+          "Which texture do you prefer: gel, cream or oil?",
+          "What should we make next?",
+        ],
+      },
+      {
+        title: "Gentle calls to action",
+        captions: [
+          "Shop the routine: link in bio.",
+          "New to the range? Start with the cleanser.",
+          "Ask about sample sizes before you buy.",
+          "Gift sets are in the shop now.",
+          "Sizes and refills are on the product page.",
+          "Not sure where to start? Message us and we'll point you to the right one.",
+        ],
+      },
+    ],
+    cta: {
+      title: "Make an ad for every product in your range",
+      body: "Import your Shopify or CSV catalog and Punqle makes a ready-to-post ad for each product, in your brand colors.",
+    },
+    tips: [
+      {
+        title: "Show the texture and the bottle",
+        body: "A clean close-up of the product and the pack does more than a long description. Natural light and a plain background work best.",
+      },
+      {
+        title: "Say how to use it",
+        body: "\"Two pumps on damp skin\" is a caption people save. Clear steps build trust and cut down on questions.",
+      },
+      {
+        title: "Avoid medical claims",
+        body: "Do not say a product treats, cures or prevents a skin condition. Describe how it feels and how to use it, and check the rules in your country.",
+      },
+      {
+        title: "Be open about ingredients",
+        body: "Link to or show the full list. Shoppers with allergies or preferences will thank you, and honest brands stand out.",
+      },
+    ],
+    faq: [
+      {
+        q: "Can I say my product treats acne or wrinkles?",
+        a: "Be careful. Claims about treating a condition can make a product count as a medicine or therapeutic good in many countries, including Australia and the US, and advertising platforms restrict them. Focus on texture, use and ingredients, and check your local rules.",
+      },
+      {
+        q: "What hashtags work for skincare?",
+        a: "Use ones that describe the product and routine (for example the product type and skin type) plus a few about your brand or location. Avoid hashtags that promise results.",
       },
       ...PHOTO_FAQ,
     ],

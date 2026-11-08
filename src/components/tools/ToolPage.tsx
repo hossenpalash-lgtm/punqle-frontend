@@ -69,9 +69,11 @@ export function ToolPage({ page }: { page: ToolPageData }) {
         {page.groups.length > 0 && (
           <section className="mt-14" aria-labelledby="ready-heading">
             <h2 id="ready-heading" className="font-display text-2xl font-extrabold text-foreground">
-              30 captions to copy
+              {page.listTitle ?? "30 captions to copy"}
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">Tap Copy, paste into Instagram, and change any word to sound like you.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {page.listIntro ?? "Tap Copy, paste into Instagram, and change any word to sound like you."}
+            </p>
             <div className="mt-6 flex flex-col gap-8">
               {page.groups.map((g) => (
                 <div key={g.title}>
@@ -124,10 +126,12 @@ export function ToolPage({ page }: { page: ToolPageData }) {
         </section>
 
         <section className="mt-14 rounded-3xl border border-border bg-muted p-6 sm:p-8">
-          <h2 className="font-display text-2xl font-extrabold text-foreground">Captions are the easy part</h2>
+          <h2 className="font-display text-2xl font-extrabold text-foreground">
+            {page.cta?.title ?? "Captions are the easy part"}
+          </h2>
           <p className="mt-2 max-w-[560px] text-[15px] leading-relaxed text-muted-foreground">
-            Punqle turns one photo into the whole post: the ad image, a short video, the caption and a week of ideas, so
-            you spend minutes on marketing instead of hours.
+            {page.cta?.body ??
+              "Punqle turns one photo into the whole post: the ad image, a short video, the caption and a week of ideas, so you spend minutes on marketing instead of hours."}
           </p>
           <Link
             to="/"

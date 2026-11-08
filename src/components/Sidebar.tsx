@@ -229,13 +229,13 @@ export function Sidebar({
         <button
           onClick={() => onNavigate("home")}
           aria-label="Home"
-          className="mb-6 flex shrink-0 items-center gap-2.5 self-start rounded-full py-1.5 pl-1.5 pr-5 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+          className="mb-6 flex shrink-0 items-center gap-2 self-start rounded-full py-1 pl-1 pr-4 transition-transform hover:scale-[1.02] active:scale-[0.98]"
           style={GLASS_PILL_IDLE}
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background">
-            <PunqleLogo className="h-4 w-4" />
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-background">
+            <PunqleLogo className="h-3.5 w-3.5" />
           </div>
-          <span className="font-display text-base font-extrabold text-foreground">Punqle</span>
+          <span className="font-display text-[15px] font-extrabold text-foreground">Punqle</span>
         </button>
 
         <div className="flex flex-1 flex-col overflow-y-auto">

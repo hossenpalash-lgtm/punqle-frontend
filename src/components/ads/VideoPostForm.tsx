@@ -1,4 +1,4 @@
-import { AlertCircle, Camera, ChevronDown, Clock, Download, Link2, Loader2, Video } from "lucide-react";
+import { AlertCircle, ChevronDown, Clock, Download, Link2, Loader2, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   base64ToFile,
@@ -13,6 +13,7 @@ import { EditVideoPanel } from "./EditVideoPanel";
 import { ProductPicker } from "./ProductPicker";
 import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
+import { FormatPills, PhotoPill } from "./SettingPills";
 
 const VIDEO_CREDIT_COST = 30; // Gemini Omni, 8 s, 1080p, sound included — mirrors main.py (was 10 on Veo)
 const POLL_INTERVAL_MS = 8000;
@@ -57,6 +58,8 @@ export function VideoPostForm({
   const [hasLogo, setHasLogo] = useState(false);
   const [hasBrandColor, setHasBrandColor] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const [needsText, setNeedsText] = useState(false);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // poll() is a self-scheduling setTimeout chain — it needs the *current*
@@ -131,7 +134,13 @@ export function VideoPostForm({
   };
 
   const handleGenerate = async () => {
-    if (!description.trim() || generating || (credits !== null && credits < VIDEO_CREDIT_COST)) return;
+    if (generating || (credits !== null && credits < VIDEO_CREDIT_COST)) return;
+    if (!description.trim()) {
+      setNeedsText(true);
+      descriptionRef.current?.focus();
+      descriptionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setGenerating(true);
     setError(null);
     setVideoUrl(null);
@@ -254,34 +263,27 @@ export function VideoPostForm({
         </div>
       )}
 
-      <div className="mb-5">
+      <div className="mb-3">
         <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Product photo (optional)
+          What's the video about?
         </label>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+        <textarea
+          ref={descriptionRef}
+          value={description}
+          onChange={(e) => {
+            setDescription(e.target.value);
+            if (needsText) setNeedsText(false);
+          }}
+          placeholder="e.g. Fresh roasted coffee beans, steam rising from a cup"
+          rows={3}
+          className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-card p-6 text-center transition-colors active:bg-secondary/40"
-          style={{ minHeight: previewUrl ? undefined : "8rem" }}
-        >
-          {previewUrl ? (
-            <img src={previewUrl} alt="Product photo" className="max-h-44 rounded-xl object-contain" />
-          ) : (
-            <>
-              <Camera className="h-7 w-7 text-muted-foreground" />
-              <span className="text-sm font-semibold text-muted-foreground">
-                Add a photo to guide the video, or skip for text-only
-              </span>
-            </>
-          )}
-        </button>
+        {needsText && (
+          <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            Tell Punqle what the video is about first.
+          </p>
+        )}
       </div>
 
       {/* Same "paste a product link / pick from catalog" pattern
@@ -335,43 +337,11 @@ export function VideoPostForm({
         </div>
       )}
 
-      <div className="mb-6">
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          What's the video about?
-        </label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="e.g. Fresh roasted coffee beans, steam rising from a cup"
-          rows={3}
-          className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-      </div>
-
-      <div className="mb-6">
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Format
-        </label>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setAspectRatio("16:9")}
-            className={[
-              "flex-1 rounded-full px-4 py-2.5 text-sm font-semibold",
-              aspectRatio === "16:9" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-            ].join(" ")}
-          >
-            Landscape (16:9)
-          </button>
-          <button
-            onClick={() => setAspectRatio("9:16")}
-            className={[
-              "flex-1 rounded-full px-4 py-2.5 text-sm font-semibold",
-              aspectRatio === "9:16" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-            ].join(" ")}
-          >
-            Vertical (9:16)
-          </button>
-        </div>
+      {/* Format and the optional photo as one row of small pills under the idea box (2026-11-10) — the
+          same arrangement as Ad Creation. The photo used to be a big dashed box ABOVE the idea. */}
+      <div className="mb-5 flex w-full flex-wrap items-center gap-2">
+        <FormatPills value={aspectRatio} onChange={setAspectRatio} />
+        <PhotoPill file={file} previewUrl={previewUrl} onFile={handleFileChange} inputRef={fileInputRef} capture="environment" />
       </div>
 
       {hasLogo && (
@@ -385,15 +355,17 @@ export function VideoPostForm({
         </p>
       )}
 
-      <button
-        onClick={handleGenerate}
-        disabled={!description.trim() || generating || (credits !== null && credits < VIDEO_CREDIT_COST)}
-        className="flex w-full items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground disabled:opacity-60"
-        style={{ background: "var(--gradient-primary)" }}
-      >
-        <Video className="h-5 w-5" />
-        Generate video ({VIDEO_CREDIT_COST} credits)
-      </button>
+      <div className="sticky bottom-3 z-10 w-full">
+        <button
+          onClick={handleGenerate}
+          disabled={generating || (credits !== null && credits < VIDEO_CREDIT_COST)}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-4 text-base font-semibold text-background shadow-[0_10px_28px_-10px_rgba(0,0,0,0.55)] disabled:opacity-60"
+        >
+          <Video className="h-5 w-5" />
+          Generate video
+          <span className="font-medium opacity-70"> · {VIDEO_CREDIT_COST} credits</span>
+        </button>
+      </div>
     </>
   );
 }

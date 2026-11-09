@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Clock, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronRight, Loader2, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 import { showToast } from "@/components/GlassToast";
 import {
@@ -11,7 +11,8 @@ import {
   type ApiTikTokPublishResponse,
 } from "@/lib/api";
 import { TikTokIcon } from "@/components/TikTokIcon";
-import { MIN_SCHEDULE_MINUTES, MAX_SCHEDULE_DAYS, toDatetimeLocalMin } from "@/lib/schedule-dates";
+import { PlatformTile } from "@/components/PlatformTile";
+import { ScheduleSwitch } from "./ScheduleSwitch";
 
 const PRIVACY_LABELS: Record<string, string> = {
   PUBLIC_TO_EVERYONE: "Everyone",
@@ -198,10 +199,15 @@ export function PublishToTikTok({
     return (
       <button
         onClick={() => setExpanded(true)}
-        className="mb-3 flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-secondary-foreground"
+        className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-left"
+        style={{ boxShadow: "var(--shadow-card)" }}
       >
-        <TikTokIcon className="h-4 w-4" />
-        Publish to TikTok
+        <PlatformTile platform="tiktok" size="lg" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-[15px] font-extrabold text-foreground">Publish to TikTok</span>
+          <span className="block text-xs text-muted-foreground">{canSchedule ? "Now, or at a time you choose" : "Share this video on your TikTok"}</span>
+        </span>
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
       </button>
     );
   }
@@ -212,13 +218,21 @@ export function PublishToTikTok({
   const alreadyPosted = !!result?.posted;
 
   return (
-    <div className="mb-3 rounded-2xl border border-border bg-background p-3.5">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Publish to {creatorInfo?.nickname ?? displayName}
-      </p>
-      <p className="mb-3 text-xs text-muted-foreground">
-        Posts land as private while the app is in TikTok's review — that's expected, not a bug.
-      </p>
+    <div className="mb-3 overflow-hidden rounded-3xl border border-border bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+      <div className="mb-3 flex items-center gap-3">
+        <PlatformTile platform="tiktok" size="md" />
+        <div className="min-w-0">
+          <p className="truncate font-display text-base font-extrabold leading-tight text-foreground">
+            Publish to {creatorInfo?.nickname ?? displayName}
+          </p>
+          <p className="text-xs text-muted-foreground">Choose who sees it and when</p>
+        </div>
+      </div>
+      {creatorInfo && !creatorInfo.is_audited && (
+        <p className="mb-3 rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground">
+          Posts land as private while the app is in TikTok's review — that's expected, not a bug.
+        </p>
+      )}
 
       {loadingCreatorInfo ? (
         <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
@@ -359,39 +373,18 @@ export function PublishToTikTok({
       )}
 
       {canSchedule && !alreadyPosted && (
-        <div className="mb-3">
-          <div className="mb-2 flex gap-2">
-            <button
-              onClick={() => setScheduling(false)}
-              className={["flex-1 rounded-full px-3 py-1.5 text-xs font-semibold", !scheduling ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"].join(" ")}
-            >
-              Post now
-            </button>
-            <button
-              onClick={() => {
-                setScheduling(true);
-                if (!scheduledAt) setScheduledAt(toDatetimeLocalMin(MIN_SCHEDULE_MINUTES));
-              }}
-              className={["flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold", scheduling ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"].join(" ")}
-            >
-              <Clock className="h-3 w-3" />
-              Schedule for later
-            </button>
-          </div>
-          {scheduling && (
-            <>
-              <input
-                type="datetime-local"
-                value={scheduledAt}
-                min={toDatetimeLocalMin(MIN_SCHEDULE_MINUTES)}
-                max={toDatetimeLocalMin(MAX_SCHEDULE_DAYS * 24 * 60)}
-                onChange={(e) => setScheduledAt(e.target.value)}
-                className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              <p className="mt-1.5 text-xs text-muted-foreground">Punqle will post it to TikTok at that time. You can change or cancel it in your calendar.</p>
-            </>
-          )}
-        </div>
+        <ScheduleSwitch
+          scheduling={scheduling}
+          onScheduling={setScheduling}
+          scheduledAt={scheduledAt}
+          onScheduledAt={setScheduledAt}
+          lines={
+            <p className="flex items-center gap-2">
+              <PlatformTile platform="tiktok" size="sm" />
+              Punqle posts it at that time
+            </p>
+          }
+        />
       )}
 
       {error && (
@@ -403,15 +396,23 @@ export function PublishToTikTok({
 
       {result && (
         <div className="mb-3 text-sm">
-          {!result.posted && <p className="text-destructive">✗ {result.error}</p>}
+          {result.posted ? (
+            <p className="flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2 text-foreground">
+              <PlatformTile platform="tiktok" size="sm" />
+              {result.scheduled ? "TikTok: scheduled. See it in Plan & Publish → Content Calendar." : "TikTok: posted"}
+            </p>
+          ) : (
+            <p className="rounded-xl bg-destructive/10 px-3 py-2 text-destructive">✗ {result.error}</p>
+          )}
         </div>
       )}
 
       {alreadyPosted ? (
         <button
           onClick={() => setExpanded(false)}
-          className="w-full rounded-full bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-4 py-3 text-sm font-semibold text-secondary-foreground"
         >
+          <CheckCircle2 className="h-4 w-4" />
           Done
         </button>
       ) : (
@@ -419,15 +420,15 @@ export function PublishToTikTok({
           <button
             onClick={handlePublish}
             disabled={publishing || !canPublish}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            className="flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
             style={{ background: "var(--gradient-primary)" }}
           >
-            {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-            {scheduling ? "Schedule" : "Confirm & Publish"}
+            {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {scheduling ? "Schedule post" : "Publish now"}
           </button>
           <button
             onClick={() => setExpanded(false)}
-            className="shrink-0 rounded-full bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground"
+            className="shrink-0 rounded-full bg-secondary px-4 py-3 text-sm font-semibold text-secondary-foreground"
           >
             Cancel
           </button>

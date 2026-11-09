@@ -1,6 +1,8 @@
-import { AlertCircle, CheckCircle2, Clock, Loader2, Youtube } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronRight, Loader2, Send, Youtube } from "lucide-react";
 import { useEffect, useState } from "react";
 import { showToast } from "@/components/GlassToast";
+import { PlatformTile } from "@/components/PlatformTile";
+import { ScheduleSwitch } from "./ScheduleSwitch";
 import {
   fetchYouTubeStatus,
   getYouTubeConnectUrl,
@@ -145,10 +147,15 @@ export function PublishToYouTube({
     return (
       <button
         onClick={() => setExpanded(true)}
-        className="mb-3 flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-secondary-foreground"
+        className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-left"
+        style={{ boxShadow: "var(--shadow-card)" }}
       >
-        <Youtube className="h-4 w-4" />
-        Publish to YouTube
+        <PlatformTile platform="youtube" size="lg" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-[15px] font-extrabold text-foreground">Publish to YouTube</span>
+          <span className="block text-xs text-muted-foreground">Now, or at a time you choose</span>
+        </span>
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
       </button>
     );
   }
@@ -159,10 +166,14 @@ export function PublishToYouTube({
   const alreadyPosted = !!result?.posted;
 
   return (
-    <div className="mb-3 rounded-2xl border border-border bg-background p-3.5">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Publish to {channelTitle}
-      </p>
+    <div className="mb-3 overflow-hidden rounded-3xl border border-border bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+      <div className="mb-3 flex items-center gap-3">
+        <PlatformTile platform="youtube" size="md" />
+        <div className="min-w-0">
+          <p className="truncate font-display text-base font-extrabold leading-tight text-foreground">Publish to {channelTitle}</p>
+          <p className="text-xs text-muted-foreground">Title, description and when</p>
+        </div>
+      </div>
 
       <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">Title</label>
       <input
@@ -184,40 +195,17 @@ export function PublishToYouTube({
       />
 
       {!alreadyPosted && (
-        <div className="mb-3 flex gap-2">
-          <button
-            onClick={() => setScheduling(false)}
-            className={[
-              "flex-1 rounded-full px-3 py-1.5 text-xs font-semibold",
-              !scheduling ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-            ].join(" ")}
-          >
-            Post now
-          </button>
-          <button
-            onClick={() => {
-              setScheduling(true);
-              if (!scheduledAt) setScheduledAt(toDatetimeLocalMin(MIN_SCHEDULE_MINUTES));
-            }}
-            className={[
-              "flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
-              scheduling ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-            ].join(" ")}
-          >
-            <Clock className="h-3 w-3" />
-            Schedule for later
-          </button>
-        </div>
-      )}
-
-      {!alreadyPosted && scheduling && (
-        <input
-          type="datetime-local"
-          value={scheduledAt}
-          min={toDatetimeLocalMin(MIN_SCHEDULE_MINUTES)}
-          max={toDatetimeLocalMin(MAX_SCHEDULE_DAYS * 24 * 60)}
-          onChange={(e) => setScheduledAt(e.target.value)}
-          className="mb-3 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        <ScheduleSwitch
+          scheduling={scheduling}
+          onScheduling={setScheduling}
+          scheduledAt={scheduledAt}
+          onScheduledAt={setScheduledAt}
+          lines={
+            <p className="flex items-center gap-2">
+              <PlatformTile platform="youtube" size="sm" />
+              YouTube posts it at that time
+            </p>
+          }
         />
       )}
 
@@ -230,15 +218,23 @@ export function PublishToYouTube({
 
       {result && (
         <div className="mb-3 text-sm">
-          {!result.posted && <p className="text-destructive">✗ {result.error}</p>}
+          {result.posted ? (
+            <p className="flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2 text-foreground">
+              <PlatformTile platform="youtube" size="sm" />
+              {result.scheduled ? "YouTube: scheduled. See it in Plan & Publish → Content Calendar." : "YouTube: published"}
+            </p>
+          ) : (
+            <p className="rounded-xl bg-destructive/10 px-3 py-2 text-destructive">✗ {result.error}</p>
+          )}
         </div>
       )}
 
       {alreadyPosted ? (
         <button
           onClick={() => setExpanded(false)}
-          className="w-full rounded-full bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-4 py-3 text-sm font-semibold text-secondary-foreground"
         >
+          <CheckCircle2 className="h-4 w-4" />
           Done
         </button>
       ) : (
@@ -246,15 +242,15 @@ export function PublishToYouTube({
           <button
             onClick={handlePublish}
             disabled={publishing || !title.trim() || (scheduling && !scheduledAt)}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            className="flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
             style={{ background: "var(--gradient-primary)" }}
           >
-            {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-            {scheduling ? "Schedule" : "Confirm & Publish"}
+            {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {scheduling ? "Schedule post" : "Publish now"}
           </button>
           <button
             onClick={() => setExpanded(false)}
-            className="shrink-0 rounded-full bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground"
+            className="shrink-0 rounded-full bg-secondary px-4 py-3 text-sm font-semibold text-secondary-foreground"
           >
             Cancel
           </button>

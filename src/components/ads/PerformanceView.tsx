@@ -77,6 +77,19 @@ function formatMultiple(n: number): string {
   return `${n.toFixed(1)}×`;
 }
 
+// A bar for "how many times your average" (founder, 2026-11-10: charts instead of sentences). The thin line is 1x = your own
+// average; the filled part is this post/group. Only real, already-computed multiples go in; nothing is invented.
+function MultipleBar({ multiple, max }: { multiple: number; max: number }) {
+  const fill = Math.max(2, Math.min(100, (multiple / max) * 100));
+  const avg = Math.min(100, (1 / max) * 100);
+  return (
+    <div className="relative h-2.5 w-full rounded-full bg-secondary" role="img" aria-label={`${formatMultiple(multiple)} your average`}>
+      <div className="h-full rounded-full bg-primary" style={{ width: `${fill}%` }} />
+      <div className="absolute -top-1 h-[18px] w-px bg-foreground/60" style={{ left: `${avg}%` }} title="Your average" aria-hidden="true" />
+    </div>
+  );
+}
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
@@ -290,6 +303,8 @@ export function PerformanceView() {
   const scores = useMemo(() => scorePosts(posts), [posts]);
   const winner = useMemo(() => bestWinner(posts, scores), [posts, scores]);
   const leaders = useMemo(() => groupLeaders(posts, scores), [posts, scores]);
+  // One scale for every bar in the card, never below 2x, so a 1.3x group and a 2.4x post can be compared by eye.
+  const barMax = Math.max(2, winner?.score.multiple ?? 0, ...leaders.map((l) => l.averageMultiple));
 
   const groupRows = useMemo(
     () => (groupBy === "none" ? [] : groupPosts(posts, groupBy)),
@@ -368,10 +383,14 @@ export function PerformanceView() {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground font-display">
-                  Your best post earned {formatMultiple(winner.score.multiple)} your {PLATFORM_LABEL[winner.post.platform]} average
+                <p className="flex items-baseline gap-2">
+                  <span className="font-display text-3xl font-extrabold leading-none text-foreground">{formatMultiple(winner.score.multiple)}</span>
+                  <span className="text-xs text-muted-foreground">your best post vs your {PLATFORM_LABEL[winner.post.platform]} average</span>
                 </p>
-                <p className="mb-1 line-clamp-1 text-xs text-muted-foreground">{winner.post.caption || "(no caption)"}</p>
+                <div className="my-2">
+                  <MultipleBar multiple={winner.score.multiple} max={barMax} />
+                </div>
+                <p className="line-clamp-1 text-xs text-muted-foreground">{winner.post.caption || "(no caption)"}</p>
                 <p className="text-xs text-muted-foreground">
                   {winner.score.engagement} interactions (likes, comments, shares, saves)
                 </p>
@@ -379,16 +398,27 @@ export function PerformanceView() {
             </div>
           )}
           {leaders.length > 0 && (
-            <ul className={`space-y-1 text-sm text-foreground ${winner ? "mt-3 border-t border-border pt-3" : ""}`}>
+            <ul className={`space-y-3 ${winner ? "mt-3 border-t border-border pt-3" : ""}`}>
               {leaders.map((l) => (
                 <li key={l.dimension}>
-                  Your <span className="font-semibold">{formatLabel(l.value)}</span> {DIMENSION_LABEL[l.dimension]} does{" "}
-                  {formatMultiple(l.averageMultiple)} your average{" "}
-                  <span className="text-xs text-muted-foreground">({l.postCount} posts)</span>
+                  <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                    <span className="text-sm text-foreground">
+                      <span className="font-semibold">{formatLabel(l.value)}</span>{" "}
+                      <span className="text-muted-foreground">{DIMENSION_LABEL[l.dimension]}</span>
+                    </span>
+                    <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
+                      {formatMultiple(l.averageMultiple)}{" "}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        ({l.postCount} posts)
+                      </span>
+                    </span>
+                  </div>
+                  <MultipleBar multiple={l.averageMultiple} max={barMax} />
                 </li>
               ))}
             </ul>
           )}
+          <p className="mt-3 text-[11px] text-muted-foreground">The thin line is your average (1×).</p>
         </div>
       )}
 

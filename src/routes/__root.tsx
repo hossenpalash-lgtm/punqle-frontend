@@ -187,6 +187,13 @@ function RootComponent() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // Screens deep in the app (e.g. the free-comparison result) can ask for the credit packs without owning this state.
+  useEffect(() => {
+    const open = () => setBillingOpen(true);
+    window.addEventListener("punqle:open-billing", open);
+    return () => window.removeEventListener("punqle:open-billing", open);
+  }, []);
+
   useEffect(() => {
     const t = setTimeout(() => setMinSplashDone(true), 700);
     return () => clearTimeout(t);

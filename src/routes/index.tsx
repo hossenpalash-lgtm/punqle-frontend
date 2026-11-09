@@ -242,6 +242,9 @@ const VIDEO_LENGTH_CHIPS: Record<ImageVideoModel, { label: string; seconds: numb
 const STUDIO_VOICE_MAX: Partial<Record<ImageVideoModel, number>> = { omni: 10, kling_3_pro: 15 };
 const lengthChipsFor = (model: ImageVideoModel, studioVoice: boolean) =>
   studioVoice ? VIDEO_LENGTH_CHIPS[model].filter((c) => c.seconds <= (STUDIO_VOICE_MAX[model] ?? 0)) : VIDEO_LENGTH_CHIPS[model];
+// The full-quality version offered after the free comparison is the same 4 seconds as the comparison, so it is
+// the cheapest real video (Wan/Kling 4.0 20-24 credits, Seedance 24) and a new account's ~15 free credits fall just short.
+const TASTER_UPGRADE_SECONDS = 4;
 // TALKING_VIDEO_REDUB_SURCHARGE is declared right below this block.
 const videoCostFor = (model: ImageVideoModel, seconds: number, studioVoice: boolean) =>
   Math.ceil(seconds * videoCreditsPerSecond(model, studioVoice)) + (studioVoice ? 18 : 0);
@@ -1306,7 +1309,7 @@ function HomeScreen() {
   // call this again for version 2/3 once the previous one's poll
   // reports done -- same start-then-poll shape as before, just callable
   // more than once in a row.
-  const startVideoVersion = async (versionIndex: number, totalVersions: number) => {
+  const startVideoVersion = async (versionIndex: number, totalVersions: number, secondsOverride?: number, enhanceOverride?: boolean) => {
     if (!videoRefImage) return;
     try {
       if (videoNarrationEnabled) {
@@ -1328,9 +1331,9 @@ function HomeScreen() {
         videoRefImage.mimeType,
         videoFullPrompt,
         videoModel,
-        videoDuration,
+        secondsOverride ?? videoDuration,
         videoAspectRatio,
-        videoEnhance,
+        enhanceOverride ?? videoEnhance,
       );
       videoPollRef.current = setTimeout(() => pollImageVideo(r.job_id, r.operation, versionIndex, totalVersions), 8000);
     } catch (err) {
@@ -1339,14 +1342,29 @@ function HomeScreen() {
     }
   };
 
-  const handleGenerateVideo = async () => {
+  const handleGenerateVideo = async (secondsOverride?: number, enhanceOverride?: boolean) => {
+    if (typeof secondsOverride !== "number") secondsOverride = undefined;
     if (!videoRefImage) return;
     if (videoNarrationEnabled ? !videoNarration.trim() : !videoPrompt.trim()) return;
     setVideoError(null);
     setVideoVariants([]);
     setResultFromTaster(false);
     setVideoPanel("generating");
-    await startVideoVersion(1, effectiveVideoVersions);
+    await startVideoVersion(1, secondsOverride ? 1 : effectiveVideoVersions, secondsOverride, enhanceOverride);
+  };
+
+  // After the free comparison: make the pick again at full quality (no watermark), 4 s, for credits. A new account's
+  // free credits fall just short, so then it opens the credit packs instead of failing with a 402.
+  const handleUpgradeTasterVideo = () => {
+    const cost = videoCostFor(videoModel, TASTER_UPGRADE_SECONDS, false);
+    if (credits !== null && credits < cost) {
+      window.dispatchEvent(new Event("punqle:open-billing"));
+      return;
+    }
+    setVideoDuration(TASTER_UPGRADE_SECONDS);
+    // The free comparison is always made with the Punqle Enhancer, so the remake uses it too (else it would look
+    // different from the video they just picked).
+    void handleGenerateVideo(TASTER_UPGRADE_SECONDS, true);
   };
 
   const handleSelectVideoVariant = (index: number) => {
@@ -2214,16 +2232,16 @@ function HomeScreen() {
                         </button>
                         {resultFromTaster ? (
                           <button
-                            onClick={handleGenerateVideo}
+                            onClick={handleUpgradeTasterVideo}
                             title="Make this video again at full quality, without the watermark"
                             className="rounded-full px-4 py-2 text-xs font-bold text-white"
                             style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                           >
-                            Full quality, no watermark ({videoCostFor(videoModel, videoDuration, videoNarrationEnabled) * effectiveVideoVersions} credits)
+                            Full quality, no watermark ({videoCostFor(videoModel, TASTER_UPGRADE_SECONDS, false)} credits)
                           </button>
                         ) : (
                           <button
-                            onClick={handleGenerateVideo}
+                            onClick={() => handleGenerateVideo()}
                             title="Generate again with the same photo and settings"
                             className="flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
                           >
@@ -2580,7 +2598,7 @@ function HomeScreen() {
                         Cancel
                       </button>
                       <button
-                        onClick={videoCompare ? handleGenerateCompare : handleGenerateVideo}
+                        onClick={videoCompare ? handleGenerateCompare : () => handleGenerateVideo()}
                         disabled={
                           !videoRefImage ||
                           (videoNarrationEnabled ? !videoNarration.trim() : !videoPrompt.trim())

@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Download, Pencil } from "lucide-react";
+import { AlertCircle, Download, Pencil } from "lucide-react";
 import { useState } from "react";
 import type { ApiAdCaptionVariant, CaptionLength, CaptionTone } from "@/lib/api";
 import { deriveOnImageHeadline, type Box, type BrandKit, type EditOptions } from "@/lib/canvas-text";
@@ -7,7 +7,7 @@ import { CaptionStyleControls } from "./CaptionStyleControls";
 import { CarouselBuilder } from "./CarouselBuilder";
 import { DragDropEditor } from "./DragDropEditor";
 import { HashtagPicker } from "./HashtagPicker";
-import { ImageVariantPicker } from "./ImageVariantPicker";
+import { ImageToolsPill, ImageVariantPicker } from "./ImageVariantPicker";
 import { PublishToMeta } from "./PublishToMeta";
 import { QuickEditPanel } from "./QuickEditPanel";
 import { TranslateCaptions } from "./TranslateCaptions";
@@ -131,7 +131,6 @@ export function PostKit({
   carouselSlideHeadlines?: (string | undefined)[];
   carouselAutoExpand?: boolean;
 }) {
-  const hashtagsAdded = editedCaption.includes("#");
   // Carousel slides mirror what's actually baked onto the main preview
   // — the short on-image headline, never the full editable caption —
   // so a downloaded carousel matches the hero image the user is looking
@@ -141,9 +140,6 @@ export function PostKit({
     cta,
   };
   const [editorOpen, setEditorOpen] = useState(false);
-  // A short/wide image (e.g. a LinkedIn banner) can't carry a tall caption card on
-  // top of it without hiding the picture, so it gets only a slim glass Publish bar.
-  const [imageIsTall, setImageIsTall] = useState(true);
   const scrollToPublish = () =>
     document.getElementById("publish-block")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -171,53 +167,43 @@ export function PostKit({
             one (the same reason photo/video tools use a neutral canvas,
             not a decoration). Nothing else on the page changes color. */}
         {compositedUrl && !editorOpen && (
-          <div className="relative mb-5 overflow-hidden rounded-2xl bg-[#1E1F24]" style={{ boxShadow: "var(--shadow-card)" }}>
-            <img
-              src={compositedUrl}
-              alt="Your generated post"
-              className="block w-full"
-              onLoad={(e) => setImageIsTall(e.currentTarget.naturalHeight / e.currentTarget.naturalWidth >= 0.85)}
-            />
-            {/* Glass controls sit ON the picture (founder, 2026-10-12): Download and Edit
-                top right, the caption and Publish in a frosted card along the bottom. */}
-            <div className="absolute right-3 top-3 flex gap-2">
-              <a
-                href={compositedUrl}
-                download="post.jpg"
-                className="glass-chip flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Download
-              </a>
+          <div className="mb-5">
+            <div className="@container relative overflow-hidden rounded-2xl bg-[#1E1F24]" style={{ boxShadow: "var(--shadow-card)" }}>
+              <img src={compositedUrl} alt="Your generated post" className="block w-full" />
+              {/* Glass Download / Edit stay ON the picture (founder, 2026-10-12), top right. top-[9cqw]
+                  puts them just below the "Made with Punqle" badge printed in that corner, which they
+                  used to cover. */}
+              <div className="absolute right-3 top-[9cqw] flex gap-2">
+                <a
+                  href={compositedUrl}
+                  download="post.jpg"
+                  className="glass-chip flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download
+                </a>
+                <button
+                  onClick={() => setEditorOpen(true)}
+                  className="glass-chip flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </button>
+              </div>
+            </div>
+            {/* The caption and Publish now sit UNDER the picture. They used to be a frosted card laid over
+                its lower part, which hid the headline and button printed there (2026-11-10: "the text
+                looks cut off"). The whole creative stays visible, exactly as it will be posted. */}
+            <div className="mt-3 rounded-2xl bg-card p-3.5" style={{ boxShadow: "var(--shadow-card)" }}>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Caption</p>
+              <p className="line-clamp-3 text-[13px] leading-snug text-foreground">{editedCaption}</p>
               <button
-                onClick={() => setEditorOpen(true)}
-                className="glass-chip flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold"
+                onClick={scrollToPublish}
+                className="bg-primary mt-3 w-full rounded-full px-4 py-2.5 text-sm font-semibold text-primary-foreground"
               >
-                <Pencil className="h-3.5 w-3.5" />
-                Edit
+                Publish
               </button>
             </div>
-            {imageIsTall ? (
-              <div className="glass-strong absolute inset-x-3 bottom-3 rounded-3xl p-3.5">
-                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Caption</p>
-                <p className="line-clamp-3 text-[13px] leading-snug text-foreground">{editedCaption}</p>
-                <button
-                  onClick={scrollToPublish}
-                  className="bg-primary mt-3 w-full rounded-full px-4 py-2.5 text-sm font-semibold text-primary-foreground"
-                >
-                  Publish
-                </button>
-              </div>
-            ) : (
-              <div className="glass-strong absolute inset-x-3 bottom-3 rounded-full p-1.5">
-                <button
-                  onClick={scrollToPublish}
-                  className="bg-primary w-full rounded-full px-4 py-2 text-sm font-semibold text-primary-foreground"
-                >
-                  Publish
-                </button>
-              </div>
-            )}
           </div>
         )}
         {compositedUrl && editorOpen && (
@@ -243,32 +229,6 @@ export function PostKit({
           </button>
         )}
 
-        {/* Real-only readiness checklist — every row is a true/false fact
-            about generated state, never an invented quality score. */}
-        <div className="mb-5 grid grid-cols-3 gap-2">
-          {[
-            { label: "Image", ready: images.length > 0 },
-            { label: "Caption", ready: captions.length > 0 },
-            { label: "Hashtags", ready: hashtagsAdded },
-          ].map(({ label, ready }) => (
-            <div
-              key={label}
-              className="flex flex-col items-center gap-1 rounded-xl bg-card py-2.5"
-              style={{ boxShadow: "var(--shadow-card)" }}
-            >
-              <span
-                className={[
-                  "flex h-5 w-5 items-center justify-center rounded-full",
-                  ready ? "bg-success/15 text-success" : "bg-secondary text-muted-foreground",
-                ].join(" ")}
-              >
-                <Check className="h-3 w-3" />
-              </span>
-              <span className="text-[12px] font-semibold text-foreground">{label}</span>
-            </div>
-          ))}
-        </div>
-
         <ImageVariantPicker
           images={images}
           selectedIndex={selectedImageIndex}
@@ -281,24 +241,8 @@ export function PostKit({
           removingBackground={removingBackground}
           enhancing={enhancing}
           disabled={outOfCredits}
+          hideTools
         />
-
-        <CarouselBuilder
-          images={images}
-          text={carouselText}
-          brandKit={brandKit}
-          editOptions={editOptions}
-          visualDirection={visualDirection}
-          slideHeadlines={carouselSlideHeadlines}
-          autoExpand={carouselAutoExpand}
-        />
-      </div>
-
-      {/* ===== Block 2: Caption — everything about the written side:
-          picking, styling, translating, and hand-editing the caption,
-          plus hashtags (which live on the caption, not the image). ===== */}
-      <div className="mb-8 border-t border-border pt-6">
-        <SectionLabel>Caption</SectionLabel>
 
         <CaptionPicker captions={captions} selectedIndex={selectedCaptionIndex} onSelect={onSelectCaption} />
 
@@ -313,21 +257,41 @@ export function PostKit({
           />
         )}
 
-        <TranslateCaptions onTranslate={onTranslate} translating={translating} />
-
-        <QuickEditPanel
-          captionText={editedCaption}
-          onCaptionChange={onCaptionChange}
-          fontScale={fontScale}
-          onFontScaleChange={onFontScaleChange}
-          barColorOverride={barColorOverride}
-          onBarColorOverrideChange={onBarColorOverrideChange}
-          hasLogo={hasLogo}
-          showLogo={showLogo}
-          onShowLogoChange={onShowLogoChange}
-        />
-
-        <HashtagPicker itemDescription={itemDescription} onAppend={onAppendHashtag} />
+        {/* Five optional tools as one row of small pills (2026-11-10) — they used to be five centered
+            text links stacked under each other, plus a "Caption" heading and a row of three tick
+            cards that only said "done". A tool's panel opens full width right where its pill is. */}
+        <div className="flex flex-wrap items-start gap-2">
+          <ImageToolsPill
+            onRemoveBackground={onRemoveBackground}
+            onEnhance={onEnhance}
+            busy={generatingImage || removingBackground || enhancing}
+            removingBackground={removingBackground}
+            enhancing={enhancing}
+            disabled={outOfCredits}
+          />
+          <CarouselBuilder
+            images={images}
+            text={carouselText}
+            brandKit={brandKit}
+            editOptions={editOptions}
+            visualDirection={visualDirection}
+            slideHeadlines={carouselSlideHeadlines}
+            autoExpand={carouselAutoExpand}
+          />
+          <TranslateCaptions onTranslate={onTranslate} translating={translating} />
+          <QuickEditPanel
+            captionText={editedCaption}
+            onCaptionChange={onCaptionChange}
+            fontScale={fontScale}
+            onFontScaleChange={onFontScaleChange}
+            barColorOverride={barColorOverride}
+            onBarColorOverrideChange={onBarColorOverrideChange}
+            hasLogo={hasLogo}
+            showLogo={showLogo}
+            onShowLogoChange={onShowLogoChange}
+          />
+          <HashtagPicker itemDescription={itemDescription} onAppend={onAppendHashtag} />
+        </div>
       </div>
 
       {/* ===== Block 3: Publish — the WhatsApp handoff, download, and

@@ -1,5 +1,6 @@
-import { ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
+import { ToolPill } from "./ToolPill";
 
 const FONT_SCALES: { label: string; value: number }[] = [
   { label: "Small", value: 0.8 },
@@ -38,18 +39,12 @@ export function QuickEditPanel({
 
   if (!expanded) {
     return (
-      <button
-        onClick={() => setExpanded(true)}
-        className="mb-4 flex w-full items-center justify-center gap-1 text-xs font-semibold text-muted-foreground"
-      >
-        Edit this post
-        <ChevronDown className="h-3.5 w-3.5" />
-      </button>
+      <ToolPill icon={SlidersHorizontal} label="Edit post" onClick={() => setExpanded(true)} />
     );
   }
 
   return (
-    <div className="mb-4 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+    <div className="w-full rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
       <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <SlidersHorizontal className="h-3.5 w-3.5" />
         Edit this post

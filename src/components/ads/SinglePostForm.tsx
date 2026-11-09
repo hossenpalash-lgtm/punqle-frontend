@@ -21,7 +21,7 @@ import {
 } from "@/lib/api";
 import {
   compositeImage,
-  deriveOnImageHeadline,
+  deriveOnImageText,
   type Box,
   type BrandKit,
   type CreativeText,
@@ -211,9 +211,10 @@ export function SinglePostForm({
     // a long caption can never end up rendered oversized on the photo.
     // Editing the caption below only ever changes the caption; it no
     // longer touches the image.
-    const headline = deriveOnImageHeadline(variant.whatsapp_message, variant.facebook_caption);
+    const onImage = deriveOnImageText(variant.whatsapp_message, variant.facebook_caption);
     const creativeText: CreativeText = {
-      headline,
+      headline: onImage.headline,
+      supporting: onImage.supporting,
       cta: understanding?.offer?.trim() || undefined,
     };
     const requestId = ++compositeRequestRef.current;

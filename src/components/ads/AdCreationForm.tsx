@@ -25,7 +25,7 @@ import {
 } from "@/lib/api";
 import {
   compositeImage,
-  deriveOnImageHeadline,
+  deriveOnImageText,
   type Box,
   type BrandKit,
   type CreativeText,
@@ -248,8 +248,8 @@ export function AdCreationForm({
     if (step !== "result" || images.length === 0) return;
     const variant = adCaptions[selectedCaptionIndex];
     if (!variant) return;
-    const headline = deriveOnImageHeadline(variant.whatsapp_message, variant.facebook_caption);
-    const creativeText: CreativeText = { headline, cta: AD_GOAL_CTA[goal] };
+    const onImage = deriveOnImageText(variant.whatsapp_message, variant.facebook_caption);
+    const creativeText: CreativeText = { headline: onImage.headline, supporting: onImage.supporting, cta: AD_GOAL_CTA[goal] };
     const requestId = ++compositeRequestRef.current;
     compositeImage(images[selectedImageIndex], creativeText, brandKit, editOptions, visualDirection)
       .then((url) => {

@@ -1,7 +1,8 @@
-import { ChevronDown, Images, Loader2, Plus } from "lucide-react";
+import { Images, Loader2, Plus } from "lucide-react";
 import { useRef, useState } from "react";
 import { zipSync } from "fflate";
 import { compositeImage, type BrandKit, type CreativeText, type EditOptions } from "@/lib/canvas-text";
+import { ToolPill } from "./ToolPill";
 
 // Free — every generated image here was already paid for individually
 // when it was made ("Generate another image" costs 1 credit each). A
@@ -178,7 +179,7 @@ export function CarouselBuilder({
       const files: Record<string, Uint8Array> = {};
       for (let slot = 0; slot < orderedSelected.length; slot++) {
         const slide = orderedSelected[slot];
-        const slideText: CreativeText = slide.headline ? { ...text, headline: slide.headline } : text;
+        const slideText: CreativeText = slide.headline ? { ...text, headline: slide.headline, supporting: undefined } : text;
         const dataUrl = await compositeImage(
           slide.imageData,
           slideText,
@@ -209,18 +210,12 @@ export function CarouselBuilder({
 
   if (!expanded) {
     return (
-      <button
-        onClick={() => setExpanded(true)}
-        className="mb-4 flex w-full items-center justify-center gap-1 text-xs font-semibold text-muted-foreground"
-      >
-        Build a carousel (multiple images)
-        <ChevronDown className="h-3.5 w-3.5" />
-      </button>
+      <ToolPill icon={Images} label="Carousel" onClick={() => setExpanded(true)} />
     );
   }
 
   return (
-    <div className="mb-4 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+    <div className="w-full rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
       <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {autoExpand ? "Your carousel" : "Select 2 or more images for the carousel"}
       </p>

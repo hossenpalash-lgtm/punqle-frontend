@@ -1,3 +1,25 @@
+// Wraps like wrapText, then narrows the width as far as it can WITHOUT adding a line, so the lines come
+// out about equal ("Join the men / who trust us") instead of one long line and a lonely last word
+// ("Join the men who trust / us"). 2026-11-10.
+function balancedWrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const lines = wrapText(ctx, text, maxWidth);
+  if (lines.length < 2) return lines;
+  let lo = maxWidth * 0.45;
+  let hi = maxWidth;
+  let best = lines;
+  for (let i = 0; i < 12; i++) {
+    const mid = (lo + hi) / 2;
+    const tryLines = wrapText(ctx, text, mid);
+    if (tryLines.length === lines.length) {
+      best = tryLines;
+      hi = mid;
+    } else {
+      lo = mid;
+    }
+  }
+  return best;
+}
+
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const words = text.split(" ");
   const lines: string[] = [];
@@ -42,7 +64,7 @@ function fitText(
   let fontSize = Math.max(startPx, minPx);
   while (fontSize > minPx) {
     ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
-    const lines = wrapText(ctx, text, maxWidth);
+    const lines = balancedWrap(ctx, text, maxWidth);
     if (lines.length * fontSize * lineHeightMult <= maxHeight) return { lines, fontSize };
     fontSize -= 1;
   }
@@ -112,7 +134,7 @@ const STYLE_TEXT_CONFIG: Record<string, StyleTextConfig> = {
     headlineScale: 1,
     supportingWeight: 500,
     supportingItalic: false,
-    ctaShape: "pill-outline",
+    ctaShape: "pill-filled",
     panelSolid: false,
   },
   bold_energetic: {
@@ -292,20 +314,90 @@ export interface CreativeText {
   cta?: string;
 }
 
-// The on-image headline is the already-generated WhatsApp message — a
-// genuinely short, standalone line written for exactly this kind of use
-// (see _generate_captions_with_style in main.py), never the full
-// Facebook caption. Falls back to a short lead clause of the caption
-// only in the rare case a variant has no WhatsApp message at all — still
-// never the full caption.
+// What goes ON the picture is a short hook, not the whole WhatsApp message (2026-11-10). The message
+// is usually two sentences ("Join the men who trust us—experience expert grooming! Shop Now."), which
+// rendered as a 3-4 line wall that got cut off, with "Shop Now" printed twice (the button already says
+// it). So: drop a closing call-to-action sentence, take the first sentence (or the part before a dash /
+// colon / comma when it is long) as the HEADLINE, and keep the rest as a smaller SUPPORTING line.
+const CTA_SENTENCE =
+  /^(shop|order|book|buy|call|visit|message|dm|contact|sign up|get started|get a quote|get quote|learn more|see more|try)\b[^.!?]{0,24}[.!?]*$/i;
+
+function wordsOf(s: string): string[] {
+  return s.trim().split(/\s+/).filter(Boolean);
+}
+
+function tidy(s: string): string {
+  return s.replace(/^[\s,;:—–-]+|[\s,;:—–-]+$/g, "").replace(/\.$/, "").trim();
+}
+
+function capitalise(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+export function deriveOnImageText(whatsappMessage: string, facebookCaption: string): { headline: string; supporting?: string } {
+  let base = whatsappMessage.trim().replace(/\s+/g, " ");
+  if (!base) {
+    const cap = facebookCaption.trim().replace(/\s+/g, " ");
+    base = cap.length <= 140 ? cap : `${cap.slice(0, 140).replace(/\s+\S*$/, "")}`;
+  }
+  if (!base) return { headline: "" };
+
+  const sentences = (base.match(/[^.!?]+[.!?]*/g) ?? [base]).map((x) => x.trim()).filter(Boolean);
+  while (sentences.length > 1 && CTA_SENTENCE.test(sentences[sentences.length - 1])) sentences.pop();
+
+  let first = sentences[0];
+  let rest = sentences.slice(1).join(" ");
+  const join = (extra: string) => [extra, rest].filter(Boolean).join(" ");
+
+  if (wordsOf(first).length > 7) {
+    const dash = first.match(/^(.+?)\s*(?:—|–| - |:|;)\s*(.+)$/);
+    const comma = first.match(/^(.+?),\s*(.+)$/);
+    if (dash && wordsOf(dash[1]).length >= 2 && wordsOf(dash[1]).length <= 8) {
+      first = dash[1];
+      rest = join(dash[2]);
+    } else if (comma && wordsOf(comma[1]).length >= 3 && wordsOf(comma[1]).length <= 8) {
+      first = comma[1];
+      rest = join(comma[2]);
+    } else {
+      const w = wordsOf(first);
+      first = w.slice(0, 7).join(" ");
+      rest = join(w.slice(7).join(" "));
+    }
+  }
+
+  const headline = tidy(first);
+  return { headline, supporting: shortSupporting(rest) };
+}
+
+const TRAILING_CONNECTOR = /\s+(and|or|the|a|an|to|of|with|for|in|on|that|which|but|so)$/i;
+
+// The smaller second line: whole sentences while they stay under ~14 words; one long sentence is cut at
+// its last comma (or at 14 words) instead of in the middle of a thought.
+function shortSupporting(rest: string): string | undefined {
+  const text = rest.trim();
+  if (!text) return undefined;
+  const sentences = (text.match(/[^.!?]+[.!?]*/g) ?? [text]).map((x) => x.trim()).filter(Boolean);
+  let out = "";
+  for (const sent of sentences) {
+    const next = out ? `${out} ${sent}` : sent;
+    if (wordsOf(next).length > 14) break;
+    out = next;
+  }
+  if (!out) {
+    const w = wordsOf(sentences[0]).slice(0, 14);
+    let cut = w.join(" ");
+    const comma = cut.lastIndexOf(",");
+    if (comma > 0 && wordsOf(cut.slice(0, comma)).length >= 5) cut = cut.slice(0, comma);
+    while (TRAILING_CONNECTOR.test(cut)) cut = cut.replace(TRAILING_CONNECTOR, "");
+    out = cut;
+  }
+  const clean = capitalise(tidy(out));
+  return clean || undefined;
+}
+
+// Kept for callers that only draw one line (carousel slides etc.): the short hook.
 export function deriveOnImageHeadline(whatsappMessage: string, facebookCaption: string): string {
-  const wa = whatsappMessage.trim();
-  if (wa) return wa;
-  const trimmed = facebookCaption.trim();
-  if (trimmed.length <= 70) return trimmed;
-  const cut = trimmed.slice(0, 70);
-  const lastSpace = cut.lastIndexOf(" ");
-  return `${cut.slice(0, lastSpace > 30 ? lastSpace : 70)}…`;
+  return deriveOnImageText(whatsappMessage, facebookCaption).headline;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -364,7 +456,6 @@ export async function compositeImage(
   const rgb = `${barRgb.r},${barRgb.g},${barRgb.b}`;
 
   const headlineDisplay = style.headlineCase === "uppercase" ? text.headline.toUpperCase() : text.headline;
-  const supportingFont = `${style.supportingItalic ? "italic " : ""}${style.supportingWeight} ${INTER}`;
 
   if (editOptions?.textBox) {
     // Freeform mode (user dragged the caption in the drag-and-drop
@@ -383,7 +474,8 @@ export async function compositeImage(
     const maxBoxHeight = Math.max(canvas.height * 0.14, canvas.height - boxY - canvas.height * 0.03);
 
     const ctaReserve = text.cta ? canvas.width * 0.06 : 0;
-    const headlineBudget = maxBoxHeight - padding * 2 - ctaReserve;
+    const supportingReserve = text.supporting ? canvas.width * 0.055 : 0;
+    const headlineBudget = maxBoxHeight - padding * 2 - ctaReserve - supportingReserve;
     const { lines: headlineLines, fontSize: headlineSize } = fitText(
       ctx,
       headlineDisplay,
@@ -401,7 +493,7 @@ export async function compositeImage(
     let supportingLines: string[] = [];
     let supportingSize = 0;
     let supportingLineHeight = 0;
-    const afterHeadline = headlineBudget - headlineHeight;
+    const afterHeadline = headlineBudget + supportingReserve - headlineHeight;
     if (text.supporting && afterHeadline > canvas.width * 0.03) {
       const fit = fitText(
         ctx,
@@ -448,7 +540,7 @@ export async function compositeImage(
     }
     if (supportingLines.length) {
       y += supportingGap;
-      ctx.font = `${supportingSize}px ${supportingFont}`;
+      ctx.font = `${style.supportingItalic ? "italic " : ""}${style.supportingWeight} ${supportingSize}px ${INTER}`;
       for (const line of supportingLines) {
         const lineWidth = ctx.measureText(line).width;
         ctx.fillText(line, boxX + (boxWidth - lineWidth) / 2, y);
@@ -467,7 +559,9 @@ export async function compositeImage(
     const barAtTop = editOptions?.barPosition === "top";
 
     const ctaReserve = text.cta ? canvas.width * 0.075 : 0;
-    const headlineBudget = maxBarHeight - padding * 2 - ctaReserve;
+    // Room held back for the smaller second line, so a big hook cannot squeeze it out (2026-11-10).
+    const supportingReserve = text.supporting ? canvas.width * 0.07 : 0;
+    const headlineBudget = maxBarHeight - padding * 2 - ctaReserve - supportingReserve;
     const { lines: headlineLines, fontSize: headlineSize } = fitText(
       ctx,
       headlineDisplay,
@@ -485,7 +579,7 @@ export async function compositeImage(
     let supportingLines: string[] = [];
     let supportingSize = 0;
     let supportingLineHeight = 0;
-    const afterHeadline = headlineBudget - headlineHeight;
+    const afterHeadline = headlineBudget + supportingReserve - headlineHeight;
     if (text.supporting && afterHeadline > canvas.width * 0.03) {
       const fit = fitText(
         ctx,
@@ -502,9 +596,17 @@ export async function compositeImage(
       supportingSize = fit.fontSize;
       supportingLineHeight = supportingSize * 1.3;
     }
-    const supportingGap = supportingLines.length ? headlineSize * 0.3 : 0;
     const ctaGap = text.cta ? headlineSize * 0.35 : 0;
     const ctaBadgeHeight = text.cta ? canvas.width * 0.052 : 0;
+    // Not enough room for hook + second line + button? Keep the hook and the button.
+    if (
+      supportingLines.length &&
+      padding * 2 + headlineHeight + headlineSize * 0.3 + supportingLines.length * supportingLineHeight + ctaGap + ctaBadgeHeight >
+        maxBarHeight
+    ) {
+      supportingLines = [];
+    }
+    const supportingGap = supportingLines.length ? headlineSize * 0.3 : 0;
 
     const barHeight = Math.min(
       maxBarHeight,
@@ -553,7 +655,7 @@ export async function compositeImage(
     }
     if (supportingLines.length) {
       y += supportingGap;
-      ctx.font = `${supportingSize}px ${supportingFont}`;
+      ctx.font = `${style.supportingItalic ? "italic " : ""}${style.supportingWeight} ${supportingSize}px ${INTER}`;
       for (const line of supportingLines) {
         const lineWidth = ctx.measureText(line).width;
         ctx.fillText(line, (canvas.width - lineWidth) / 2, y);

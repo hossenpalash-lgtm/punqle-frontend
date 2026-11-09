@@ -1,7 +1,8 @@
-import { ChevronDown, Eraser, Loader2, Sparkles, Wand2 } from "lucide-react";
+import { Eraser, Loader2, Sparkles, Wand2 } from "lucide-react";
 import { useState } from "react";
 
 import { PHOTO_EDIT_CREDIT_COST } from "@/lib/api";
+import { ToolPill } from "./ToolPill";
 
 // Unlike captions, each extra image costs a real credit (Gemini image
 // generation isn't cheap) — the button says so up front rather than
@@ -21,6 +22,7 @@ export function ImageVariantPicker({
   removingBackground = false,
   enhancing = false,
   disabled,
+  hideTools = false,
 }: {
   images: string[];
   selectedIndex: number;
@@ -38,10 +40,12 @@ export function ImageVariantPicker({
   removingBackground?: boolean;
   enhancing?: boolean;
   disabled: boolean;
+  // PostKit shows the extra image tools as a pill in its tools row instead (see ImageToolsPill).
+  hideTools?: boolean;
 }) {
   const anyBusy = generating || removingBackground || enhancing;
   const [showMore, setShowMore] = useState(false);
-  const hasEditTools = !!(onRemoveBackground || onEnhance);
+  const hasEditTools = !hideTools && !!(onRemoveBackground || onEnhance);
 
   return (
     <div className="mb-4">
@@ -79,13 +83,7 @@ export function ImageVariantPicker({
           Generate another image ({generateMoreCreditCost} credit{generateMoreCreditCost === 1 ? "" : "s"})
         </button>
         {hasEditTools && !showMore && (
-          <button
-            onClick={() => setShowMore(true)}
-            className="flex w-full items-center justify-center gap-1 text-xs font-semibold text-muted-foreground"
-          >
-            More image tools
-            <ChevronDown className="h-3.5 w-3.5" />
-          </button>
+          <ToolPill icon={Wand2} label="Image tools" onClick={() => setShowMore(true)} />
         )}
         {hasEditTools && showMore && (
           <div className="flex gap-2">
@@ -120,6 +118,51 @@ export function ImageVariantPicker({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// The two paid photo tools (remove background, enhance) as one pill that opens a full-width panel.
+export function ImageToolsPill({
+  onRemoveBackground,
+  onEnhance,
+  busy,
+  removingBackground = false,
+  enhancing = false,
+  disabled,
+}: {
+  onRemoveBackground?: () => void;
+  onEnhance?: () => void;
+  busy: boolean;
+  removingBackground?: boolean;
+  enhancing?: boolean;
+  disabled: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  if (!onRemoveBackground && !onEnhance) return null;
+  if (!open) return <ToolPill icon={Wand2} label="Image tools" onClick={() => setOpen(true)} />;
+  return (
+    <div className="flex w-full gap-2">
+      {onRemoveBackground && (
+        <button
+          onClick={onRemoveBackground}
+          disabled={busy || disabled}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-secondary px-3 py-2.5 text-xs font-semibold text-secondary-foreground disabled:opacity-60"
+        >
+          {removingBackground ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eraser className="h-3.5 w-3.5" />}
+          Remove background ({PHOTO_EDIT_CREDIT_COST} credits)
+        </button>
+      )}
+      {onEnhance && (
+        <button
+          onClick={onEnhance}
+          disabled={busy || disabled}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-secondary px-3 py-2.5 text-xs font-semibold text-secondary-foreground disabled:opacity-60"
+        >
+          {enhancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+          Enhance ({PHOTO_EDIT_CREDIT_COST} credits)
+        </button>
+      )}
     </div>
   );
 }

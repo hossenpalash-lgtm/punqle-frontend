@@ -14,7 +14,7 @@ import {
   type BusinessCategory,
 } from "@/lib/api";
 import { CATEGORY_LABELS, CATEGORY_OPTIONS } from "@/lib/categories";
-import { compositeImage, deriveOnImageHeadline, type BrandKit } from "@/lib/canvas-text";
+import { compositeImage, deriveOnImageText, type BrandKit } from "@/lib/canvas-text";
 import { MIN_SCHEDULE_MINUTES, formatScheduleDate } from "@/lib/schedule-dates";
 import { DAY_LABELS, PlanDayCard } from "./PlanDayCard";
 
@@ -184,7 +184,7 @@ export function WeeklyPlanForm({
         if (!post.image_base64) throw new Error("No image for this day.");
         const compositedUrl = await compositeImage(
           post.image_base64,
-          { headline: deriveOnImageHeadline(post.whatsapp_message ?? "", post.caption ?? "") },
+          deriveOnImageText(post.whatsapp_message ?? "", post.caption ?? ""),
           brandKit,
         );
         const r = await publishToMeta(

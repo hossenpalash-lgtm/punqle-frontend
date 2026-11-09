@@ -9,7 +9,7 @@ import {
   type ApiAdGenerateResponse,
   type ApiContentPlanPost,
 } from "@/lib/api";
-import { compositeImage, deriveOnImageHeadline, type BrandKit } from "@/lib/canvas-text";
+import { compositeImage, deriveOnImageText, type BrandKit } from "@/lib/canvas-text";
 import { CaptionPicker } from "./CaptionPicker";
 import { ImageVariantPicker } from "./ImageVariantPicker";
 
@@ -77,7 +77,7 @@ export function PlanDayCard({
     const variant = captions[selectedCaptionIndex];
     compositeImage(
       images[selectedImageIndex],
-      { headline: deriveOnImageHeadline(variant.whatsapp_message, variant.facebook_caption) },
+      deriveOnImageText(variant.whatsapp_message, variant.facebook_caption),
       brandKit,
     )
       .then(setCompositedUrl)

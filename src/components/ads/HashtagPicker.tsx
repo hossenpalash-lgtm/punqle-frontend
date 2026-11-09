@@ -1,6 +1,7 @@
-import { Check, ChevronDown, Hash, Loader2 } from "lucide-react";
+import { Check, Hash, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { suggestHashtags } from "@/lib/api";
+import { ToolPill } from "./ToolPill";
 
 // Free — text-only GPT call, same economics as translate. Separate from
 // the caption text on purpose (matches Predis's own dedicated hashtag
@@ -45,18 +46,12 @@ export function HashtagPicker({
 
   if (!expanded) {
     return (
-      <button
-        onClick={handleExpand}
-        className="mb-4 flex w-full items-center justify-center gap-1 text-xs font-semibold text-muted-foreground"
-      >
-        Suggest hashtags
-        <ChevronDown className="h-3.5 w-3.5" />
-      </button>
+      <ToolPill icon={Hash} label="Hashtags" onClick={handleExpand} />
     );
   }
 
   return (
-    <div className="mb-4 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+    <div className="w-full rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
       <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <Hash className="h-3.5 w-3.5" />
         Tap to add to your caption

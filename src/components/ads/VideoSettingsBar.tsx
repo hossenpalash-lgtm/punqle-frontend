@@ -1,37 +1,13 @@
 import { ImagePlus, RectangleHorizontal, RectangleVertical, X } from "lucide-react";
-import type { ReactNode, RefObject } from "react";
+import type { RefObject } from "react";
 import type { AdGoal, VideoAspectRatio } from "@/lib/api";
 import { ANGLES, GOALS } from "./AdBriefStep";
+import { PillSelect } from "./SettingPills";
 
 // One row of small settings right under the idea box (2026-11-10). Higgsfield, Krea and Creatify all
 // do the same: the prompt first, then every setting as a small chip next to it, never as separate
 // headed sections further down the page. Same settings and same state as before (Format, Goal, the
 // message angle, the optional product photo) — only where they sit changed.
-function PillSelect({
-  label,
-  value,
-  onChange,
-  children,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  children: ReactNode;
-}) {
-  return (
-    <label className="flex items-center gap-1.5 rounded-full bg-secondary py-1.5 pl-3 pr-2 text-xs font-semibold text-muted-foreground">
-      {label}
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="max-w-[9.5rem] cursor-pointer truncate bg-transparent text-xs font-semibold text-foreground focus:outline-none"
-      >
-        {children}
-      </select>
-    </label>
-  );
-}
-
 export function VideoSettingsBar({
   aspectRatio,
   onAspectRatio,

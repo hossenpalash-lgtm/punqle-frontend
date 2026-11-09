@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Loader2, Settings2, Sparkles, Upload, X } from "lucide-react";
+import { AlertCircle, Check, ChevronDown, Loader2, Settings2, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   base64ToFile,
@@ -35,13 +35,12 @@ import {
   findVisualDirection,
   MORE_VISUAL_DIRECTIONS,
   PLATFORM_OPTIONS,
-  VERSION_COUNTS,
   VISUAL_DIRECTIONS,
   type Platform,
 } from "@/lib/social-wizard";
-import { ANGLES, GOALS } from "./AdBriefStep";
 import { GenerationProgress } from "./GenerationProgress";
 import { ImageChoiceCard } from "./ImageChoiceCard";
+import { ImageSettingsBar } from "./ImageSettingsBar";
 import { PostKit } from "./PostKit";
 import { ProductPicker } from "./ProductPicker";
 import { ResultsGrid } from "./ResultsGrid";
@@ -118,6 +117,8 @@ export function AdCreationForm({
   const [mainInput, setMainInput] = useState("");
   const [inputFetching, setInputFetching] = useState(false);
   const [inputError, setInputError] = useState<string | null>(null);
+  const [needsText, setNeedsText] = useState(false);
+  const mainInputRef = useRef<HTMLTextAreaElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [generationStage, setGenerationStage] = useState(0);
 
@@ -359,7 +360,14 @@ export function AdCreationForm({
 
   const handleMainSubmit = async () => {
     const text = mainInput.trim();
-    if (!text || inputFetching || outOfCredits) return;
+    if (inputFetching || outOfCredits) return;
+    // The button used to be greyed out with no reason when the box was empty; now it explains itself.
+    if (!text) {
+      setNeedsText(true);
+      mainInputRef.current?.focus();
+      mainInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setInputError(null);
     if (looksLikeUrl(text)) {
       setInputFetching(true);
@@ -532,36 +540,110 @@ export function AdCreationForm({
               component already say the same thing; the textarea's own
               placeholder covers "paste a link or describe it." */}
           <textarea
+            ref={mainInputRef}
             value={mainInput}
-            onChange={(e) => setMainInput(e.target.value)}
+            onChange={(e) => {
+              setMainInput(e.target.value);
+              if (needsText) setNeedsText(false);
+            }}
             placeholder="https://yourstore.com/products/... or Handmade leather wallets, 20% off this week"
             rows={3}
             disabled={inputFetching}
             className="mb-3 w-full rounded-2xl border border-input bg-background px-4 py-3.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
-          <div className="mb-4 w-full text-left">
+          {needsText && (
+            <p className="-mt-1 mb-3 flex w-full items-center gap-1.5 text-left text-sm font-medium text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              Tell Punqle what you're advertising first.
+            </p>
+          )}
+          <div className="mb-3 w-full text-left">
             <ProductPicker onSelect={handleQuickCreateFromCatalog} />
           </div>
 
-          <div className="mb-4 w-full rounded-2xl border border-border bg-card p-4 text-left">
-            <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Goal
-            </label>
-            <div className="grid grid-cols-4 gap-2">
-              {GOALS.map((g) => (
+          <ImageSettingsBar
+            goal={goal}
+            onGoal={setGoal}
+            angle={angle}
+            onAngle={setAngle}
+            platform={platform}
+            onPlatform={setPlatform}
+            versions={versions}
+            onVersions={setVersions}
+            file={file}
+            previewUrl={previewUrl}
+            onFile={handleFileChange}
+            personLabel={actors.find((x) => x.id === actorId)?.name ?? "None"}
+            personOpen={actorPickerOpen}
+            onTogglePerson={() => setActorPickerOpen((v) => !v)}
+          />
+
+          {actorPickerOpen && (
+            <div className="-mt-1 mb-4 w-full rounded-2xl border border-border bg-card p-3 text-left">
+              <div className="mb-2 flex flex-wrap items-center gap-1.5">
                 <button
-                  key={g.value}
-                  onClick={() => setGoal(g.value)}
-                  className={[
-                    "rounded-full px-3 py-2.5 text-sm font-semibold transition-colors",
-                    goal === g.value ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
-                  ].join(" ")}
+                  onClick={() => {
+                    setActorId(undefined);
+                    setActorPickerOpen(false);
+                  }}
+                  className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground"
                 >
-                  {g.label}
+                  No person
                 </button>
-              ))}
+                {(["all", "female", "male"] as const).map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setActorGenderFilter(g)}
+                    className={[
+                      "rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors",
+                      actorGenderFilter === g ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
+                    ].join(" ")}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+              {actorsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {actors
+                    .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
+                    .map((a) => {
+                      const selected = actorId === a.id;
+                      return (
+                        <button
+                          key={a.id}
+                          onClick={() => setActorId(selected ? undefined : a.id)}
+                          className="flex flex-col items-center gap-1"
+                        >
+                          <span
+                            className={[
+                              "relative aspect-square w-full overflow-hidden rounded-xl",
+                              selected ? "ring-2 ring-foreground" : "",
+                            ].join(" ")}
+                          >
+                            <img
+                              src={`data:image/jpeg;base64,${a.preview_image_base64}`}
+                              alt={a.name}
+                              className="h-full w-full object-cover"
+                            />
+                            {selected && (
+                              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background">
+                                <Check className="h-2.5 w-2.5" />
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[11px] font-medium text-foreground">{a.name}</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           {/* Style/Angle/Platform/Variations/People & Product moved out of
               a single collapsed "Settings" panel and onto the main screen
@@ -600,192 +682,6 @@ export function AdCreationForm({
             )}
           </div>
 
-          <div className="mb-4 w-full rounded-2xl border border-border bg-card p-4 text-left">
-            <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              What should the ad say?
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {ANGLES.map((a) => {
-                const selected = angle === a.value;
-                return (
-                  <button
-                    key={a.label}
-                    onClick={() => setAngle(a.value)}
-                    className={[
-                      "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                      selected ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
-                    ].join(" ")}
-                  >
-                    {selected && a.value !== null && <Check className="h-3 w-3" />}
-                    {a.value === null && <Sparkles className="h-3 w-3" />}
-                    {a.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mb-4 flex w-full gap-3">
-            <div className="flex-[2] rounded-2xl border border-border bg-card p-4 text-left">
-              <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Platform
-              </label>
-              <div className="grid grid-cols-4 gap-1.5">
-                {PLATFORM_OPTIONS.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setPlatform(p.id)}
-                    className={[
-                      "rounded-xl px-2 py-2 text-[12px] font-semibold transition-colors",
-                      platform === p.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
-                    ].join(" ")}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex-1 rounded-2xl border border-border bg-card p-4 text-left">
-              <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Variations
-              </label>
-              <div className="flex gap-1.5">
-                {VERSION_COUNTS.map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setVersions(v)}
-                    className={[
-                      "flex-1 rounded-xl px-2 py-2 text-sm font-semibold transition-colors",
-                      versions === v ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
-                    ].join(" ")}
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Product photo + actor grouped under one heading (2026-09-23)
-              — makes the actual relationship explicit: an actor is
-              someone who uses/holds THIS product photo (or Punqle's own
-              AI-generated one when none is uploaded). Works either way —
-              see fetchImageActors' own comment. */}
-          <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            People &amp; Product
-          </label>
-          <div className="mb-4 w-full rounded-2xl border border-border bg-card p-4 text-left">
-            <p className="mb-2 text-[12px] font-semibold text-muted-foreground">
-              Product photo <span className="normal-case text-muted-foreground/70">— optional, Punqle can create one</span>
-            </p>
-            {!file ? (
-              <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-secondary px-3 py-2.5 text-xs font-semibold text-secondary-foreground">
-                <Upload className="h-3.5 w-3.5" />
-                Upload your own product photo
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
-                />
-              </label>
-            ) : (
-              <div className="flex items-center justify-between rounded-xl bg-secondary px-3 py-2.5">
-                <span className="flex items-center gap-2 text-xs font-semibold text-secondary-foreground">
-                  {previewUrl && <img src={previewUrl} alt="" className="h-6 w-6 rounded-md object-cover" />}
-                  {file.name}
-                </span>
-                <button onClick={() => handleFileChange(null)} aria-label="Remove photo" className="text-muted-foreground">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
-
-            <p className="mb-2 mt-4 text-[12px] font-semibold text-muted-foreground">Add a person</p>
-            <div className="mb-2 flex gap-1.5">
-              <button
-                onClick={() => {
-                  setActorId(undefined);
-                  setActorPickerOpen(false);
-                }}
-                className={[
-                  "flex-1 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
-                  !actorPickerOpen ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
-                ].join(" ")}
-              >
-                No person
-              </button>
-              <button
-                onClick={() => setActorPickerOpen(true)}
-                className={[
-                  "flex-1 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
-                  actorPickerOpen ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
-                ].join(" ")}
-              >
-                Choose an actor
-              </button>
-            </div>
-
-            {actorPickerOpen && (
-              <>
-                <div className="mb-2 mt-2 flex flex-wrap gap-1.5">
-                  {(["all", "female", "male"] as const).map((g) => (
-                    <button
-                      key={g}
-                      onClick={() => setActorGenderFilter(g)}
-                      className={[
-                        "rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors",
-                        actorGenderFilter === g ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
-                      ].join(" ")}
-                    >
-                      {g}
-                    </button>
-                  ))}
-                </div>
-                {actorsLoading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-4 gap-2">
-                    {actors
-                      .filter((a) => actorGenderFilter === "all" || a.gender === actorGenderFilter)
-                      .map((a) => {
-                        const selected = actorId === a.id;
-                        return (
-                          <button
-                            key={a.id}
-                            onClick={() => setActorId(selected ? undefined : a.id)}
-                            className="flex flex-col items-center gap-1"
-                          >
-                            <span
-                              className={[
-                                "relative aspect-square w-full overflow-hidden rounded-xl",
-                                selected ? "ring-2 ring-foreground" : "",
-                              ].join(" ")}
-                            >
-                              <img
-                                src={`data:image/jpeg;base64,${a.preview_image_base64}`}
-                                alt={a.name}
-                                className="h-full w-full object-cover"
-                              />
-                              {selected && (
-                                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background">
-                                  <Check className="h-2.5 w-2.5" />
-                                </span>
-                              )}
-                            </span>
-                            <span className="text-[11px] font-medium text-foreground">{a.name}</span>
-                          </button>
-                        );
-                      })}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
           <button
             onClick={() => setSettingsOpen((v) => !v)}
             className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"
@@ -817,18 +713,28 @@ export function AdCreationForm({
 
           {(inputError || error) && <p className="mb-4 text-sm font-medium text-destructive">{inputError || error}</p>}
 
-          {imageTrialAvailable && (
-            <p className="mb-2 text-center text-xs font-semibold text-foreground">✨ Your first ad is free — no credits</p>
+          {outOfCredits && !imageTrialAvailable && (
+            <p className="mb-4 text-sm text-muted-foreground">You're out of credits — top up to keep creating.</p>
           )}
 
-          <button
-            onClick={handleMainSubmit}
-            disabled={!mainInput.trim() || inputFetching || outOfCredits}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-4 text-base font-semibold text-background disabled:opacity-60"
-          >
-            {inputFetching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-            {imageTrialAvailable ? "Try free" : "Create My Ad"}
-          </button>
+          {/* Sticky so "Create My Ad" stays in view while the style cards scroll past (2026-11-10);
+              the separate "first ad is free" line now lives inside the button. */}
+          <div className="sticky bottom-3 z-10 w-full">
+            <button
+              onClick={handleMainSubmit}
+              disabled={inputFetching || outOfCredits}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-4 text-base font-semibold text-background shadow-[0_10px_28px_-10px_rgba(0,0,0,0.55)] disabled:opacity-60"
+            >
+              {inputFetching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+              {imageTrialAvailable ? (
+                <>
+                  Try free<span className="font-medium opacity-70"> · no credits</span>
+                </>
+              ) : (
+                "Create My Ad"
+              )}
+            </button>
+          </div>
         </div>
       )}
 

@@ -4,6 +4,7 @@ import {
   fetchBusinessProfile,
   fetchCurrentContentPlan,
   fetchMetaStatus,
+  fetchSchedulingCapabilities,
   generateContentPlan,
   publishToMeta,
   setBusinessProfile,
@@ -66,6 +67,10 @@ export function WeeklyPlanForm({
   const [metaConnected, setMetaConnected] = useState(false);
   const [metaPageName, setMetaPageName] = useState<string | null>(null);
   const [hasInstagram, setHasInstagram] = useState(false);
+  const [instagramCanSchedule, setInstagramCanSchedule] = useState(false); // true only while the server's own alarm clock is on
+  useEffect(() => {
+    fetchSchedulingCapabilities().then((c) => setInstagramCanSchedule(!!c.instagram)).catch(() => setInstagramCanSchedule(false));
+  }, []);
   const [scheduleTime, setScheduleTime] = useState("10:00");
   const [scheduleFacebook, setScheduleFacebook] = useState(true);
   const [scheduleInstagram, setScheduleInstagram] = useState(false);
@@ -379,10 +384,15 @@ export function WeeklyPlanForm({
                     />
                     Instagram{!hasInstagram && " (no Instagram linked to this Page)"}
                   </label>
-                  {scheduleInstagram && (
+                  {scheduleInstagram && !instagramCanSchedule && (
                     <p className="mb-3 text-xs text-muted-foreground">
                       Instagram has no scheduling — those days post now, right away; only Facebook will wait for its
                       date.
+                    </p>
+                  )}
+                  {scheduleInstagram && instagramCanSchedule && (
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      Punqle will post each Instagram day at its time. You can change or cancel any of them in your calendar.
                     </p>
                   )}
 

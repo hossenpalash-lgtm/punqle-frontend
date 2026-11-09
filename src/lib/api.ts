@@ -1546,9 +1546,9 @@ export interface ApiMetaPublishResponse {
 // compositedDataUrl is a canvas toDataURL() result ("data:image/...;base64,...")
 // — parsed here (not passed pre-split) so every call site can just hand over
 // PostKit's existing compositedUrl prop as-is, same as CarouselBuilder does.
-// scheduledTime (ISO8601, optional) only affects Facebook — Instagram has no
-// native scheduling, so it always posts immediately regardless; the caller
-// is responsible for disclosing that to the user before submitting.
+// scheduledTime (ISO8601, optional): Facebook holds the post itself. Instagram has no native scheduling, so it posts immediately
+// UNLESS the server's own alarm clock is on (fetchSchedulingCapabilities().instagram), then Punqle sends it at that time. The
+// caller is responsible for telling the user which of the two applies before submitting.
 export function publishToMeta(
   compositedDataUrl: string,
   caption: string,
@@ -1678,6 +1678,14 @@ export interface ApiTikTokPublishResponse {
   posted: boolean;
   publish_id?: string;
   error?: string;
+  scheduled?: boolean; // true when Punqle's own alarm clock will send it at the chosen time
+}
+
+// Which platforms can take a chosen time. Facebook and YouTube always can; Instagram and TikTok only while the server's own
+// alarm clock is switched on (it is OFF until the founder has tried it on his own accounts). On any error: assume "no".
+export interface ApiSchedulingCapabilities { facebook: boolean; youtube: boolean; instagram: boolean; tiktok: boolean }
+export function fetchSchedulingCapabilities(): Promise<ApiSchedulingCapabilities> {
+  return apiFetch<ApiSchedulingCapabilities>("/scheduling/capabilities");
 }
 
 // Fetched fresh every time the publish panel opens — TikTok's own
@@ -1720,6 +1728,7 @@ export function publishToTikTok(
   goal?: string | null,
   angle?: string | null,
   style?: string | null,
+  scheduledTime?: string, // ISO8601; only when the server says TikTok can take a time (see fetchSchedulingCapabilities)
 ): Promise<ApiTikTokPublishResponse> {
   const match = videoDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
@@ -1735,6 +1744,7 @@ export function publishToTikTok(
   formData.append("allow_stitch", String(allowStitch));
   formData.append("promotes_own_brand", String(promotesOwnBrand));
   formData.append("has_paid_partnership", String(hasPaidPartnership));
+  if (scheduledTime) formData.append("scheduled_time", scheduledTime);
   if (contentPlanId && contentPlanDay) {
     formData.append("source", "weekly_plan");
     formData.append("content_plan_id", contentPlanId);

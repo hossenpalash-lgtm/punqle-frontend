@@ -1,7 +1,8 @@
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { showToast } from "@/components/GlassToast";
 import {
+  fetchSchedulingCapabilities,
   fetchTikTokCreatorInfo,
   fetchTikTokStatus,
   getTikTokConnectUrl,
@@ -10,6 +11,7 @@ import {
   type ApiTikTokPublishResponse,
 } from "@/lib/api";
 import { TikTokIcon } from "@/components/TikTokIcon";
+import { MIN_SCHEDULE_MINUTES, MAX_SCHEDULE_DAYS, toDatetimeLocalMin } from "@/lib/schedule-dates";
 
 const PRIVACY_LABELS: Record<string, string> = {
   PUBLIC_TO_EVERYONE: "Everyone",
@@ -19,9 +21,10 @@ const PRIVACY_LABELS: Record<string, string> = {
 };
 
 // Mirrors PublishToYouTube's shape closely — same inline-on-the-result-
-// screen placement, same connect-then-expand-then-publish flow. No
-// scheduling here (TikTok's Content Posting API posts immediately, no
-// native future-publish the way Facebook/YouTube have).
+// screen placement, same connect-then-expand-then-publish flow. TikTok's
+// Content Posting API has no native future-publish (unlike Facebook/YouTube), so
+// "Schedule for later" only appears while the server's own alarm clock is on
+// (fetchSchedulingCapabilities); Punqle then sends the post at that time.
 //
 // The confirmation screen below (nickname, privacy dropdown, comment/
 // duet/stitch toggles, branded-content disclosure) exists because
@@ -61,6 +64,9 @@ export function PublishToTikTok({
   const [promotesOwnBrand, setPromotesOwnBrand] = useState(true);
   const [hasPaidPartnership, setHasPaidPartnership] = useState(false);
 
+  const [canSchedule, setCanSchedule] = useState(false); // true only while the server's own alarm clock is on
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<ApiTikTokPublishResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,8 +74,12 @@ export function PublishToTikTok({
   // Success floats as a glass notice; a failure keeps its detail inline too.
   useEffect(() => {
     if (!result) return;
-    showToast(result.posted ? "Published to TikTok" : `TikTok: ${result.error}`, { tone: result.posted ? "success" : "error" });
+    showToast(result.posted ? (result.scheduled ? "Scheduled on TikTok" : "Published to TikTok") : `TikTok: ${result.error}`, { tone: result.posted ? "success" : "error" });
   }, [result]);
+
+  useEffect(() => {
+    fetchSchedulingCapabilities().then((c) => setCanSchedule(!!c.tiktok)).catch(() => setCanSchedule(false));
+  }, []);
 
   useEffect(() => {
     fetchTikTokStatus()
@@ -135,7 +145,8 @@ export function PublishToTikTok({
     !!videoUrl &&
     !!creatorInfo &&
     !!privacyLevel &&
-    (promotesOwnBrand || hasPaidPartnership);
+    (promotesOwnBrand || hasPaidPartnership) &&
+    (!scheduling || !!scheduledAt);
 
   const handlePublish = async () => {
     if (publishing || !canPublish) return;
@@ -157,6 +168,8 @@ export function PublishToTikTok({
         goal,
         angle,
         style,
+        // datetime-local gives the viewer's local time; toISOString() converts it to the UTC the backend expects.
+        scheduling && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
       );
       setResult(r);
     } catch (err) {
@@ -345,6 +358,42 @@ export function PublishToTikTok({
         </>
       )}
 
+      {canSchedule && !alreadyPosted && (
+        <div className="mb-3">
+          <div className="mb-2 flex gap-2">
+            <button
+              onClick={() => setScheduling(false)}
+              className={["flex-1 rounded-full px-3 py-1.5 text-xs font-semibold", !scheduling ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"].join(" ")}
+            >
+              Post now
+            </button>
+            <button
+              onClick={() => {
+                setScheduling(true);
+                if (!scheduledAt) setScheduledAt(toDatetimeLocalMin(MIN_SCHEDULE_MINUTES));
+              }}
+              className={["flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold", scheduling ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"].join(" ")}
+            >
+              <Clock className="h-3 w-3" />
+              Schedule for later
+            </button>
+          </div>
+          {scheduling && (
+            <>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                min={toDatetimeLocalMin(MIN_SCHEDULE_MINUTES)}
+                max={toDatetimeLocalMin(MAX_SCHEDULE_DAYS * 24 * 60)}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground">Punqle will post it to TikTok at that time. You can change or cancel it in your calendar.</p>
+            </>
+          )}
+        </div>
+      )}
+
       {error && (
         <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0" />
@@ -374,7 +423,7 @@ export function PublishToTikTok({
             style={{ background: "var(--gradient-primary)" }}
           >
             {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-            Confirm & Publish
+            {scheduling ? "Schedule" : "Confirm & Publish"}
           </button>
           <button
             onClick={() => setExpanded(false)}

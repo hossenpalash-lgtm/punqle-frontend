@@ -394,6 +394,9 @@ function HomeScreen() {
   // (and whether it is switched on at all); the card only shows when it says yes.
   const [tasterAvailable, setTasterAvailable] = useState(false);
   const [tasterMode, setTasterMode] = useState(false);
+  // True while the result on screen is the user's pick from the FREE comparison (short, watermarked): its button then
+  // offers the full-quality version and states the price, since this is the first time a cost appears for them.
+  const [resultFromTaster, setResultFromTaster] = useState(false);
   const refreshTasterStatus = () => {
     fetchFreeTasterStatus().then((s) => setTasterAvailable(s.available)).catch(() => setTasterAvailable(false));
   };
@@ -794,6 +797,7 @@ function HomeScreen() {
   };
 
   const handleResetHome = () => {
+    setResultFromTaster(false);
     setHomeGeneratedImage(null);
     setHomeImageVariants([]);
     setHomeIdea("");
@@ -1340,6 +1344,7 @@ function HomeScreen() {
     if (videoNarrationEnabled ? !videoNarration.trim() : !videoPrompt.trim()) return;
     setVideoError(null);
     setVideoVariants([]);
+    setResultFromTaster(false);
     setVideoPanel("generating");
     await startVideoVersion(1, effectiveVideoVersions);
   };
@@ -2207,14 +2212,25 @@ function HomeScreen() {
                         >
                           Actor
                         </button>
-                        <button
-                          onClick={handleGenerateVideo}
-                          title="Generate again with the same photo and settings"
-                          className="flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
-                        >
-                          <RefreshCw className="h-3 w-3" />
-                          Remix
-                        </button>
+                        {resultFromTaster ? (
+                          <button
+                            onClick={handleGenerateVideo}
+                            title="Make this video again at full quality, without the watermark"
+                            className="rounded-full px-4 py-2 text-xs font-bold text-white"
+                            style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
+                          >
+                            Full quality, no watermark ({videoCostFor(videoModel, videoDuration, videoNarrationEnabled) * effectiveVideoVersions} credits)
+                          </button>
+                        ) : (
+                          <button
+                            onClick={handleGenerateVideo}
+                            title="Generate again with the same photo and settings"
+                            className="flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                            Remix
+                          </button>
+                        )}
                         <button
                           onClick={handleResetHome}
                           className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
@@ -2281,6 +2297,7 @@ function HomeScreen() {
                     taster={tasterMode}
                     onCredits={setCredits}
                     onUse={(video, model) => {
+                      setResultFromTaster(tasterMode);
                       setHomeGeneratedVideo(video);
                       setVideoModel(model);
                       setVideoVariants([]);

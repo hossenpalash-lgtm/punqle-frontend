@@ -14,16 +14,20 @@ interface Showcase {
   body: string;
   image: string;
   alt: string;
+  caption?: string;
 }
 
 // Filled 2026-11-10 from a REAL run (a national coffee chain's public website, ~25 s, about 2 US cents): the summary, "at a glance" and
 // the evidence behind every idea came back from the live tool; only the business name is hidden on purpose (we do not put a real
 // company's name and its customers' complaints on our own marketing page without asking). Nothing in the picture is invented.
 const SHOWCASE: Showcase | null = {
-  heading: "See what your competitors are up to, and what to post instead.",
-  body: "Paste a competitor's website or Instagram page. Punqle reads their public pages and reviews and gives you post ideas backed by real evidence. This is a real result for a national coffee chain (name hidden), made in about half a minute.",
+  // Short on purpose (founder, 2026-11-10: people skim, they do not read line by line): a 6-word promise, one 16-word line,
+  // and a picture that is itself a three-row "at a glance" card (what they do / what customers say / your best move).
+  heading: "See what your competitors do. Post something better.",
+  body: "Paste a competitor's link. Get post ideas backed by real evidence in about 30 seconds.",
   image: "/demo/competitive-edge.jpg",
-  alt: "A Competitive Edge result for a national coffee chain: a short summary, what they do, what customers say, and your best move, with a button to create an ad from the idea.",
+  alt: "The at-a-glance card of a real Competitive Edge result: what the competitor does, what customers say, and your best move, with a button to create an ad from the idea.",
+  caption: "A real result for a national coffee chain (name hidden).",
 };
 
 export function CompetitiveEdgeShowcase({ onTry }: { onTry: () => void }) {
@@ -49,6 +53,7 @@ export function CompetitiveEdgeShowcase({ onTry }: { onTry: () => void }) {
             className="mt-4 w-full max-w-[640px] rounded-2xl border border-border"
             loading="lazy"
           />
+          {SHOWCASE.caption && <p className="-mt-1 text-xs text-muted-foreground">{SHOWCASE.caption}</p>}
           <button
             type="button"
             onClick={onTry}

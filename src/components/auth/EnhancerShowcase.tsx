@@ -10,7 +10,7 @@ const SCENES = [
     id: "cafe",
     tab: "A person",
     words: "He smiles and says: \"Welcome, your first coffee is on us.\"",
-    added: "A phone-shot look, natural skin and expressions, relaxed delivery, the room's real sound.",
+    added: "A phone-shot look, natural expressions, the room's real sound.",
     video: "/demo/enhancer-cafe.mp4",
     poster: "/demo/enhancer-cafe-poster.jpg",
     alt: "A cafe owner speaking to the camera: on the left the engine's own result with an aggressive zoom, on the right the same shot with the Enhancer, steady and natural",
@@ -19,7 +19,7 @@ const SCENES = [
     id: "living-room",
     tab: "A place",
     words: "show the living room",
-    added: "A soft breeze moves the curtain; every object stays exactly where it is; a steady frame.",
+    added: "A soft breeze moves the curtain. Everything stays where it is.",
     video: "/demo/enhancer-living-room.mp4",
     poster: "/demo/enhancer-living-room-poster.jpg",
     alt: "A bright living room: on the left a camera pushing into the plant, on the right the same room steady with a curtain moving in a breeze",
@@ -28,7 +28,7 @@ const SCENES = [
     id: "dog",
     tab: "A pet",
     words: "make the dog look happy",
-    added: "The dog wags its tail and smiles; small relaxed movements; fur and colors stay exactly as in the photo.",
+    added: "The dog wags and smiles. Fur and colours stay true to your photo.",
     video: "/demo/enhancer-dog.mp4",
     poster: "/demo/enhancer-dog-poster.jpg",
     alt: "A golden retriever in a park: on the left a zoom onto its face, on the right the same dog calm and happy at the same size",
@@ -65,8 +65,7 @@ export function EnhancerShowcase({ onTry }: { onTry: () => void }) {
             Same photo. Same words. A video that looks filmed.
           </h2>
           <p className="max-w-lg text-[15px] leading-relaxed text-muted-foreground">
-            AI video engines love to zoom in and move like a robot. The Enhancer reads your photo, fills in what your
-            description leaves out, and keeps the shot steady and believable.
+            Plain AI video zooms and moves like a robot. The Enhancer keeps it steady and natural.
           </p>
 
           <div role="tablist" aria-label="Choose an example" className="mt-3 flex gap-2">
@@ -120,8 +119,7 @@ export function EnhancerShowcase({ onTry }: { onTry: () => void }) {
           </div>
 
           <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
-            Real results: the same photo and the same words in both, made with Wan 3.0 at 720p, 4 seconds each. Sound is
-            off in this preview.
+            Real results: same photo, same words, Wan 3.0, 720p, 4 seconds. Sound is off.
           </p>
           <button
             type="button"

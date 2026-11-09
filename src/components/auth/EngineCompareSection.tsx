@@ -20,7 +20,7 @@ const SCENES = [
       { name: "Kling 4.0", resolution: "720p" },
       { name: "Wan 3.0", resolution: "720p" },
     ],
-    note: "Real results from the free comparison: the same photo and the same words, 4 seconds each, 720p, with the free-plan watermark. Sound is off in this preview.",
+    note: "Real free results: same photo, same words, 4 seconds, 720p, free-plan watermark. Sound is off.",
     alt: "One wrist-watch photo turned into a video by Seedance 2.5, Kling 4.0 and Wan 3.0, side by side",
   },
   {
@@ -35,7 +35,7 @@ const SCENES = [
       { name: "Kling 4.0", resolution: "1080p" },
       { name: "Wan 3.0", resolution: "1080p" },
     ],
-    note: "Real results from these engines: same photo, same words, 4 seconds each. Sound is off in this preview.",
+    note: "Real results: same photo, same words, 4 seconds each. Sound is off.",
     alt: "The same photo of a person turned into a video by Seedance 2.5, Kling 4.0 and Wan 3.0, side by side",
   },
 ] as const;
@@ -72,8 +72,7 @@ export function EngineCompareSection({ onTry }: { onTry: () => void }) {
             One photo. Three AI video engines. You pick.
           </h2>
           <p className="max-w-lg text-[15px] leading-relaxed text-muted-foreground">
-            Instead of guessing which engine will look best, Punqle runs your photo through Wan 3.0, Kling 4.0 and
-            Seedance 2.5 side by side, so you can keep the video you actually like.
+            Punqle runs your photo through three AI video engines side by side. Keep the one you like.
           </p>
 
           <div role="tablist" aria-label="Choose an example" className="mt-3 flex gap-2">

@@ -236,13 +236,17 @@ export function AdCreationForm({
     if (adCaptions.length > 0) setEditedCaption(adCaptions[selectedCaptionIndex].facebook_caption);
   }, [selectedCaptionIndex, adCaptions]);
 
+  // The actor list is ~480 KB of pictures and only matters once someone opens "Person", so it loads on
+  // that first click instead of on every visit to this page (2026-11-10).
   useEffect(() => {
+    if (!actorPickerOpen || actors.length > 0) return;
     setActorsLoading(true);
     fetchImageActors()
       .then((r) => setActors(r.actors))
       .catch(() => {})
       .finally(() => setActorsLoading(false));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actorPickerOpen]);
 
   useEffect(() => {
     if (step !== "result" || images.length === 0) return;

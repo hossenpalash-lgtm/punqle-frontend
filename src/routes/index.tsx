@@ -590,6 +590,9 @@ function HomeScreen() {
   // which reuses this same actor catalog as a "pick an actor" option
   // (matches Arcads' own "Presets" picker on their Product tab).
   useEffect(() => {
+    // Only on the Home tab (2026-11-10): opening Ads/Social/etc. straight from a link used to pull the
+    // whole actor catalog (~480 KB) that those screens never show.
+    if (tab !== "home") return;
     if (homeMode !== "talking_actors" && homeMode !== "product" && homeMode !== "video") return;
     if (actors.length === 0 && !actorsLoading) {
       setActorsLoading(true);
@@ -616,7 +619,7 @@ function HomeScreen() {
         .finally(() => setCustomActorsLoading(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [homeMode]);
+  }, [homeMode, tab]);
 
   const goTo = (t: Tab) => navigate({ to: "/", search: { tab: t } });
 

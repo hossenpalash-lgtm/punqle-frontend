@@ -66,34 +66,58 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{children}</p>;
 }
 
-// One bar for how customers feel, from the tag each real customer comment already carries (founder, 2026-11-10: charts instead of
-// sentences). Shown only when EVERY comment has a tag, so the bar never guesses; otherwise the sentence stays.
+// A small pie (donut) for how customers feel, from the tag each real customer comment already carries (founder, 2026-11-10: a pie is
+// the easiest for people to read; charts instead of sentences). Shown only when EVERY comment has a tag, so it never guesses;
+// otherwise the sentence stays on its own.
 const SENTIMENT_STYLES = {
-  positive: { label: "positive", bar: "bg-emerald-500", dot: "bg-emerald-500" },
-  mixed: { label: "mixed", bar: "bg-amber-400", dot: "bg-amber-400" },
-  negative: { label: "negative", bar: "bg-rose-500", dot: "bg-rose-500" },
+  positive: { label: "positive", text: "text-emerald-500", dot: "bg-emerald-500" },
+  mixed: { label: "mixed", text: "text-amber-400", dot: "bg-amber-400" },
+  negative: { label: "negative", text: "text-rose-500", dot: "bg-rose-500" },
 } as const;
 
-function SentimentBar({ signals }: { signals: ApiCompetitorAnalysisResponse["customer_signals"] }) {
+function SentimentDonut({ signals }: { signals: ApiCompetitorAnalysisResponse["customer_signals"] }) {
   if (signals.length === 0 || signals.some((s) => !s.sentiment)) return null;
   const counts = { positive: 0, mixed: 0, negative: 0 };
   for (const s of signals) counts[s.sentiment as keyof typeof counts] += 1;
-  const order = ["positive", "mixed", "negative"] as const;
+  const shown = (["positive", "mixed", "negative"] as const).filter((k) => counts[k] > 0);
+  let offset = 0;
   return (
-    <div className="mt-2" role="img" aria-label={order.filter((k) => counts[k] > 0).map((k) => `${counts[k]} ${SENTIMENT_STYLES[k].label}`).join(", ")}>
-      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-background">
-        {order.filter((k) => counts[k] > 0).map((k) => (
-          <div key={k} className={SENTIMENT_STYLES[k].bar} style={{ width: `${(counts[k] / signals.length) * 100}%` }} />
-        ))}
+    <div className="mt-2 flex items-center gap-4" role="img" aria-label={shown.map((k) => `${counts[k]} ${SENTIMENT_STYLES[k].label}`).join(", ")}>
+      <div className="relative h-16 w-16 shrink-0">
+        <svg viewBox="0 0 36 36" className="h-16 w-16 -rotate-90" aria-hidden="true">
+          <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--background)" strokeWidth="5.5" />
+          {shown.map((k) => {
+            const len = (counts[k] / signals.length) * 100;
+            const el = (
+              <circle
+                key={k}
+                cx="18"
+                cy="18"
+                r="15.9155"
+                fill="none"
+                stroke="currentColor"
+                className={SENTIMENT_STYLES[k].text}
+                strokeWidth="5.5"
+                strokeDasharray={`${len} ${100 - len}`}
+                strokeDashoffset={-offset}
+              />
+            );
+            offset += len;
+            return el;
+          })}
+        </svg>
+        <span className="absolute inset-0 flex flex-col items-center justify-center leading-none text-foreground">
+          <span className="font-display text-xl font-extrabold">{signals.length}</span>
+        </span>
       </div>
-      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-secondary-foreground">
-        {order.filter((k) => counts[k] > 0).map((k) => (
-          <span key={k} className="flex items-center gap-1">
-            <span className={`h-2 w-2 rounded-full ${SENTIMENT_STYLES[k].dot}`} aria-hidden="true" />
+      <ul className="space-y-1 text-[13px] text-secondary-foreground">
+        {shown.map((k) => (
+          <li key={k} className="flex items-center gap-1.5">
+            <span className={`h-2.5 w-2.5 rounded-full ${SENTIMENT_STYLES[k].dot}`} aria-hidden="true" />
             <span className="font-bold tabular-nums">{counts[k]}</span> {SENTIMENT_STYLES[k].label}
-          </span>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
@@ -424,7 +448,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
                     <p className="text-sm text-secondary-foreground">
                       {firstSignal?.signal || "No reliable public customer feedback found."}
                     </p>
-                    <SentimentBar signals={result.customer_signals} />
+                    <SentimentDonut signals={result.customer_signals} />
                   </div>
                 </div>
                 <div className="flex items-start gap-3 rounded-xl bg-secondary px-3 py-2.5">

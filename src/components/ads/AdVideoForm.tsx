@@ -265,6 +265,7 @@ export function AdVideoForm({
   const [hasLogo, setHasLogo] = useState(false);
   const [hasBrandColor, setHasBrandColor] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mainInputRef = useRef<HTMLTextAreaElement>(null);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const headlineRef = useRef("");
@@ -860,7 +861,15 @@ export function AdVideoForm({
 
   const handleMainSubmit = async () => {
     const text = mainInput.trim();
-    if (!text || inputFetching || anglesLoading || generating) return;
+    if (inputFetching || anglesLoading || generating) return;
+    // The button used to be greyed out with no reason when this box was empty, far below the box on
+    // a long page. Now it explains itself and takes the person back to the box (2026-11-10).
+    if (!text) {
+      setInputError("Tell Punqle what you're advertising first.");
+      mainInputRef.current?.focus();
+      mainInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setInputError(null);
     if (looksLikeUrl(text)) {
       setInputFetching(true);
@@ -1326,8 +1335,12 @@ export function AdVideoForm({
           component already say the same thing; the textarea's own
           placeholder covers "paste a link or describe it." */}
       <textarea
+        ref={mainInputRef}
         value={mainInput}
-        onChange={(e) => setMainInput(e.target.value)}
+        onChange={(e) => {
+          setMainInput(e.target.value);
+          if (inputError) setInputError(null);
+        }}
         placeholder="https://yourstore.com/products/... or Handmade leather wallets, 20% off this week"
         rows={3}
         disabled={busy}
@@ -1543,7 +1556,7 @@ export function AdVideoForm({
               {!file ? (
                 <label className="mb-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-card px-3 py-2.5 text-xs font-semibold text-foreground">
                   <Upload className="h-3.5 w-3.5" />
-                  Upload a product photo, or skip for text-only
+                  Upload a product photo
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1588,34 +1601,34 @@ export function AdVideoForm({
               Vertical (9:16)
             </button>
           </div>
+
+          {/* Goal now lives in the same box as Format (2026-11-10): both are plain settings, and it
+              used to sit alone outside it. */}
+          <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Goal</p>
+          <div className="grid grid-cols-4 gap-2">
+            {GOALS.map((g) => (
+              <button
+                key={g.value}
+                onClick={() => setGoal(g.value)}
+                className={[
+                  "rounded-full px-2 py-2.5 text-sm font-semibold",
+                  goal === g.value ? "bg-foreground text-background" : "bg-card text-secondary-foreground",
+                ].join(" ")}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
       </div>
 
-      <label className="mb-2 block w-full text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Goal
-      </label>
-      <div className="mb-4 grid w-full grid-cols-4 gap-2">
-        {GOALS.map((g) => (
-          <button
-            key={g.value}
-            onClick={() => setGoal(g.value)}
-            className={[
-              "rounded-full px-3 py-2.5 text-sm font-semibold",
-              goal === g.value ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground",
-            ].join(" ")}
-          >
-            {g.label}
-          </button>
-        ))}
-      </div>
-
+      {/* Price only, no minutes (2026-11-10): the two wait phrases ("about 1-2 min" / "usually a few
+          minutes") disagreed, and a promised number of minutes only annoys when it runs over. */}
       <div className="mb-4 w-full rounded-2xl border border-dashed border-border bg-secondary/60 p-3 text-center text-xs font-semibold text-foreground">
         {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && videoAdFree ? (
           <span className="text-foreground">✨ Try free — no credits</span>
         ) : (
           <>1 video · {videoStyle === "avatar" ? "from " : ""}{currentCost} credits</>
-        )}{" "}
-        ·{" "}
-        {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" ? "about 1-2 min" : "usually a few minutes"}
+        )}
       </div>
 
       {currentInsufficientCredits && (
@@ -1642,7 +1655,7 @@ export function AdVideoForm({
 
       <button
         onClick={handleMainSubmit}
-        disabled={!mainInput.trim() || busy || currentInsufficientCredits || styleNeedsMoreInput}
+        disabled={busy || currentInsufficientCredits || styleNeedsMoreInput}
         className="flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-4 text-base font-semibold text-background disabled:opacity-60"
       >
         {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Video className="h-5 w-5" />}

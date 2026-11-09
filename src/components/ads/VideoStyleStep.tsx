@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { VIDEO_STYLES, type VideoStyle, type VideoStyleOption } from "@/lib/video-style";
 import { ImageChoiceCard } from "./ImageChoiceCard";
 
@@ -34,8 +34,17 @@ const STYLE_PREVIEW: Record<VideoStyle, string> = {
 const STYLE_GROUPS: { key: VideoStyleOption["group"]; title: string; subtitle: string }[] = [
   { key: "ai_ugc", title: "AI UGC — Recommended", subtitle: "Punqle's own actors and product-in-hand video" },
   { key: "product", title: "Product Videos", subtitle: "Product-focused styles without a presenter" },
-  { key: "presenter", title: "Also available", subtitle: "A stock AI avatar reads your script" },
+  { key: "presenter", title: "AI Presenter", subtitle: "A stock avatar reads your script" },
 ];
+
+// Most cards cost the same, so a "30 credits" line on each of them was five copies of one
+// fact (the button at the bottom already shows the price of the picked style, 2026-11-10).
+// Show the price only on a card that differs from the usual one.
+const COMMON_CREDIT_HINT = (() => {
+  const counts = new Map<string, number>();
+  for (const s of VIDEO_STYLES) counts.set(s.creditHint, (counts.get(s.creditHint) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+})();
 
 export function VideoStyleStep({
   selected,
@@ -52,6 +61,40 @@ export function VideoStyleStep({
       <div className="flex w-full flex-col gap-3">
         {STYLE_GROUPS.map((group) => {
           const isAiUgc = group.key === "ai_ugc";
+          // The presenter group is one card, so as a 3-column grid it left two thirds of a
+          // ~300px block empty under its own "Also available" heading. One compact row now
+          // (2026-11-10): same choice, same price note, a fifth of the height.
+          if (group.key === "presenter") {
+            const style = VIDEO_STYLES.find((s) => s.group === "presenter");
+            if (!style) return null;
+            const isSelected = selected === style.id;
+            return (
+              <button
+                key={group.key}
+                type="button"
+                onClick={() => onSelect(style.id)}
+                aria-pressed={isSelected}
+                className={[
+                  "flex items-center gap-3 rounded-2xl border bg-card p-1.5 text-left transition-colors",
+                  isSelected ? "border-foreground ring-1 ring-foreground" : "border-border hover:border-foreground/40",
+                ].join(" ")}
+              >
+                <img src={STYLE_PREVIEW[style.id]} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-[13px] leading-tight text-foreground">{style.label}</span>
+                  <span className="block text-xs text-muted-foreground">{group.subtitle}</span>
+                </span>
+                {style.creditHint !== COMMON_CREDIT_HINT && (
+                  <span className="shrink-0 text-[11.5px] font-semibold text-muted-foreground">{style.creditHint}</span>
+                )}
+                {isSelected && (
+                  <span className="mr-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+                    <Check className="h-3 w-3" />
+                  </span>
+                )}
+              </button>
+            );
+          }
           return (
           <div
             key={group.key}
@@ -82,7 +125,7 @@ export function VideoStyleStep({
                       key={style.id}
                       image={STYLE_PREVIEW[style.id]}
                       label={style.label}
-                      sublabel={style.creditHint}
+                      sublabel={style.creditHint === COMMON_CREDIT_HINT ? undefined : style.creditHint}
                       video
                       selected={selected === style.id}
                       onClick={() => onSelect(style.id)}

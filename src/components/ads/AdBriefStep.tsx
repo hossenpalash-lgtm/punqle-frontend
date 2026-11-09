@@ -14,7 +14,9 @@ export const GOALS: { value: AdGoal; label: string; description: string }[] = [
 // disclosure principle already used for Idea Step's chips: don't force a
 // decision the user doesn't need to make.
 export const ANGLES: { value: string | null; label: string }[] = [
-  { value: null, label: "Let Punqle choose ✨" },
+  // No ✨ in the label: every chip renderer already draws a Sparkles icon for this
+  // option, so the emoji showed two sparkles side by side (2026-11-10).
+  { value: null, label: "Let Punqle choose" },
   { value: "Benefit", label: "Benefit" },
   { value: "Problem → Solution", label: "Problem → Solution" },
   { value: "Offer", label: "Offer" },

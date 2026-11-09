@@ -226,7 +226,7 @@ const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
   wan_3: 5, // Wan 3.0 and Kling 4.0 run at 1080p
   kling_3_pro: 5, // Kling now makes its own sound here; with a studio voice it animates silently at 4/s (see videoCreditsPerSecond)
   kling_4: 6,
-  seedance_2_5: 5, // was 6 until 2026-11-09 (rivals sell it for about half); mirrors main.py
+  seedance_2_5: 4, // was 6 until 2026-11-09 (rivals sell it for about half; 5 first, then 4); mirrors main.py
   seedance_2_5_hd: 10, // native 1080p through a second provider (measured 2026-11-09); mirrors main.py
 };
 const videoCreditsPerSecond = (model: ImageVideoModel, withStudioVoice: boolean) =>

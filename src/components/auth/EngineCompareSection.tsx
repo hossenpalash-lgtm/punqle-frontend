@@ -4,16 +4,47 @@ import { ArrowRight, Columns3 } from "lucide-react";
 // Landing-page proof of Punqle's "Compare" feature: the same photo and the same words, run through three
 // real video engines (a real 4 s test on 2026-11-07, nothing edited except size). Costs nothing per visitor:
 // it is one small pre-made file. The labels are HTML (not baked into the video) so they stay sharp.
-// The resolutions are the true ones: Seedance runs at 720p, Kling 4.0 and Wan 3.0 at 1080p.
-const ENGINES = [
-  { name: "Seedance 2.5", resolution: "720p" },
-  { name: "Kling 4.0", resolution: "1080p" },
-  { name: "Wan 3.0", resolution: "1080p" },
-];
+// The resolutions are the true ones. "A person": Seedance 720p, Kling 4.0 and Wan 3.0 1080p (a 2026-11-07 test).
+// "A product" (a wrist watch): the real result of the FREE comparison on 2026-11-09, all three at 720p, 4 s, with the
+// free-plan watermark, nothing edited except size and the three clips sitting side by side.
+const SCENES = [
+  {
+    id: "product",
+    tab: "A product",
+    video: "/demo/engine-compare-watch.mp4",
+    poster: "/demo/engine-compare-watch-poster.jpg",
+    aspect: "1080 / 450",
+    maxWidth: "max-w-[720px]",
+    engines: [
+      { name: "Seedance 2.5", resolution: "720p" },
+      { name: "Kling 4.0", resolution: "720p" },
+      { name: "Wan 3.0", resolution: "720p" },
+    ],
+    note: "Real results from the free comparison: the same photo and the same words, 4 seconds each, 720p, with the free-plan watermark. Sound is off in this preview.",
+    alt: "One wrist-watch photo turned into a video by Seedance 2.5, Kling 4.0 and Wan 3.0, side by side",
+  },
+  {
+    id: "person",
+    tab: "A person",
+    video: "/demo/engine-compare.mp4",
+    poster: "/demo/engine-compare-poster.jpg",
+    aspect: "900 / 534",
+    maxWidth: "max-w-[560px]",
+    engines: [
+      { name: "Seedance 2.5", resolution: "720p" },
+      { name: "Kling 4.0", resolution: "1080p" },
+      { name: "Wan 3.0", resolution: "1080p" },
+    ],
+    note: "Real results from these engines: same photo, same words, 4 seconds each. Sound is off in this preview.",
+    alt: "The same photo of a person turned into a video by Seedance 2.5, Kling 4.0 and Wan 3.0, side by side",
+  },
+] as const;
 
 export function EngineCompareSection({ onTry }: { onTry: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [active, setActive] = useState<(typeof SCENES)[number]["id"]>("product");
+  const scene = SCENES.find((x) => x.id === active) ?? SCENES[0];
 
   // People who ask their device for less motion get a still picture with play controls instead of a loop.
   useEffect(() => {
@@ -45,24 +76,44 @@ export function EngineCompareSection({ onTry }: { onTry: () => void }) {
             Seedance 2.5 side by side, so you can keep the video you actually like.
           </p>
 
-          <div className="mt-4 w-full max-w-[560px]">
-            <div className="overflow-hidden rounded-2xl bg-[#1E1F24]" style={{ aspectRatio: "900 / 534" }}>
+          <div role="tablist" aria-label="Choose an example" className="mt-3 flex gap-2">
+            {SCENES.map((x) => (
+              <button
+                key={x.id}
+                type="button"
+                role="tab"
+                aria-selected={x.id === active}
+                onClick={() => setActive(x.id)}
+                className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground ${
+                  x.id === active
+                    ? "border-transparent bg-primary text-primary-foreground"
+                    : "border-border bg-background text-foreground hover:bg-muted"
+                }`}
+              >
+                {x.tab}
+              </button>
+            ))}
+          </div>
+
+          <div className={`mt-2 w-full ${scene.maxWidth}`}>
+            <div className="overflow-hidden rounded-2xl bg-[#1E1F24]" style={{ aspectRatio: scene.aspect }}>
               <video
+                key={scene.id}
                 ref={videoRef}
                 className="h-full w-full object-cover"
-                src="/demo/engine-compare.mp4"
-                poster="/demo/engine-compare-poster.jpg"
+                src={scene.video}
+                poster={scene.poster}
                 autoPlay={!reducedMotion}
                 controls={reducedMotion}
                 loop
                 muted
                 playsInline
                 preload="metadata"
-                aria-label="The same photo turned into a video by Seedance 2.5, Kling 4.0 and Wan 3.0, side by side"
+                aria-label={scene.alt}
               />
             </div>
             <div className="mt-2 grid grid-cols-3 gap-2">
-              {ENGINES.map((e) => (
+              {scene.engines.map((e) => (
                 <div key={e.name} className="text-center">
                   <p className="whitespace-nowrap text-[13px] font-semibold text-foreground sm:text-sm">{e.name}</p>
                   <p className="text-xs text-muted-foreground">{e.resolution}</p>
@@ -71,9 +122,7 @@ export function EngineCompareSection({ onTry }: { onTry: () => void }) {
             </div>
           </div>
 
-          <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
-            Real results from these engines: same photo, same words, 4 seconds each. Sound is off in this preview.
-          </p>
+          <p className="max-w-md text-xs leading-relaxed text-muted-foreground">{scene.note}</p>
           <button
             type="button"
             onClick={onTry}

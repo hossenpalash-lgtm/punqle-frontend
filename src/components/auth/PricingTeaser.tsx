@@ -1,12 +1,17 @@
-import { BadgeDollarSign } from "lucide-react";
+import { BadgeDollarSign, Clapperboard, Image as ImageIcon } from "lucide-react";
 
 // Real credit tiers (AUD), same numbers already live in the app's own
 // Billing panel — an honest affordability signal for small-business
 // visitors, not a fabricated "cheaper than X" comparison.
+// "Credits" mean nothing to a new visitor, so each tier also shows what they buy (founder, 2026-11-10: use a picture, not a paragraph).
+// Real prices from the app: an image with the top image model = 3 credits; a 4-second clip on the cheapest video engine = 15 credits
+// (3.75 credits a second). Rounded DOWN, so the numbers never promise more than the credits can pay for.
+const IMAGE_CREDITS = 3;
+const VIDEO_4S_CREDITS = 15;
 const TIERS = [
-  { name: "Starter", price: "$5.99", credits: "30 credits a month", mid: false },
-  { name: "Growth", price: "$19", credits: "110 credits a month", mid: true },
-  { name: "Pro", price: "$44.99", credits: "300 credits a month", mid: false },
+  { name: "Starter", price: "$5.99", credits: 30, mid: false },
+  { name: "Growth", price: "$19", credits: 110, mid: true },
+  { name: "Pro", price: "$44.99", credits: 300, mid: false },
 ];
 
 export function PricingTeaser() {
@@ -37,11 +42,28 @@ export function PricingTeaser() {
               {t.price}
               <span className="text-sm font-semibold text-muted-foreground">/mo</span>
             </span>
-            <span className="text-[13.5px] text-muted-foreground">{t.credits}</span>
+            <ul className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
+              <li className="flex items-center gap-2.5">
+                <ImageIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span>
+                  <span className="font-display text-xl font-extrabold">{Math.floor(t.credits / IMAGE_CREDITS)}</span>{" "}
+                  <span className="text-sm text-muted-foreground">images</span>
+                </span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Clapperboard className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span>
+                  <span className="font-display text-xl font-extrabold">{Math.floor(t.credits / VIDEO_4S_CREDITS)}</span>{" "}
+                  <span className="text-sm text-muted-foreground">short videos</span>
+                </span>
+              </li>
+            </ul>
+            <span className="mt-1 text-[12.5px] text-muted-foreground">{t.credits} credits a month</span>
           </div>
         ))}
       </div>
-      <p className="mt-5 text-center text-xs text-muted-foreground">Prices in AUD. No contracts — cancel anytime.</p>
+      <p className="mt-5 text-center text-xs text-muted-foreground">Prices in AUD. No contracts, cancel anytime.</p>
+      <p className="mt-1 text-center text-xs text-muted-foreground">Counted with top-quality images and 4-second clips. Cheaper options stretch it further.</p>
     </section>
   );
 }

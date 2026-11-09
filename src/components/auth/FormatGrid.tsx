@@ -8,14 +8,14 @@ import { LayoutGrid } from "lucide-react";
 // abstract icon+text cards.
 const FORMATS: { label: string; desc: string; image: string }[] = [
   { label: "Ready Actors", desc: "Real people, redubbed for your business.", image: "/actors/maya.jpg" },
-  { label: "Video Ad", desc: "Cinematic, lifestyle, UGC and presenter styles.", image: "/showcase-ads/product-showcase-poster.jpg" },
-  { label: "Image Ad", desc: "Goal-driven stills for Facebook & Instagram.", image: "/showcase-ads/skincare.jpg" },
-  { label: "Product", desc: "An actor holding your product, styled and shot.", image: "/showcase-ads/fitness.jpg" },
-  { label: "Unboxing", desc: "A fresh, styled background for your product photo.", image: "/showcase-ads/home.jpg" },
+  { label: "Video Ad", desc: "Cinematic, lifestyle, UGC and presenter styles.", image: "/thumbs/product-showcase-poster.jpg" },
+  { label: "Image Ad", desc: "Goal-driven stills for Facebook & Instagram.", image: "/thumbs/skincare.jpg" },
+  { label: "Product", desc: "An actor holding your product, styled and shot.", image: "/thumbs/fitness.jpg" },
+  { label: "Unboxing", desc: "A fresh, styled background for your product photo.", image: "/thumbs/home.jpg" },
   { label: "Show Your App", desc: "A real person showing your app on screen.", image: "/showcase-ads/saas.jpg" },
-  { label: "Upscale", desc: "Sharpen and enlarge any photo or video.", image: "/actors/liam.jpg" },
-  { label: "Try-On", desc: "See your product on a real person, instantly.", image: "/showcase-ads/fashion.jpg" },
-  { label: "Carousel", desc: "One topic, a full multi-slide carousel — auto-designed.", image: "/showcase-ads/food.jpg" },
+  { label: "Upscale", desc: "Sharpen and enlarge any photo or video.", image: "/thumbs/liam.jpg" },
+  { label: "Try-On", desc: "See your product on a real person, instantly.", image: "/thumbs/fashion.jpg" },
+  { label: "Carousel", desc: "One topic, a full multi-slide carousel — auto-designed.", image: "/thumbs/food.jpg" },
 ];
 
 export function FormatGrid() {

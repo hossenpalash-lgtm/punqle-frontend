@@ -1920,6 +1920,7 @@ export interface ApiCompetitorCustomerSignal {
   signal: string;
   evidence: string;
   source_url: string | null;
+  sentiment?: "positive" | "negative" | "mixed" | null; // missing on analyses saved before 2026-11-10
 }
 
 export interface ApiCompetitorOpportunity {

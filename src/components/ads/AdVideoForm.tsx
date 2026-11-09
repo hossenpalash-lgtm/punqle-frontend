@@ -1,14 +1,11 @@
 import {
   AlertCircle,
-  Camera,
   Captions,
   Check,
   Clock,
   Download,
   Loader2,
   Music,
-  Sparkles,
-  Upload,
   Video,
   X,
 } from "lucide-react";
@@ -51,12 +48,12 @@ import {
   type VideoAspectRatio,
 } from "@/lib/api";
 import { findVideoStyle, headlineFontStyleFor, type VideoStyle } from "@/lib/video-style";
-import { ANGLES, GOALS } from "./AdBriefStep";
 import { AvatarPickerStep, avatarAvailable } from "./AvatarPickerStep";
 import { EditVideoPanel } from "./EditVideoPanel";
 import { ProductPicker } from "./ProductPicker";
 import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
+import { VideoSettingsBar } from "./VideoSettingsBar";
 import { VideoStyleStep } from "./VideoStyleStep";
 
 // Mirrors main.py's VIDEO_CREDIT_COST: one fixed 8 s Gemini Omni clip at
@@ -150,6 +147,8 @@ export function AdVideoForm({
   const [mainInput, setMainInput] = useState("");
   const [inputFetching, setInputFetching] = useState(false);
   const [inputError, setInputError] = useState<string | null>(null);
+  // Shown right under the idea box (not down by the button) when Generate is pressed with it empty.
+  const [needsText, setNeedsText] = useState(false);
 
   const [offerDescription, setOfferDescription] = useState("");
   const [goal, setGoal] = useState<AdGoal>(initialVideo?.goal ?? "sales");
@@ -865,7 +864,7 @@ export function AdVideoForm({
     // The button used to be greyed out with no reason when this box was empty, far below the box on
     // a long page. Now it explains itself and takes the person back to the box (2026-11-10).
     if (!text) {
-      setInputError("Tell Punqle what you're advertising first.");
+      setNeedsText(true);
       mainInputRef.current?.focus();
       mainInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
@@ -1340,15 +1339,39 @@ export function AdVideoForm({
         onChange={(e) => {
           setMainInput(e.target.value);
           if (inputError) setInputError(null);
+          if (needsText) setNeedsText(false);
         }}
         placeholder="https://yourstore.com/products/... or Handmade leather wallets, 20% off this week"
         rows={3}
         disabled={busy}
         className="mb-3 w-full rounded-2xl border border-input bg-background px-4 py-3.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
       />
-      <div className="mb-4 w-full text-left">
+      {needsText && (
+        <p className="-mt-1 mb-3 flex w-full items-center gap-1.5 text-left text-sm font-medium text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          Tell Punqle what you're advertising first.
+        </p>
+      )}
+      <div className="mb-3 w-full text-left">
         <ProductPicker onSelect={handleQuickCreateFromCatalog} />
       </div>
+
+      {/* Format, Goal, Message and the optional photo as one row of small settings under the idea
+          box (2026-11-10) — the layout Higgsfield, Krea and Creatify all use — instead of four
+          headed sections further down the page. */}
+      <VideoSettingsBar
+        aspectRatio={aspectRatio}
+        onAspectRatio={setAspectRatio}
+        goal={goal}
+        onGoal={setGoal}
+        showProductOptions={videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor"}
+        angle={angle}
+        onAngle={setAngle}
+        file={file}
+        previewUrl={previewUrl}
+        onFile={handleFileChange}
+        fileInputRef={fileInputRef}
+      />
 
       {/* Style/Angle/Photo/Format un-collapsed onto the main screen
           (2026-09-23, same principle as Image Ad's redesign — see
@@ -1375,7 +1398,7 @@ export function AdVideoForm({
               <option value="bangla">বাংলা</option>
             </select>
           </div>
-          <div className="mb-4 rounded-2xl bg-card p-3">
+          <div className="mb-4">
             <VideoStyleStep selected={videoStyle} onSelect={setVideoStyle} />
           </div>
 
@@ -1524,111 +1547,6 @@ export function AdVideoForm({
               )}
             </div>
           )}
-
-          {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && (
-            <>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                What should the ad say?
-              </p>
-              <div className="mb-4 flex flex-wrap gap-1.5">
-                {ANGLES.map((a) => {
-                  const selected = angle === a.value;
-                  return (
-                    <button
-                      key={a.label}
-                      onClick={() => setAngle(a.value)}
-                      className={[
-                        "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium",
-                        selected ? "bg-foreground text-background" : "bg-card text-secondary-foreground",
-                      ].join(" ")}
-                    >
-                      {selected && a.value !== null && <Check className="h-3 w-3" />}
-                      {a.value === null && <Sparkles className="h-3 w-3" />}
-                      {a.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Photo (optional)
-              </p>
-              {!file ? (
-                <label className="mb-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-card px-3 py-2.5 text-xs font-semibold text-foreground">
-                  <Upload className="h-3.5 w-3.5" />
-                  Upload a product photo
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
-                  />
-                </label>
-              ) : (
-                <div className="mb-4 flex items-center justify-between rounded-xl bg-card px-3 py-2.5">
-                  <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                    {previewUrl && <img src={previewUrl} alt="" className="h-6 w-6 rounded-md object-cover" />}
-                    <Camera className="h-3.5 w-3.5" />
-                    {file.name}
-                  </span>
-                  <button onClick={() => handleFileChange(null)} aria-label="Remove photo" className="text-muted-foreground">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Format</p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setAspectRatio("16:9")}
-              className={[
-                "flex-1 rounded-full px-4 py-2.5 text-sm font-semibold",
-                aspectRatio === "16:9" ? "bg-foreground text-background" : "bg-card text-secondary-foreground",
-              ].join(" ")}
-            >
-              Landscape (16:9)
-            </button>
-            <button
-              onClick={() => setAspectRatio("9:16")}
-              className={[
-                "flex-1 rounded-full px-4 py-2.5 text-sm font-semibold",
-                aspectRatio === "9:16" ? "bg-foreground text-background" : "bg-card text-secondary-foreground",
-              ].join(" ")}
-            >
-              Vertical (9:16)
-            </button>
-          </div>
-
-          {/* Goal now lives in the same box as Format (2026-11-10): both are plain settings, and it
-              used to sit alone outside it. */}
-          <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Goal</p>
-          <div className="grid grid-cols-4 gap-2">
-            {GOALS.map((g) => (
-              <button
-                key={g.value}
-                onClick={() => setGoal(g.value)}
-                className={[
-                  "rounded-full px-2 py-2.5 text-sm font-semibold",
-                  goal === g.value ? "bg-foreground text-background" : "bg-card text-secondary-foreground",
-                ].join(" ")}
-              >
-                {g.label}
-              </button>
-            ))}
-          </div>
-      </div>
-
-      {/* Price only, no minutes (2026-11-10): the two wait phrases ("about 1-2 min" / "usually a few
-          minutes") disagreed, and a promised number of minutes only annoys when it runs over. */}
-      <div className="mb-4 w-full rounded-2xl border border-dashed border-border bg-secondary/60 p-3 text-center text-xs font-semibold text-foreground">
-        {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && videoAdFree ? (
-          <span className="text-foreground">✨ Try free — no credits</span>
-        ) : (
-          <>1 video · {videoStyle === "avatar" ? "from " : ""}{currentCost} credits</>
-        )}
       </div>
 
       {currentInsufficientCredits && (
@@ -1653,16 +1571,31 @@ export function AdVideoForm({
         </p>
       )}
 
-      <button
-        onClick={handleMainSubmit}
-        disabled={busy || currentInsufficientCredits || styleNeedsMoreInput}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-4 text-base font-semibold text-background disabled:opacity-60"
-      >
-        {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Video className="h-5 w-5" />}
-        {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && videoAdFree
-          ? "Try free"
-          : "Generate video"}
-      </button>
+      {/* The price lives inside the button and the button stays in view while the style cards scroll
+          past (2026-11-10): Krea and Higgsfield keep Generate next to the idea, ours used to sit
+          ~1,300px below it. No minutes promised — they only annoy when a render runs long. */}
+      <div className="sticky bottom-3 z-10 w-full">
+        <button
+          onClick={handleMainSubmit}
+          disabled={busy || currentInsufficientCredits || styleNeedsMoreInput}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-4 text-base font-semibold text-background shadow-[0_10px_28px_-10px_rgba(0,0,0,0.55)] disabled:opacity-60"
+        >
+          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Video className="h-5 w-5" />}
+          {videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor" && videoAdFree ? (
+            <>
+              Try free<span className="font-medium opacity-70"> · no credits</span>
+            </>
+          ) : (
+            <>
+              Generate video
+              <span className="font-medium opacity-70">
+                {" "}· {videoStyle === "avatar" ? "from " : ""}
+                {currentCost} credits
+              </span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

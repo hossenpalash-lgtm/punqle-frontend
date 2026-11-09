@@ -90,6 +90,8 @@ import { WeeklyPlanForm } from "@/components/ads/WeeklyPlanForm";
 import { ImageChoiceCard } from "@/components/ads/ImageChoiceCard";
 import { GeneratingGlow } from "@/components/GeneratingGlow";
 import { COMPARE_CHIPS, COMPARE_MODELS, VideoCompare, startCompareJobs } from "@/components/ads/VideoCompare";
+import { StarterExamples } from "@/components/ads/StarterExamples";
+import type { StarterExample } from "@/components/ads/StarterExamples";
 import { RecentVideos } from "@/components/ads/RecentVideos";
 import type { CompareJob } from "@/components/ads/VideoCompare";
 
@@ -412,6 +414,7 @@ function HomeScreen() {
   const [resultFromTaster, setResultFromTaster] = useState(false);
   const [tasterResultJobId, setTasterResultJobId] = useState<string | null>(null); // the free-comparison job whose video is on screen (needed to unlock it)
   const [tasterActionError, setTasterActionError] = useState<string | null>(null);
+  const [exampleLoading, setExampleLoading] = useState<string | null>(null); // which "Try an example" card is loading its photo
   const refreshTasterStatus = () => {
     fetchFreeTasterStatus().then((s) => setTasterAvailable(s.available)).catch(() => setTasterAvailable(false));
   };
@@ -911,6 +914,33 @@ function HomeScreen() {
     setVideoNarration("");
     setVideoVoiceGender("female");
     setVideoPanel("composer");
+  };
+
+  // "Try an example": loads one of our own ready-made product photos and its words into the Video composer, exactly as if the
+  // person had uploaded that photo and typed those words. Costs nothing; the free comparison (if still available) comes next.
+  const handlePickExample = async (ex: StarterExample) => {
+    if (exampleLoading) return;
+    setExampleLoading(ex.id);
+    setVideoError(null);
+    try {
+      const res = await fetch(ex.photo);
+      if (!res.ok) throw new Error("not found");
+      const blob = await res.blob();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("read failed"));
+        reader.readAsDataURL(blob);
+      });
+      const match = dataUrl.match(/^data:(.*?);base64,(.*)$/);
+      if (!match) throw new Error("bad photo");
+      startVideoFromImage(match[2], match[1], "9:16");
+      setVideoPrompt(ex.prompt); // after startVideoFromImage, which clears the words
+    } catch {
+      setVideoError("Couldn't load this example. Please try again.");
+    } finally {
+      setExampleLoading(null);
+    }
   };
 
   const handleReplaceVideoImage = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2337,6 +2367,8 @@ function HomeScreen() {
                         Recent videos ({recentCount})
                       </button>
                     )}
+                    <StarterExamples onPick={handlePickExample} loadingId={exampleLoading} />
+                    {videoError && <p className="text-xs text-destructive">{videoError}</p>}
                     {actors.length > 0 && (
                       <div className="mt-2 w-full border-t border-border pt-4 text-left">
                         <p className="mb-2 text-xs font-semibold text-muted-foreground">Or start from a Punqle actor</p>

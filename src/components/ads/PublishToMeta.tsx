@@ -1,8 +1,9 @@
-import { AlertCircle, CheckCircle2, Clock, Facebook, Loader2 } from "lucide-react";
+import { AlertCircle, CalendarClock, Check, CheckCircle2, ChevronRight, Clock, Facebook, Loader2, Send, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchMetaStatus, fetchSchedulingCapabilities, getMetaConnectUrl, publishToMeta, type ApiMetaPublishResponse } from "@/lib/api";
-import { MIN_SCHEDULE_MINUTES, MAX_SCHEDULE_DAYS, toDatetimeLocalMin } from "@/lib/schedule-dates";
+import { MIN_SCHEDULE_MINUTES, MAX_SCHEDULE_DAYS, formatScheduleDate, toDatetimeLocalMin } from "@/lib/schedule-dates";
 import { showToast } from "@/components/GlassToast";
+import { PlatformTile } from "@/components/PlatformTile";
 
 // Inline in the Post Kit, next to Download/Schedule — not a modal, matching
 // CarouselBuilder's "tool sits right where the image already is" pattern.
@@ -27,6 +28,7 @@ export function PublishToMeta({
   const [connected, setConnected] = useState(false);
   const [pageName, setPageName] = useState<string | null>(null);
   const [hasInstagram, setHasInstagram] = useState(false);
+  const [igName, setIgName] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
 
   const [expanded, setExpanded] = useState(false);
@@ -58,6 +60,7 @@ export function PublishToMeta({
         setConnected(r.connected);
         setPageName(r.page_name);
         setHasInstagram(!!r.ig_username);
+        setIgName(r.ig_username || null);
         setPostInstagram(!!r.ig_username);
       })
       .catch(() => {
@@ -128,10 +131,20 @@ export function PublishToMeta({
     return (
       <button
         onClick={() => setExpanded(true)}
-        className="mb-3 flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-secondary-foreground"
+        className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-left"
+        style={{ boxShadow: "var(--shadow-card)" }}
       >
-        <Facebook className="h-4 w-4" />
-        Post to Facebook{hasInstagram ? " & Instagram" : ""}
+        <span className="flex -space-x-2">
+          <PlatformTile platform="facebook" size="lg" ring />
+          {hasInstagram && <PlatformTile platform="instagram" size="lg" ring />}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-[15px] font-extrabold text-foreground">
+            Post to Facebook{hasInstagram ? " & Instagram" : ""}
+          </span>
+          <span className="block text-xs text-muted-foreground">Now, or at a time you choose</span>
+        </span>
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
       </button>
     );
   }
@@ -142,120 +155,171 @@ export function PublishToMeta({
   // harmless preview.
   const alreadyPosted = !!(result?.facebook?.posted || result?.instagram?.posted);
 
+  const tile = (key: "facebook" | "instagram", on: boolean, setOn: (v: boolean) => void, name: string, sub: string, disabled = false) => (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={on}
+      disabled={disabled || alreadyPosted}
+      onClick={() => setOn(!on)}
+      className={[
+        "relative flex flex-col items-start gap-2 rounded-2xl p-3 text-left transition-colors",
+        on ? "border-2 border-foreground bg-card" : "border border-border bg-secondary/60",
+        disabled ? "cursor-not-allowed opacity-50" : "",
+      ].join(" ")}
+    >
+      <PlatformTile platform={key} size="lg" />
+      <span className="min-w-0 max-w-full">
+        <span className="block text-sm font-bold text-foreground">{name}</span>
+        <span className="block truncate text-xs text-muted-foreground">{sub}</span>
+      </span>
+      <span
+        className={[
+          "absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full border",
+          on ? "border-foreground bg-foreground text-background" : "border-border bg-background text-transparent",
+        ].join(" ")}
+        aria-hidden="true"
+      >
+        <Check className="h-3 w-3" strokeWidth={3} />
+      </span>
+    </button>
+  );
+
   return (
-    <div className="mb-3 rounded-2xl border border-border bg-background p-3.5">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Post to {pageName}
-      </p>
-
-      <label className="mb-1.5 flex items-center gap-2 text-sm text-foreground">
-        <input type="checkbox" checked={postFacebook} onChange={(e) => setPostFacebook(e.target.checked)} />
-        Facebook Page
-      </label>
-      <label className="mb-3 flex items-center gap-2 text-sm text-foreground">
-        <input
-          type="checkbox"
-          checked={postInstagram}
-          disabled={!hasInstagram}
-          onChange={(e) => setPostInstagram(e.target.checked)}
-        />
-        Instagram{!hasInstagram && " (no Instagram linked to this Page)"}
-      </label>
-
-      <div className="mb-3 flex gap-2">
-        <button
-          onClick={() => setScheduling(false)}
-          className={[
-            "flex-1 rounded-full px-3 py-1.5 text-xs font-semibold",
-            !scheduling ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-          ].join(" ")}
-        >
-          Post now
-        </button>
-        <button
-          onClick={() => {
-            setScheduling(true);
-            if (!scheduledAt) setScheduledAt(toDatetimeLocalMin(MIN_SCHEDULE_MINUTES));
-          }}
-          className={[
-            "flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
-            scheduling ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-          ].join(" ")}
-        >
-          <Clock className="h-3 w-3" />
-          Schedule for later
-        </button>
+    <div className="mb-3 overflow-hidden rounded-3xl border border-border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
+      <div className="flex items-center gap-3 px-4 pb-1 pt-4">
+        <span className="flex -space-x-2">
+          <PlatformTile platform="facebook" size="md" ring />
+          {hasInstagram && <PlatformTile platform="instagram" size="md" ring />}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate font-display text-base font-extrabold leading-tight text-foreground">Post to {pageName}</p>
+          <p className="text-xs text-muted-foreground">Pick where it goes and when</p>
+        </div>
       </div>
 
-      {scheduling && (
-        <div className="mb-3">
-          <input
-            type="datetime-local"
-            value={scheduledAt}
-            min={toDatetimeLocalMin(MIN_SCHEDULE_MINUTES)}
-            max={toDatetimeLocalMin(MAX_SCHEDULE_DAYS * 24 * 60)}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          {postInstagram && !instagramCanSchedule && (
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              Instagram has no scheduling — it'll post now regardless{postFacebook ? "; only Facebook will wait until then." : "."}
-            </p>
-          )}
-          {postInstagram && instagramCanSchedule && (
-            <p className="mt-1.5 text-xs text-muted-foreground">Instagram will be posted by Punqle at that time. You can change or cancel it in your calendar.</p>
-          )}
+      <div className="space-y-3.5 p-4">
+        <div className="grid grid-cols-2 gap-2.5">
+          {tile("facebook", postFacebook, setPostFacebook, "Facebook", pageName || "Your Page")}
+          {tile("instagram", postInstagram, setPostInstagram, "Instagram", hasInstagram ? (igName ? `@${igName}` : "Linked") : "Not linked", !hasInstagram)}
         </div>
-      )}
 
-      {error && (
-        <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-destructive">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          {error}
-        </p>
-      )}
-
-      {result && (
-        <div className="mb-3 space-y-1 text-sm">
-          {result.facebook && !result.facebook.posted && (
-            <p className="text-destructive">{`✗ Facebook: ${result.facebook.error}`}</p>
-          )}
-          {result.instagram && !result.instagram.posted && (
-            <p className="text-destructive">{`✗ Instagram: ${result.instagram.error}`}</p>
-          )}
-        </div>
-      )}
-
-      {alreadyPosted ? (
-        <button
-          onClick={() => setExpanded(false)}
-          className="w-full rounded-full bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground"
-        >
-          Done
-        </button>
-      ) : (
-        <div className="flex gap-2">
+        <div className="flex rounded-full bg-secondary p-1" role="tablist" aria-label="When to post">
           <button
-            onClick={handlePublish}
-            disabled={publishing || (!postFacebook && !postInstagram) || (scheduling && !scheduledAt)}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-            style={{ background: "var(--gradient-primary)" }}
+            role="tab"
+            aria-selected={!scheduling}
+            disabled={alreadyPosted}
+            onClick={() => setScheduling(false)}
+            className={["flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full py-2 text-sm font-semibold transition-colors", !scheduling ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"].join(" ")}
           >
-            {publishing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4" />
-            )}
-            {scheduling ? "Schedule" : "Confirm & Publish"}
+            <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+            Post now
           </button>
+          <button
+            role="tab"
+            aria-selected={scheduling}
+            disabled={alreadyPosted}
+            onClick={() => {
+              setScheduling(true);
+              if (!scheduledAt) setScheduledAt(toDatetimeLocalMin(MIN_SCHEDULE_MINUTES));
+            }}
+            className={["flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full py-2 text-sm font-semibold transition-colors", scheduling ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"].join(" ")}
+          >
+            <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+            Schedule
+          </button>
+        </div>
+
+        {scheduling && (
+          <div className="rounded-2xl bg-secondary p-3.5">
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+              When
+            </p>
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              disabled={alreadyPosted}
+              min={toDatetimeLocalMin(MIN_SCHEDULE_MINUTES)}
+              max={toDatetimeLocalMin(MAX_SCHEDULE_DAYS * 24 * 60)}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            {scheduledAt && (
+              <p className="mt-2 font-display text-[15px] font-extrabold text-foreground">{formatScheduleDate(new Date(scheduledAt))}</p>
+            )}
+            <ul className="mt-2.5 space-y-1.5">
+              {postFacebook && (
+                <li className="flex items-center gap-2 text-[13px] text-foreground">
+                  <PlatformTile platform="facebook" size="sm" />
+                  Facebook posts it at that time
+                </li>
+              )}
+              {postInstagram && (
+                <li className="flex items-center gap-2 text-[13px] text-foreground">
+                  <PlatformTile platform="instagram" size="sm" />
+                  {instagramCanSchedule ? "Punqle posts it at that time" : "Posts right now (Instagram can't wait)"}
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+
+        {error && (
+          <p className="flex items-center gap-1.5 text-sm font-medium text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {error}
+          </p>
+        )}
+
+        {result && (
+          <ul className="space-y-1.5 text-sm">
+            {result.facebook && (
+              <li className={["flex items-center gap-2 rounded-xl px-3 py-2", result.facebook.posted ? "bg-emerald-500/10 text-foreground" : "bg-destructive/10 text-destructive"].join(" ")}>
+                <PlatformTile platform="facebook" size="sm" />
+                {result.facebook.posted ? (result.facebook.scheduled ? "Facebook: scheduled" : "Facebook: posted") : `Facebook: ${result.facebook.error}`}
+              </li>
+            )}
+            {result.instagram && (
+              <li className={["flex items-center gap-2 rounded-xl px-3 py-2", result.instagram.posted ? "bg-emerald-500/10 text-foreground" : "bg-destructive/10 text-destructive"].join(" ")}>
+                <PlatformTile platform="instagram" size="sm" />
+                {result.instagram.posted ? (result.instagram.scheduled ? "Instagram: scheduled" : "Instagram: posted") : `Instagram: ${result.instagram.error}`}
+              </li>
+            )}
+            {alreadyPosted && (result.facebook?.scheduled || result.instagram?.scheduled) && (
+              <li className="px-1 text-xs text-muted-foreground">See it in Plan &amp; Publish → Content Calendar.</li>
+            )}
+          </ul>
+        )}
+
+        {alreadyPosted ? (
           <button
             onClick={() => setExpanded(false)}
-            className="shrink-0 rounded-full bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-4 py-3 text-sm font-semibold text-secondary-foreground"
           >
-            Cancel
+            <CheckCircle2 className="h-4 w-4" />
+            Done
           </button>
-        </div>
-      )}
+        ) : (
+          <div className="flex gap-2">
+            <button
+              onClick={handlePublish}
+              disabled={publishing || (!postFacebook && !postInstagram) || (scheduling && !scheduledAt)}
+              className="flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {scheduling ? "Schedule post" : "Publish now"}
+            </button>
+            <button
+              onClick={() => setExpanded(false)}
+              className="shrink-0 rounded-full bg-secondary px-4 py-3 text-sm font-semibold text-secondary-foreground"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

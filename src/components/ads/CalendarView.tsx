@@ -24,6 +24,7 @@ import {
 } from "@/lib/api";
 import { addDays, startOfWeek, toDatetimeLocalValue } from "@/lib/schedule-dates";
 import { TikTokIcon } from "@/components/TikTokIcon";
+import { PLATFORM_ACCENT, PLATFORM_BRAND, PlatformTile } from "@/components/PlatformTile";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -48,6 +49,14 @@ function formatWeekRange(start: Date): string {
 function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
+
+// Coloured pills (founder, 2026-11-10: the calendar must be eye-catching): amber = waiting, green = out, red = failed.
+const STATUS_PILL: Record<ApiScheduledPost["status"], string> = {
+  scheduled: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  published: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  failed: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
+};
+const STATUS_DOT: Record<ApiScheduledPost["status"], string> = { scheduled: "bg-amber-500", published: "bg-emerald-500", failed: "bg-rose-500" };
 
 const STATUS_META: Record<ApiScheduledPost["status"], { label: string; className: string; icon: typeof Clock }> = {
   scheduled: { label: "Scheduled", className: "text-muted-foreground", icon: Clock },
@@ -215,6 +224,23 @@ export function CalendarView({ onGoToWeeklyPlan }: { onGoToWeeklyPlan: () => voi
 
       {error && <p className="mb-4 text-sm font-medium text-destructive">{error}</p>}
 
+      {!loading && posts.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-foreground px-3 py-1 text-xs font-bold text-background">
+            {posts.length} post{posts.length === 1 ? "" : "s"} this week
+          </span>
+          {(["scheduled", "published", "failed"] as const).map((st) => {
+            const n = posts.filter((p) => p.status === st).length;
+            return n > 0 ? (
+              <span key={st} className={["flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold", STATUS_PILL[st]].join(" ")}>
+                <span className={["h-2 w-2 rounded-full", STATUS_DOT[st]].join(" ")} aria-hidden="true" />
+                {n} {STATUS_META[st].label.toLowerCase()}
+              </span>
+            ) : null;
+          })}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -230,8 +256,8 @@ export function CalendarView({ onGoToWeeklyPlan }: { onGoToWeeklyPlan: () => voi
               <div key={day.toISOString()} className="w-36 shrink-0">
                 <p
                   className={[
-                    "mb-2 text-center text-xs font-semibold uppercase tracking-wider",
-                    isSameDay(day, today) ? "text-primary" : "text-muted-foreground",
+                    "mb-2 rounded-full py-1.5 text-center text-xs font-bold uppercase tracking-wider",
+                    isSameDay(day, today) ? "bg-foreground text-background" : "bg-secondary text-muted-foreground",
                   ].join(" ")}
                 >
                   {DAY_LABELS[i]} {day.getDate()}
@@ -250,8 +276,8 @@ export function CalendarView({ onGoToWeeklyPlan }: { onGoToWeeklyPlan: () => voi
                         <button
                           key={post.id}
                           onClick={() => openPost(post)}
-                          className="rounded-xl bg-card p-2 text-left"
-                          style={{ boxShadow: "var(--shadow-card)" }}
+                          className="overflow-hidden rounded-xl bg-card p-2 pt-2.5 text-left"
+                          style={{ boxShadow: "var(--shadow-card)", borderTop: `3px solid ${PLATFORM_ACCENT[post.platform]}` }}
                         >
                           {post.image_base64 ? (
                             <img
@@ -260,25 +286,29 @@ export function CalendarView({ onGoToWeeklyPlan }: { onGoToWeeklyPlan: () => voi
                               className="mb-1.5 h-16 w-full rounded-lg object-cover"
                             />
                           ) : (
-                            <div className="mb-1.5 flex h-16 w-full items-center justify-center rounded-lg bg-secondary">
-                              <Youtube className="h-5 w-5 text-secondary-foreground" />
+                            <div
+                              className="mb-1.5 flex h-16 w-full items-center justify-center rounded-lg text-white"
+                              style={{ background: PLATFORM_BRAND[post.platform] }}
+                            >
+                              <PlatformIcon className="h-6 w-6" />
                             </div>
                           )}
-                          <p className="line-clamp-2 text-[12px] text-foreground">{post.caption || "(no caption)"}</p>
-                          <div className="mt-1 flex items-center justify-between">
-                            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                              <PlatformIcon className="h-3 w-3" />
+                          <p className="line-clamp-2 text-[12px] font-medium text-foreground">{post.caption || "(no caption)"}</p>
+                          <div className="mt-1.5 flex items-center justify-between gap-1">
+                            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
+                              <PlatformTile platform={post.platform} size="sm" />
                               {new Date(post.scheduled_time).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
                             </span>
                             <span
-                              className={["flex items-center gap-0.5 text-[11px] font-medium", meta.className].join(" ")}
+                              className={["flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold", STATUS_PILL[post.status]].join(" ")}
                               title={
                                 post.status === "published"
                                   ? "Based on the platform accepting the scheduled post — not independently confirmed."
                                   : meta.label
                               }
                             >
-                              <StatusIcon className="h-3 w-3" />
+                              <StatusIcon className="h-2.5 w-2.5" />
+                              {post.status === "published" ? "Posted" : meta.label}
                             </span>
                           </div>
                         </button>

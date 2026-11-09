@@ -903,7 +903,6 @@ export function AdCreationForm({
           error={error}
           onReset={handleReset}
           showCaptionStyleControls={false}
-          showLaunchCampaignPlaceholder
         />
       )}
     </>

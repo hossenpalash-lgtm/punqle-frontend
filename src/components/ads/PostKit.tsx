@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Download, Lock, Pencil, Rocket } from "lucide-react";
+import { AlertCircle, Check, Download, Pencil } from "lucide-react";
 import { useState } from "react";
 import type { ApiAdCaptionVariant, CaptionLength, CaptionTone } from "@/lib/api";
 import { deriveOnImageHeadline, type Box, type BrandKit, type EditOptions } from "@/lib/canvas-text";
@@ -73,7 +73,6 @@ export function PostKit({
   // there; and it wants a placeholder signaling where real campaign
   // launch will live once that's built).
   showCaptionStyleControls = true,
-  showLaunchCampaignPlaceholder = false,
   carouselSlideHeadlines,
   carouselAutoExpand = false,
 }: {
@@ -125,7 +124,6 @@ export function PostKit({
   error: string | null;
   onReset: () => void;
   showCaptionStyleControls?: boolean;
-  showLaunchCampaignPlaceholder?: boolean;
   // Set only by SinglePostForm's auto-design carousel flow — see
   // CarouselBuilder's own props for what each does. Both default to
   // "off", byte-identical to every other caller (Ad Creation, a normal
@@ -361,20 +359,6 @@ export function PostKit({
         </a>
 
         <PublishToMeta compositedUrl={compositedUrl} caption={editedCaption} goal={goal} angle={angle} style={visualDirection} />
-
-        {showLaunchCampaignPlaceholder && (
-          <button
-            disabled
-            className="mb-3 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-muted-foreground"
-          >
-            <Rocket className="h-4 w-4" />
-            Launch Campaign
-            <span className="ml-1 flex items-center gap-1 rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold">
-              <Lock className="h-2.5 w-2.5" />
-              Coming soon
-            </span>
-          </button>
-        )}
 
         <button
           onClick={onReset}

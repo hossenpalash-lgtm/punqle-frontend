@@ -2235,6 +2235,14 @@ function HomeScreen() {
                       Upload a photo
                       <input type="file" accept="image/*" className="hidden" onChange={handleUploadOwnImageForVideo} />
                     </label>
+                    {/* Shown only when the server says this account still has its free comparison, so a new visitor
+                        learns about it BEFORE choosing a photo (the card with the button only appears afterwards). */}
+                    {tasterAvailable && (
+                      <p className="flex items-center gap-1.5 rounded-full bg-secondary px-3.5 py-1.5 text-xs font-semibold text-foreground">
+                        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                        Your first comparison is free: see 3 video tools side by side
+                      </p>
+                    )}
                     {recentSaved && recentCount > 0 && (
                       <button onClick={() => setShowRecent(true)} className="text-xs font-semibold text-muted-foreground underline underline-offset-2">
                         Recent videos ({recentCount})

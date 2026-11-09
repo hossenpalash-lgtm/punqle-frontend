@@ -864,7 +864,8 @@ export function generateImageDirect(
 // reference + pick a model + pick a length + generate), matching a real
 // competitor's own simplest tool. Only 3 real, working models are
 // offered — see ImageVideoModel.
-export type ImageVideoModel = "omni" | "kling_3_pro" | "kling_4" | "seedance_2_5" | "wan_3"; // Veo retired 2026-10-22; Gemini Omni is the default; Kling 4.0 / Seedance 2.5 / Omni reach 30 s
+// "seedance_2_5_hd" = Seedance 2.5 at native 1080p (2026-11-09; the plain "seedance_2_5" is 720p, its limit on our main provider).
+export type ImageVideoModel = "omni" | "kling_3_pro" | "kling_4" | "seedance_2_5" | "seedance_2_5_hd" | "wan_3"; // Veo retired 2026-10-22; Gemini Omni is the default; Kling 4.0 / Seedance 2.5 / Omni reach 30 s
 
 export interface ApiImageVideoStartResponse {
   job_id: string;
@@ -894,6 +895,15 @@ export function generateImageVideo(
       enhance,
       compare,
     }),
+  });
+}
+
+// Free-taster result -> the SAME video (720p) without the watermark, for a few credits. Charged once; asking again is free.
+export function unlockTasterVideo(jobId: string): Promise<{ video_base64: string; credits_remaining: number | null }> {
+  return apiFetch("/ads/unlock-taster-video", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ job_id: jobId }),
   });
 }
 

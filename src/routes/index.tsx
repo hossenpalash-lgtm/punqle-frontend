@@ -56,6 +56,7 @@ import {
   fetchMyCustomActors,
   generateImageDirect,
   generateImageVideo,
+  unlockTasterVideo,
   generateTalkingVideo,
   generateUnboxingShot,
   type ApiFeatureTrials,
@@ -208,6 +209,7 @@ const IMAGE_VIDEO_MODEL_OPTIONS: { id: ImageVideoModel; label: string; blurb: st
   { id: "kling_3_pro", label: "Kling 3.0 Pro", blurb: "Crisp motion, up to 15 s." },
   { id: "kling_4", label: "Kling 4.0", blurb: "Clean cuts in one steady setting." },
   { id: "seedance_2_5", label: "Seedance 2.5", blurb: "The most cinematic, lifelike look." },
+  { id: "seedance_2_5_hd", label: "Seedance 2.5 · 1080p", blurb: "Seedance in full 1080p. Takes longer, costs more." },
 ];
 const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
   omni: "Gemini Omni",
@@ -215,6 +217,7 @@ const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
   kling_3_pro: "Kling 3.0 Pro",
   kling_4: "Kling 4.0",
   seedance_2_5: "Seedance 2.5",
+  seedance_2_5_hd: "Seedance 2.5 · 1080p",
 };
 // Display-only estimate, mirrors the backend's own per-second credit rates — the backend always
 // computes the real charge itself, this is just so the cards and the Generate button can show a cost upfront.
@@ -224,6 +227,7 @@ const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
   kling_3_pro: 5, // Kling now makes its own sound here; with a studio voice it animates silently at 4/s (see videoCreditsPerSecond)
   kling_4: 6,
   seedance_2_5: 6,
+  seedance_2_5_hd: 10, // native 1080p through a second provider (measured 2026-11-09); mirrors main.py
 };
 const videoCreditsPerSecond = (model: ImageVideoModel, withStudioVoice: boolean) =>
   model === "kling_3_pro" && withStudioVoice ? 4 : IMAGE_VIDEO_CREDIT_PER_SECOND[model];
@@ -235,6 +239,7 @@ const VIDEO_LENGTH_CHIPS: Record<ImageVideoModel, { label: string; seconds: numb
   kling_3_pro: [{ label: "Short", seconds: 5 }, { label: "Medium", seconds: 10 }, { label: "Long", seconds: 15 }],
   kling_4: [{ label: "Short", seconds: 8 }, { label: "Medium", seconds: 15 }, { label: "Long", seconds: 30 }],
   seedance_2_5: [{ label: "Short", seconds: 5 }, { label: "Medium", seconds: 15 }, { label: "Long", seconds: 30 }],
+  seedance_2_5_hd: [{ label: "Short", seconds: 5 }, { label: "Medium", seconds: 10 }, { label: "Long", seconds: 15 }], // 10 credits a second, so kept short
 };
 // "Studio voice" (a separate ElevenLabs voice, lip-synced afterwards) is the old Talking Video path:
 // Omni up to 10 s, Kling 3.0 Pro up to 15 s. The normal way to make someone speak is the
@@ -245,6 +250,11 @@ const lengthChipsFor = (model: ImageVideoModel, studioVoice: boolean) =>
 // The full-quality version offered after the free comparison is the same 4 seconds as the comparison, so it is
 // the cheapest real video (Wan/Kling 4.0 20-24 credits, Seedance 24) and a new account's ~15 free credits fall just short.
 const TASTER_UPGRADE_SECONDS = 4;
+// Under every free result: (1) the SAME video (720p) without the watermark for TASTER_UNLOCK_CREDITS (mirrors main.py), or
+// (2) a NEW 1080p video. Wan 3.0 and Kling 4.0 already make 1080p; Seedance 2.5's 1080p is its own engine.
+const TASTER_UNLOCK_CREDITS = 10;
+const TASTER_1080_MODEL: Partial<Record<ImageVideoModel, ImageVideoModel>> = { seedance_2_5: "seedance_2_5_hd" };
+const tasterUpgradeModel = (model: ImageVideoModel): ImageVideoModel => TASTER_1080_MODEL[model] ?? model;
 // TALKING_VIDEO_REDUB_SURCHARGE is declared right below this block.
 const videoCostFor = (model: ImageVideoModel, seconds: number, studioVoice: boolean) =>
   Math.ceil(seconds * videoCreditsPerSecond(model, studioVoice)) + (studioVoice ? 18 : 0);
@@ -400,6 +410,8 @@ function HomeScreen() {
   // True while the result on screen is the user's pick from the FREE comparison (short, watermarked): its button then
   // offers the full-quality version and states the price, since this is the first time a cost appears for them.
   const [resultFromTaster, setResultFromTaster] = useState(false);
+  const [tasterResultJobId, setTasterResultJobId] = useState<string | null>(null); // the free-comparison job whose video is on screen (needed to unlock it)
+  const [tasterActionError, setTasterActionError] = useState<string | null>(null);
   const refreshTasterStatus = () => {
     fetchFreeTasterStatus().then((s) => setTasterAvailable(s.available)).catch(() => setTasterAvailable(false));
   };
@@ -1309,7 +1321,7 @@ function HomeScreen() {
   // call this again for version 2/3 once the previous one's poll
   // reports done -- same start-then-poll shape as before, just callable
   // more than once in a row.
-  const startVideoVersion = async (versionIndex: number, totalVersions: number, secondsOverride?: number, enhanceOverride?: boolean) => {
+  const startVideoVersion = async (versionIndex: number, totalVersions: number, secondsOverride?: number, enhanceOverride?: boolean, modelOverride?: ImageVideoModel) => {
     if (!videoRefImage) return;
     try {
       if (videoNarrationEnabled) {
@@ -1330,7 +1342,7 @@ function HomeScreen() {
         videoRefImage.base64,
         videoRefImage.mimeType,
         videoFullPrompt,
-        videoModel,
+        modelOverride ?? videoModel,
         secondsOverride ?? videoDuration,
         videoAspectRatio,
         enhanceOverride ?? videoEnhance,
@@ -1342,29 +1354,60 @@ function HomeScreen() {
     }
   };
 
-  const handleGenerateVideo = async (secondsOverride?: number, enhanceOverride?: boolean) => {
+  const handleGenerateVideo = async (secondsOverride?: number, enhanceOverride?: boolean, modelOverride?: ImageVideoModel) => {
     if (typeof secondsOverride !== "number") secondsOverride = undefined;
     if (!videoRefImage) return;
     if (videoNarrationEnabled ? !videoNarration.trim() : !videoPrompt.trim()) return;
     setVideoError(null);
     setVideoVariants([]);
     setResultFromTaster(false);
+    setTasterResultJobId(null);
     setVideoPanel("generating");
-    await startVideoVersion(1, secondsOverride ? 1 : effectiveVideoVersions, secondsOverride, enhanceOverride);
+    await startVideoVersion(1, secondsOverride ? 1 : effectiveVideoVersions, secondsOverride, enhanceOverride, modelOverride);
   };
 
-  // After the free comparison: make the pick again at full quality (no watermark), 4 s, for credits. A new account's
-  // free credits fall just short, so then it opens the credit packs instead of failing with a 402.
-  const handleUpgradeTasterVideo = () => {
-    const cost = videoCostFor(videoModel, TASTER_UPGRADE_SECONDS, false);
+  // After the free comparison: make the pick again at 1080p (no watermark), 4 s, for credits. A new account's
+  // free credits fall short, so then it opens the credit packs instead of failing with a 402. Seedance's 1080p is its own engine.
+  const handleUpgradeTasterVideo = (model: ImageVideoModel) => {
+    const upgradeModel = tasterUpgradeModel(model);
+    const cost = videoCostFor(upgradeModel, TASTER_UPGRADE_SECONDS, false);
     if (credits !== null && credits < cost) {
       window.dispatchEvent(new Event("punqle:open-billing"));
       return;
     }
+    setTasterActionError(null);
+    setCompareJobs(null);
+    setTasterMode(false);
+    setVideoModel(upgradeModel);
     setVideoDuration(TASTER_UPGRADE_SECONDS);
     // The free comparison is always made with the Punqle Enhancer, so the remake uses it too (else it would look
     // different from the video they just picked).
-    void handleGenerateVideo(TASTER_UPGRADE_SECONDS, true);
+    void handleGenerateVideo(TASTER_UPGRADE_SECONDS, true, upgradeModel);
+  };
+
+  // Free result -> the SAME video (720p) without the watermark, for TASTER_UNLOCK_CREDITS. Returns a message when it didn't work.
+  const handleUnlockTasterVideo = async (jobId: string | null, model: ImageVideoModel): Promise<string | null> => {
+    if (!jobId) return "This video can't be unlocked any more.";
+    if (credits !== null && credits < TASTER_UNLOCK_CREDITS) {
+      window.dispatchEvent(new Event("punqle:open-billing"));
+      return `You need ${TASTER_UNLOCK_CREDITS} credits for this.`;
+    }
+    try {
+      const r = await unlockTasterVideo(jobId);
+      if (r.credits_remaining !== null) setCredits(r.credits_remaining);
+      setTasterActionError(null);
+      setResultFromTaster(false);
+      setTasterResultJobId(null);
+      setHomeGeneratedVideo(r.video_base64);
+      setVideoModel(model);
+      setVideoVariants([]);
+      setCompareJobs(null);
+      setTasterMode(false);
+      setVideoPanel("result");
+      return null;
+    } catch (err) {
+      return err instanceof Error ? err.message : "Couldn't unlock this video.";
+    }
   };
 
   const handleSelectVideoVariant = (index: number) => {
@@ -2220,9 +2263,10 @@ function HomeScreen() {
                         ))}
                       </div>
                     )}
-                    <div className="flex items-center justify-between gap-2 px-4 py-3">
+                    {resultFromTaster && tasterActionError && <p className="px-4 pt-2 text-xs text-destructive">{tasterActionError}</p>}
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
                       <span className="text-xs text-muted-foreground">{IMAGE_VIDEO_MODEL_LABELS[videoModel]}</span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <button
                           onClick={handleTurnVideoFrameIntoActor}
                           title="Save the current frame as a reusable actor"
@@ -2231,14 +2275,25 @@ function HomeScreen() {
                           Actor
                         </button>
                         {resultFromTaster ? (
-                          <button
-                            onClick={handleUpgradeTasterVideo}
-                            title="Make this video again at full quality, without the watermark"
-                            className="rounded-full px-4 py-2 text-xs font-bold text-white"
-                            style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
-                          >
-                            Full quality, no watermark ({videoCostFor(videoModel, TASTER_UPGRADE_SECONDS, false)} credits)
-                          </button>
+                          <>
+                            {tasterResultJobId && (
+                              <button
+                                onClick={async () => setTasterActionError(await handleUnlockTasterVideo(tasterResultJobId, videoModel))}
+                                title="This exact video, 720p, without the watermark"
+                                className="rounded-full px-4 py-2 text-xs font-bold text-white"
+                                style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
+                              >
+                                No watermark, 720p ({TASTER_UNLOCK_CREDITS} credits)
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleUpgradeTasterVideo(videoModel)}
+                              title="Make a new video in 1080p, without the watermark"
+                              className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+                            >
+                              1080p, new video ({videoCostFor(tasterUpgradeModel(videoModel), TASTER_UPGRADE_SECONDS, false)} credits)
+                            </button>
+                          </>
                         ) : (
                           <button
                             onClick={() => handleGenerateVideo()}
@@ -2314,7 +2369,13 @@ function HomeScreen() {
                     seconds={tasterMode ? 4 : videoDuration}
                     taster={tasterMode}
                     onCredits={setCredits}
+                    unlockCost={TASTER_UNLOCK_CREDITS}
+                    upgradeCost={(m) => videoCostFor(tasterUpgradeModel(m), TASTER_UPGRADE_SECONDS, false)}
+                    onUnlock={(m) => handleUnlockTasterVideo(compareJobs?.find((j) => j.model === m)?.jobId ?? null, m)}
+                    onUpgrade={(m) => handleUpgradeTasterVideo(m)}
                     onUse={(video, model) => {
+                      setTasterActionError(null);
+                      setTasterResultJobId(tasterMode ? (compareJobs?.find((j) => j.model === model)?.jobId ?? null) : null);
                       setResultFromTaster(tasterMode);
                       setHomeGeneratedVideo(video);
                       setVideoModel(model);

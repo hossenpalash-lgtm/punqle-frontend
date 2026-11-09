@@ -13,7 +13,7 @@ export const COMPARE_CHIPS = [
   { label: "Short", seconds: 10 },
   { label: "Long", seconds: 15 },
 ];
-const LABELS: Record<string, string> = { omni: "Gemini Omni", wan_3: "Wan 3.0", kling_4: "Kling 4.0", seedance_2_5: "Seedance 2.5" };
+const LABELS: Record<string, string> = { omni: "Gemini Omni", wan_3: "Wan 3.0", kling_4: "Kling 4.0", seedance_2_5: "Seedance 2.5", seedance_2_5_hd: "Seedance 2.5 · 1080p" };
 const ASPECT_CLASS: Record<VideoAspectRatio, string> = { "9:16": "aspect-[9/16]", "16:9": "aspect-video", "1:1": "aspect-square" };
 
 export type CompareJob = { model: ImageVideoModel; jobId: string | null; error: string | null };
@@ -48,6 +48,10 @@ export function VideoCompare({
   taster = false,
   onCredits,
   onUse,
+  onUnlock,
+  onUpgrade,
+  unlockCost = 10,
+  upgradeCost,
   onBack,
 }: {
   jobs: CompareJob[] | null;
@@ -58,9 +62,17 @@ export function VideoCompare({
   seconds: number;
   onCredits: (n: number) => void;
   onUse: (video: string, model: ImageVideoModel) => void;
+  // Free comparison only. Two options under every finished video: (1) this EXACT video (720p) without the watermark
+  // (onUnlock resolves to an error message, or null when it worked and the page has moved on), (2) a NEW 1080p video.
+  onUnlock?: (model: ImageVideoModel) => Promise<string | null>;
+  onUpgrade?: (model: ImageVideoModel) => void;
+  unlockCost?: number;
+  upgradeCost?: (model: ImageVideoModel) => number;
   onBack: () => void;
 }) {
   const [cards, setCards] = useState<Record<string, CardState>>({});
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
   const timers = useRef<number[]>([]);
 
   useEffect(() => {
@@ -149,14 +161,53 @@ export function VideoCompare({
                   </div>
                 )}
               </div>
-              <button
-                disabled={c?.status !== "done" || !c.video}
-                onClick={() => c?.video && onUse(c.video, m)}
-                className="flex items-center justify-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-30"
-              >
-                <Check className="h-3.5 w-3.5" />
-                {taster ? "I like this one" : "Use this one"}
-              </button>
+              {taster && onUnlock && onUpgrade && c?.status === "done" && c.video ? (
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    disabled={busy[m]}
+                    onClick={async () => {
+                      setBusy((b) => ({ ...b, [m]: true }));
+                      setCardErrors((e) => ({ ...e, [m]: "" }));
+                      const message = await onUnlock(m);
+                      if (message) {
+                        setCardErrors((e) => ({ ...e, [m]: message }));
+                        setBusy((b) => ({ ...b, [m]: false }));
+                      }
+                    }}
+                    className="flex flex-col items-center justify-center rounded-2xl bg-primary px-3 py-2 text-primary-foreground disabled:opacity-60"
+                  >
+                    <span className="flex items-center gap-1.5 text-xs font-bold">
+                      {busy[m] ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                      No watermark, 720p
+                    </span>
+                    <span className="text-[11px] font-medium opacity-80">This exact video · {unlockCost} credits</span>
+                  </button>
+                  <button
+                    disabled={busy[m]}
+                    onClick={() => onUpgrade(m)}
+                    className="flex flex-col items-center justify-center rounded-2xl border border-border bg-background px-3 py-2 text-foreground disabled:opacity-60"
+                  >
+                    <span className="text-xs font-bold">1080p, no watermark</span>
+                    <span className="text-[11px] font-medium text-muted-foreground">New video · {upgradeCost ? upgradeCost(m) : "?"} credits</span>
+                  </button>
+                  <button
+                    onClick={() => c.video && onUse(c.video, m)}
+                    className="rounded-full px-3 py-1 text-[11px] font-semibold text-muted-foreground underline underline-offset-2"
+                  >
+                    Keep it with the watermark
+                  </button>
+                  {cardErrors[m] && <p className="text-center text-[11px] text-destructive">{cardErrors[m]}</p>}
+                </div>
+              ) : (
+                <button
+                  disabled={c?.status !== "done" || !c.video}
+                  onClick={() => c?.video && onUse(c.video, m)}
+                  className="flex items-center justify-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-30"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  {taster ? "I like this one" : "Use this one"}
+                </button>
+              )}
             </div>
           );
         })}
@@ -164,7 +215,7 @@ export function VideoCompare({
 
       {taster && allSettled && (
         <p className="rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground">
-          Want your favourite in 1080p, without the watermark and longer? Pick that tool in the Video screen and make it with credits.
+          "No watermark" keeps the exact video you see. "1080p" makes a new video in full quality.
         </p>
       )}
 

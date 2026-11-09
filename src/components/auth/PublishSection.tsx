@@ -23,9 +23,7 @@ export function PublishSection() {
           <h2 className="text-balance font-display text-xl font-extrabold sm:text-2xl">
             Plan your week, then publish in one click.
           </h2>
-          <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            Schedule posts ahead on Facebook and YouTube; post to Instagram and TikTok the moment you're ready. No exporting, no re-uploading.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">No exporting, no re-uploading.</p>
         </div>
         <ul className="flex items-center gap-3">
           {PLATFORMS.map(({ icon: Icon, label, schedule }) => (

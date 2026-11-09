@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams, useNavigate } from "@tanstack/react-router";
 import {
   ArrowUp,
   Check,
@@ -99,6 +99,10 @@ type Tab = "home" | "single" | "plan" | "calendar" | "performance" | "history" |
 
 export const Route = createFileRoute("/")({
   component: HomeScreen,
+  // "home" is the default tab, so leave it out of the URL. Before (2026-11-10) the router added
+  // `?tab=home` to every plain `/` visit, which cost a whole extra round trip (a 307 from
+  // Virginia, ~0.35 s from Melbourne) before the page started loading.
+  search: { middlewares: [stripSearchParams({ tab: "home" })] },
   validateSearch: (search: Record<string, unknown>): { tab: Tab } => ({
     tab:
       search.tab === "plan"

@@ -1,6 +1,6 @@
 import { AlertCircle, CheckCircle2, Clock, Facebook, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { fetchMetaStatus, getMetaConnectUrl, publishToMeta, type ApiMetaPublishResponse } from "@/lib/api";
+import { fetchMetaStatus, fetchSchedulingCapabilities, getMetaConnectUrl, publishToMeta, type ApiMetaPublishResponse } from "@/lib/api";
 import { MIN_SCHEDULE_MINUTES, MAX_SCHEDULE_DAYS, toDatetimeLocalMin } from "@/lib/schedule-dates";
 import { showToast } from "@/components/GlassToast";
 
@@ -32,6 +32,7 @@ export function PublishToMeta({
   const [expanded, setExpanded] = useState(false);
   const [postFacebook, setPostFacebook] = useState(true);
   const [postInstagram, setPostInstagram] = useState(false);
+  const [instagramCanSchedule, setInstagramCanSchedule] = useState(false); // true only while the server's own alarm clock is on
   const [scheduling, setScheduling] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [publishing, setPublishing] = useState(false);
@@ -42,10 +43,14 @@ export function PublishToMeta({
   useEffect(() => {
     if (!result) return;
     if (result.facebook?.posted) showToast(result.facebook.scheduled ? "Scheduled on Facebook" : "Posted to Facebook", { tone: "success" });
-    if (result.instagram?.posted) showToast("Posted to Instagram", { tone: "success" });
+    if (result.instagram?.posted) showToast(result.instagram.scheduled ? "Scheduled on Instagram" : "Posted to Instagram", { tone: "success" });
     if (result.facebook && !result.facebook.posted) showToast(`Facebook: ${result.facebook.error}`, { tone: "error" });
     if (result.instagram && !result.instagram.posted) showToast(`Instagram: ${result.instagram.error}`, { tone: "error" });
   }, [result]);
+
+  useEffect(() => {
+    fetchSchedulingCapabilities().then((c) => setInstagramCanSchedule(!!c.instagram)).catch(() => setInstagramCanSchedule(false));
+  }, []);
 
   useEffect(() => {
     fetchMetaStatus()
@@ -192,10 +197,13 @@ export function PublishToMeta({
             onChange={(e) => setScheduledAt(e.target.value)}
             className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
-          {postInstagram && (
+          {postInstagram && !instagramCanSchedule && (
             <p className="mt-1.5 text-xs text-muted-foreground">
               Instagram has no scheduling — it'll post now regardless{postFacebook ? "; only Facebook will wait until then." : "."}
             </p>
+          )}
+          {postInstagram && instagramCanSchedule && (
+            <p className="mt-1.5 text-xs text-muted-foreground">Instagram will be posted by Punqle at that time. You can change or cancel it in your calendar.</p>
           )}
         </div>
       )}

@@ -196,7 +196,7 @@ export function PhotoCaptionTool({ defaultType }: { defaultType: BusinessType })
                 maxLength={140}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="e.g. new oat milk latte, open Sundays"
-                className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-foreground"
+                className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-placeholder focus-visible:outline focus-visible:outline-2 focus-visible:outline-foreground"
               />
             </div>
             <button

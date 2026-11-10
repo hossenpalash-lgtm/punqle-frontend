@@ -1802,7 +1802,7 @@ function HomeScreen() {
                           onChange={(e) => setCreateActorPrompt(e.target.value)}
                           placeholder="Describe your actor… (e.g. 30-year-old woman, friendly, casual, natural look)"
                           rows={2}
-                          className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                          className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-placeholder focus:outline-none"
                         />
                         {/* 2026-10-01 — a real generated photo once came back
                             with a second person in frame (a rickshaw driver,
@@ -1872,7 +1872,7 @@ function HomeScreen() {
                               value={createActorRefinePrompt}
                               onChange={(e) => setCreateActorRefinePrompt(e.target.value)}
                               placeholder="Make changes… (e.g. put a mug in her hand)"
-                              className="min-w-0 flex-1 rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                              className="min-w-0 flex-1 rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-placeholder focus:outline-none"
                             />
                             <button
                               onClick={handleRefineActorPhoto}
@@ -1887,7 +1887,7 @@ function HomeScreen() {
                           value={createActorName}
                           onChange={(e) => setCreateActorName(e.target.value)}
                           placeholder="Actor's name"
-                          className="w-full rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                          className="w-full rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-placeholder focus:outline-none"
                         />
                         <div className="flex gap-1.5">
                           {(["female", "male"] as const).map((g) => (
@@ -2140,7 +2140,7 @@ function HomeScreen() {
                                       if (e.key === "Enter") handleSaveRenameCustomActor();
                                       if (e.key === "Escape") setEditingCustomActorId(null);
                                     }}
-                                    className="w-full rounded border border-border bg-card px-1 text-center text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+                                    className="w-full rounded border border-border bg-card px-1 text-center text-[11px] text-foreground placeholder:text-placeholder focus:outline-none"
                                   />
                                 ) : (
                                   <button
@@ -2235,7 +2235,7 @@ function HomeScreen() {
                         placeholder="What should your actor say?…"
                         rows={2}
                         maxLength={actorNarrationMax}
-                        className="w-full resize-none bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                        className="w-full resize-none bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-placeholder focus:outline-none"
                       />
                       {actorNarration.trim() && (
                         <p className="px-3 pb-1 text-[12px] text-muted-foreground">
@@ -2480,7 +2480,7 @@ function HomeScreen() {
                           onChange={(e) => setVideoPrompt(e.target.value)}
                           placeholder="Describe your ad: who is in it and what happens… (e.g. a woman with dry hair tries a new shampoo, rinses, and her hair looks smooth and shiny)"
                           rows={3}
-                          className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                          className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-placeholder focus:outline-none"
                         />
                         <div>
                           <textarea
@@ -2488,7 +2488,7 @@ function HomeScreen() {
                             onChange={(e) => setVideoLines(e.target.value)}
                             placeholder='What should they say? (optional) e.g. "My hair has been so dry lately. Two weeks in, and look at it."'
                             rows={2}
-                            className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                            className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-placeholder focus:outline-none"
                           />
                           <p className="mt-1 text-[12px] text-muted-foreground">
                             Leave empty for no speech. Keep it short — about 2–3 words per second. English works best.
@@ -2664,7 +2664,7 @@ function HomeScreen() {
                               onChange={(e) => setVideoNarration(e.target.value)}
                               placeholder="What should they say?… (e.g. This bottle is very durable and keeps your drink cold all day.)"
                               rows={2}
-                              className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                              className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-placeholder focus:outline-none"
                             />
                             <div className="flex items-center justify-between">
                               <p className="text-xs font-semibold text-muted-foreground">Voice</p>
@@ -2815,7 +2815,7 @@ function HomeScreen() {
                       }}
                       placeholder="Describe what you want to create… (e.g. a Gen Z girl holding our product)"
                       rows={2}
-                      className="w-full resize-none rounded-t-3xl bg-transparent px-5 py-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                      className="w-full resize-none rounded-t-3xl bg-transparent px-5 py-4 text-sm text-foreground placeholder:text-placeholder focus:outline-none"
                     />
                     {homeImageSettingsOpen && (
                       <div className="border-t border-border px-4 py-3">
@@ -3093,7 +3093,7 @@ function HomeScreen() {
                       onChange={(e) => setProductPrompt(e.target.value)}
                       placeholder="Describe the product and how it's used… (e.g. Strong, durable bottle that can be used every day.)"
                       rows={2}
-                      className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                      className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-placeholder focus:outline-none"
                     />
 
                     <div className="flex items-center justify-end gap-2 pt-1">
@@ -3198,7 +3198,7 @@ function HomeScreen() {
                       onChange={(e) => setUnboxingScene(e.target.value)}
                       placeholder="Describe the surface or setting… (e.g. on a marble kitchen counter, soft morning light)"
                       rows={2}
-                      className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                      className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-placeholder focus:outline-none"
                     />
 
                     <div className="flex items-center justify-end gap-2 pt-1">

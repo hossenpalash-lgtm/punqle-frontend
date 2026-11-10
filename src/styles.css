@@ -23,6 +23,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-placeholder: var(--placeholder);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
@@ -129,6 +130,10 @@
   --secondary-foreground: oklch(0.24 0.01 260);
   --muted: oklch(0.953 0.005 255);
   --muted-foreground: oklch(0.43 0.014 258);
+  /* Example text inside an empty box ("What should they say? e.g. ..."). 2026-11-11 (founder): it looked almost the same as
+     text the customer actually typed, so nobody could tell a suggestion from their own words. Typed text is 15:1 against the
+     page, this is about 4.5:1 (still readable, clearly softer). */
+  --placeholder: oklch(0.55 0.012 258);
   /* The one restrained "AI accent" — a muted violet, reserved for
      recommendation badges, sparkle/AI icons, and progress-indicator
      active states (see the Social Content master-refinement pass,
@@ -164,6 +169,7 @@
   --secondary-foreground: oklch(0.94 0.005 260);
   --muted: oklch(0.25 0.01 260);
   --muted-foreground: oklch(0.65 0.01 260);
+  --placeholder: oklch(0.58 0.01 260);
   --accent: oklch(0.72 0.14 300);
   --accent-foreground: oklch(0.16 0.02 300);
   --destructive: oklch(0.68 0.2 25);

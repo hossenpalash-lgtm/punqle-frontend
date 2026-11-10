@@ -38,6 +38,7 @@ import {
   VISUAL_DIRECTIONS,
   type Platform,
 } from "@/lib/social-wizard";
+import { friendlyAdError, inferGoalFromDescription } from "@/lib/ad-goal";
 import { GenerationProgress } from "./GenerationProgress";
 import { ImageChoiceCard } from "./ImageChoiceCard";
 import { ImageSettingsBar } from "./ImageSettingsBar";
@@ -124,6 +125,10 @@ export function AdCreationForm({
 
   const [offerDescription, setOfferDescription] = useState("");
   const [goal, setGoal] = useState<AdGoal>(initialGeneratedImage?.goal ?? "sales");
+  // true once the customer picks a goal themselves; until then the goal follows what they typed (a hair salon gets
+  // "Book Now", not "Shop Now"; see lib/ad-goal.ts). A hand-picked goal is never overridden.
+  const [goalChosen, setGoalChosen] = useState(false);
+  const errorBannerRef = useRef<HTMLDivElement>(null);
   const [angle, setAngle] = useState<string | null>(null);
   const [visualDirection, setVisualDirection] = useState<VisualDirection>("clean_premium");
   const [showMoreStyles, setShowMoreStyles] = useState(false);
@@ -140,7 +145,7 @@ export function AdCreationForm({
         setStep("result");
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : "Couldn't prepare your ad.");
+        setError(friendlyAdError(err, "Couldn't prepare your ad."));
         setStep("create");
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,6 +208,9 @@ export function AdCreationForm({
   const [captionLength] = useState<CaptionLength>("medium");
   const [styledDescription, setStyledDescription] = useState("");
   const compositeRequestRef = useRef(0);
+  useEffect(() => {
+    if (error && step === "create") errorBannerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error, step]);
 
   const editOptions: EditOptions = { fontScale, barColorOverride, showLogo, textBox, logoBox };
   const outOfCredits = credits !== null && credits <= 0;
@@ -309,6 +317,8 @@ export function AdCreationForm({
     const effectiveFile = override ? override.file : file;
     const sourceFile = effectiveFile ?? null;
     const requestedVersions = versions as 1 | 3 | 5;
+    const effectiveGoal: AdGoal = goalChosen ? goal : (inferGoalFromDescription(finalDescription) ?? goal);
+    if (effectiveGoal !== goal) setGoal(effectiveGoal);
 
     try {
       await pause(300);
@@ -318,7 +328,7 @@ export function AdCreationForm({
       await pause(250);
       setGenerationStage(3);
 
-      const capResult = await generateAdCaptions(finalDescription, goal, angle, requestedVersions);
+      const capResult = await generateAdCaptions(finalDescription, effectiveGoal, angle, requestedVersions);
       setAdCaptions(capResult.captions);
       setRecommendedIndex(capResult.recommended_index);
       setRecommendedReason(capResult.recommended_reason);
@@ -344,7 +354,7 @@ export function AdCreationForm({
       setSelectedImageIndex(0);
       setStep(versions > 1 ? "results" : "result");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't generate your ads.");
+      setError(friendlyAdError(err, "Couldn't generate your ads."));
       setStep("create");
     } finally {
       setGenerating(false);
@@ -425,7 +435,7 @@ export function AdCreationForm({
       setSelectedImageIndex(images.length);
       setCredits(r.credits_remaining);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't generate a new image.");
+      setError(friendlyAdError(err, "Couldn't generate a new image."));
     } finally {
       setGeneratingImage(false);
     }
@@ -441,7 +451,7 @@ export function AdCreationForm({
       setSelectedImageIndex(images.length);
       setCredits(r.credits_remaining);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't remove the background.");
+      setError(friendlyAdError(err, "Couldn't remove the background."));
     } finally {
       setRemovingBackground(false);
     }
@@ -457,7 +467,7 @@ export function AdCreationForm({
       setSelectedImageIndex(images.length);
       setCredits(r.credits_remaining);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't enhance the image.");
+      setError(friendlyAdError(err, "Couldn't enhance the image."));
     } finally {
       setEnhancing(false);
     }
@@ -474,7 +484,7 @@ export function AdCreationForm({
       setRecommendedReason(r.recommended_reason);
       setSelectedCaptionIndex(0);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't generate new captions.");
+      setError(friendlyAdError(err, "Couldn't generate new captions."));
     } finally {
       setRegeneratingCaptions(false);
     }
@@ -492,7 +502,7 @@ export function AdCreationForm({
       ]);
       setSelectedCaptionIndex(adCaptions.length);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't translate the captions.");
+      setError(friendlyAdError(err, "Couldn't translate the captions."));
     } finally {
       setTranslating(false);
     }
@@ -506,6 +516,7 @@ export function AdCreationForm({
     setGenerationStage(0);
     setOfferDescription("");
     setGoal("sales");
+    setGoalChosen(false);
     setAngle(null);
     setVisualDirection("clean_premium");
     setShowMoreStyles(false);
@@ -543,6 +554,16 @@ export function AdCreationForm({
               page-level "Ad Creation" title + tagline right above this
               component already say the same thing; the textarea's own
               placeholder covers "paste a link or describe it." */}
+          {error && (
+            <div
+              ref={errorBannerRef}
+              role="alert"
+              className="mb-3 flex w-full items-start gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-left text-sm font-medium text-destructive"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           <textarea
             ref={mainInputRef}
             value={mainInput}
@@ -567,7 +588,10 @@ export function AdCreationForm({
 
           <ImageSettingsBar
             goal={goal}
-            onGoal={setGoal}
+            onGoal={(g) => {
+              setGoalChosen(true);
+              setGoal(g);
+            }}
             angle={angle}
             onAngle={setAngle}
             platform={platform}
@@ -715,7 +739,7 @@ export function AdCreationForm({
             </div>
           )}
 
-          {(inputError || error) && <p className="mb-4 text-sm font-medium text-destructive">{inputError || error}</p>}
+          {inputError && <p className="mb-4 text-sm font-medium text-destructive">{inputError}</p>}
 
           {outOfCredits && !imageTrialAvailable && (
             <p className="mb-4 text-sm text-muted-foreground">You're out of credits — top up to keep creating.</p>

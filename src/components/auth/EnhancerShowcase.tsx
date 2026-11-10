@@ -93,7 +93,7 @@ export function EnhancerShowcase({ onTry }: { onTry: () => void }) {
           <div className="mt-2 w-full max-w-[560px]">
             <div className="grid grid-cols-2 gap-2 pb-2 text-center">
               <p className="text-[13px] font-semibold text-muted-foreground sm:text-sm">As the engine makes it</p>
-              <p className="text-[13px] font-semibold text-foreground sm:text-sm">With the Enhancer</p>
+              <p className="text-[13px] font-semibold text-foreground sm:text-sm">With the Punqle Enhancer</p>
             </div>
             <div ref={frameRef} className="overflow-hidden rounded-2xl bg-[#1E1F24]" style={{ aspectRatio: "720 / 646" }}>
               <video

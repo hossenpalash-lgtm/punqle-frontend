@@ -36,7 +36,7 @@ export function PostThisVideo({
   return (
     <div className="border-t border-border px-4 pb-1 pt-3">
       <p className="mb-2 font-display text-sm font-extrabold text-foreground">Post this video</p>
-      <div className="mb-3 grid grid-cols-4 gap-2" role="group" aria-label="Where to post this video">
+      <div className="mb-3 grid grid-cols-4 gap-1" role="group" aria-label="Where to post this video">
         {BUTTONS.map((b) => {
           const selected = open === b.key;
           return (
@@ -46,14 +46,14 @@ export function PostThisVideo({
               aria-pressed={selected}
               onClick={() => setOpen(selected ? null : b.key)}
               className={[
-                "flex flex-col items-center gap-1.5 rounded-2xl px-1 pb-2 pt-2.5 transition-colors",
+                "flex flex-col items-center gap-1 rounded-xl px-1 pb-1.5 pt-1.5 transition-colors",
                 selected ? "bg-secondary ring-2 ring-foreground" : "hover:bg-secondary/60",
               ].join(" ")}
             >
-              <PlatformTile platform={b.key} size="xl" />
+              <PlatformTile platform={b.key} size="md" />
               <span className="text-center leading-tight">
-                <span className="block text-[12px] font-bold text-foreground">{b.name}</span>
-                <span className="block text-[11px] text-muted-foreground">{b.kind}</span>
+                <span className="block text-[11px] font-bold text-foreground">{b.name}</span>
+                <span className="block text-[10px] text-muted-foreground">{b.kind}</span>
               </span>
             </button>
           );

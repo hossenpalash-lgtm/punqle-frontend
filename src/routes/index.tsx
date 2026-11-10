@@ -93,6 +93,7 @@ import { COMPARE_CHIPS, COMPARE_MODELS, VideoCompare, startCompareJobs } from "@
 import { StarterExamples } from "@/components/ads/StarterExamples";
 import type { StarterExample } from "@/components/ads/StarterExamples";
 import { RecentVideos } from "@/components/ads/RecentVideos";
+import { PostThisVideo } from "@/components/ads/PostThisVideo";
 import type { CompareJob } from "@/components/ads/VideoCompare";
 
 type Tab = "home" | "single" | "plan" | "calendar" | "performance" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative" | "tryon";
@@ -2349,6 +2350,12 @@ function HomeScreen() {
                         </button>
                       </div>
                     </div>
+                    <PostThisVideo
+                      videoUrl={`data:video/mp4;base64,${homeGeneratedVideo}`}
+                      headline={(homeIdea.trim() || videoPrompt.trim() || "My ad video").slice(0, 100)}
+                      aspectRatio={videoAspectRatio}
+                      videoKept={recentSaved}
+                    />
                   </>
                 ) : !videoRefImage && showRecent ? (
                   <RecentVideos onClose={() => setShowRecent(false)} />
@@ -2954,6 +2961,12 @@ function HomeScreen() {
                         </button>
                       </div>
                     </div>
+                    <PostThisVideo
+                      videoUrl={`data:video/mp4;base64,${homeGeneratedVideo}`}
+                      headline={(homeIdea.trim() || videoPrompt.trim() || "My ad video").slice(0, 100)}
+                      aspectRatio={videoAspectRatio}
+                      videoKept={recentSaved}
+                    />
                   </>
                 ) : productPanel === "generating" ? (
                   <GeneratingGlow label="Creating your image…" />

@@ -35,6 +35,7 @@ export function PublishToYouTube({
   goal,
   angle,
   style,
+  videoKept,
 }: {
   videoUrl: string | null;
   headline: string;
@@ -42,6 +43,7 @@ export function PublishToYouTube({
   goal?: string | null;
   angle?: string | null;
   style?: string | null;
+  videoKept?: boolean; // the server keeps this video 14 days (Recent videos), so connecting does not lose it
 }) {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [connected, setConnected] = useState(false);
@@ -92,7 +94,10 @@ export function PublishToYouTube({
     // Reached mid-flow with a freshly generated (already paid-for) video
     // sitting only in memory — a bare OAuth redirect would silently
     // discard it, same reason PublishToMeta warns before navigating away.
-    if (!window.confirm("Connecting will leave this page — your current video and headline won't be saved. Continue?")) {
+    const warning = videoKept
+      ? "Connecting will leave this page. Your video stays in Recent videos for 14 days: open it there and tap Post. Continue?"
+      : "Connecting will leave this page — your current video and headline won't be saved. Continue?";
+    if (!window.confirm(warning)) {
       return;
     }
     setConnecting(true);

@@ -1,14 +1,45 @@
-import { Download, Loader2, X } from "lucide-react";
+import { Download, Loader2, Send, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchRecentVideos } from "@/lib/api";
-import type { ApiRecentVideo } from "@/lib/api";
+import type { ApiRecentVideo, VideoAspectRatio } from "@/lib/api";
+import { PostThisVideo } from "./PostThisVideo";
 
 const LABELS: Record<string, string> = { omni: "Gemini Omni", kling_3_pro: "Kling", kling_4: "Kling 4.0", seedance_2_5: "Seedance 2.5" };
 
+// A saved video has no stored shape, so read it from the picture itself: wide, tall or about square.
+function aspectFromSize(width: number, height: number): VideoAspectRatio {
+  const r = width / (height || 1);
+  if (r > 1.2) return "16:9";
+  if (r < 0.8) return "9:16";
+  return "1:1";
+}
+
+function readAsDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result));
+    fr.onerror = () => reject(new Error("Couldn't read the video."));
+    fr.readAsDataURL(blob);
+  });
+}
+
+function readAspect(blobUrl: string): Promise<VideoAspectRatio> {
+  return new Promise((resolve) => {
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.onloadedmetadata = () => resolve(aspectFromSize(v.videoWidth, v.videoHeight));
+    v.onerror = () => resolve("9:16");
+    v.src = blobUrl;
+  });
+}
+
 // The user's videos from the last 14 days. Videos that finished while the page was closed show up here.
+// "Post" opens the same YouTube / TikTok panels as the result screen, so a customer who had to leave to connect an account
+// can come back here and post the very same video.
 export function RecentVideos({ onClose }: { onClose: () => void }) {
   const [videos, setVideos] = useState<ApiRecentVideo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [posting, setPosting] = useState<{ id: string; dataUrl: string | null; aspect: VideoAspectRatio; failed: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -19,6 +50,17 @@ export function RecentVideos({ onClose }: { onClose: () => void }) {
       cancelled = true;
     };
   }, []);
+
+  const startPosting = async (v: ApiRecentVideo) => {
+    setPosting({ id: v.id, dataUrl: null, aspect: "9:16", failed: false });
+    try {
+      const blob = await (await fetch(v.url)).blob();
+      const [dataUrl, aspect] = await Promise.all([readAsDataUrl(blob), readAspect(URL.createObjectURL(blob))]);
+      setPosting({ id: v.id, dataUrl, aspect, failed: false });
+    } catch {
+      setPosting({ id: v.id, dataUrl: null, aspect: "9:16", failed: true });
+    }
+  };
 
   return (
     <div className="space-y-3 px-4 py-3">
@@ -52,8 +94,39 @@ export function RecentVideos({ onClose }: { onClose: () => void }) {
                   <Download className="h-3.5 w-3.5" />
                 </a>
               </div>
+              <button
+                onClick={() => startPosting(v)}
+                disabled={posting?.id === v.id && !posting.dataUrl && !posting.failed}
+                className="flex items-center justify-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-xs font-semibold text-foreground disabled:opacity-60"
+              >
+                {posting?.id === v.id && !posting.dataUrl && !posting.failed ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                Post
+              </button>
             </div>
           ))}
+        </div>
+      )}
+      {posting?.failed && (
+        <p className="text-xs font-medium text-destructive">
+          Couldn't open that video for posting. Download it and upload it yourself, or try again.
+        </p>
+      )}
+      {posting?.dataUrl && (
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="flex items-center justify-end px-3 pt-2">
+            <button
+              onClick={() => setPosting(null)}
+              aria-label="Close posting"
+              className="rounded-full bg-secondary p-1.5 text-secondary-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <PostThisVideo videoUrl={posting.dataUrl} headline="My ad video" aspectRatio={posting.aspect} videoKept />
         </div>
       )}
     </div>

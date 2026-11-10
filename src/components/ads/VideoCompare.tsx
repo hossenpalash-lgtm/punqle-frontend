@@ -118,7 +118,9 @@ export function VideoCompare({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobs]);
 
-  const allSettled = !starting && jobs !== null && COMPARE_MODELS.every((m) => cards[m] && cards[m].status !== "making");
+  // The tools shown are the ones that were actually started: all three for a paid comparison, the server's two for the free one.
+  const models: ImageVideoModel[] = jobs && jobs.length > 0 ? jobs.map((j) => j.model) : COMPARE_MODELS;
+  const allSettled = !starting && jobs !== null && models.every((m) => cards[m] && cards[m].status !== "making");
 
   // The page is what collects the finished videos, so warn before a refresh or tab close while any is still being made.
   useEffect(() => {
@@ -132,7 +134,7 @@ export function VideoCompare({
     <div className="space-y-3 px-4 py-3">
       <div>
         <p className="flex flex-wrap items-center gap-2 font-display text-sm font-extrabold text-foreground">
-          {taster ? "Your free comparison" : "Comparing 3 tools"}
+          {taster ? "Your free comparison" : `Comparing ${models.length} tools`}
           {taster && <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Enhanced by Punqle</span>}
         </p>
         <p className="text-xs text-muted-foreground">
@@ -142,8 +144,8 @@ export function VideoCompare({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {COMPARE_MODELS.map((m) => {
+      <div className={["grid grid-cols-1 gap-3", models.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"].join(" ")}>
+        {models.map((m) => {
           const c = cards[m];
           return (
             <div key={m} className="flex flex-col gap-2 rounded-2xl bg-secondary p-2.5">

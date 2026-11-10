@@ -413,6 +413,8 @@ function HomeScreen() {
   // Free taster: one free 4-second, 720p, watermarked comparison per new account. The server decides who may use it
   // (and whether it is switched on at all); the card only shows when it says yes.
   const [tasterAvailable, setTasterAvailable] = useState(false);
+  // How many tools the free comparison uses (the server's list: Wan 3.0 + Kling 4.0 since 2026-11-11, Seedance is for paying users).
+  const [tasterModelCount, setTasterModelCount] = useState(2);
   const [tasterMode, setTasterMode] = useState(false);
   // True while the result on screen is the user's pick from the FREE comparison (short, watermarked): its button then
   // offers the full-quality version and states the price, since this is the first time a cost appears for them.
@@ -421,7 +423,12 @@ function HomeScreen() {
   const [tasterActionError, setTasterActionError] = useState<string | null>(null);
   const [exampleLoading, setExampleLoading] = useState<string | null>(null); // which "Try an example" card is loading its photo
   const refreshTasterStatus = () => {
-    fetchFreeTasterStatus().then((s) => setTasterAvailable(s.available)).catch(() => setTasterAvailable(false));
+    fetchFreeTasterStatus()
+      .then((s) => {
+        setTasterAvailable(s.available);
+        if (s.models?.length) setTasterModelCount(s.models.length);
+      })
+      .catch(() => setTasterAvailable(false));
   };
   useEffect(() => {
     if (homeMode !== "video") return;
@@ -2373,7 +2380,7 @@ function HomeScreen() {
                     {tasterAvailable && (
                       <p className="flex items-center gap-1.5 rounded-full bg-secondary px-3.5 py-1.5 text-xs font-semibold text-foreground">
                         <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                        Your first comparison is free: see 3 video tools side by side
+                        Your first comparison is free: see {tasterModelCount} video tools side by side
                       </p>
                     )}
                     {recentSaved && recentCount > 0 && (
@@ -2684,7 +2691,7 @@ function HomeScreen() {
                     {tasterAvailable && !videoNarrationEnabled && (
                       <div className="flex items-center justify-between gap-3 rounded-2xl bg-secondary px-3 py-2.5">
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold text-foreground">Free: compare all 3 tools</p>
+                          <p className="text-xs font-semibold text-foreground">Free: compare {tasterModelCount} tools</p>
                           <p className="text-[11px] text-muted-foreground">One free try. 4 seconds, 720p, with a Punqle watermark.</p>
                         </div>
                         <button

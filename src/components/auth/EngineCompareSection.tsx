@@ -21,7 +21,7 @@ const SCENES = [
       { name: "Kling 4.0", resolution: "720p" },
       { name: "Wan 3.0", resolution: "720p" },
     ],
-    note: "Real free results: same photo, same words, 4 seconds, 720p, free-plan watermark. Sound is off.",
+    note: "Real results: same photo, same words, 4 seconds, 720p, free-plan watermark. Sound is off.",
     alt: "One wrist-watch photo turned into a video by Seedance 2.5, Kling 4.0 and Wan 3.0, side by side",
   },
   {

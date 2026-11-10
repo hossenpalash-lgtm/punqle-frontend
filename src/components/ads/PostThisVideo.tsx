@@ -34,9 +34,9 @@ export function PostThisVideo({
   const [open, setOpen] = useState<PlatformKey | null>(null);
 
   return (
-    <div className="border-t border-border px-4 pb-1 pt-3">
-      <p className="mb-2 font-display text-sm font-extrabold text-foreground">Post this video</p>
-      <div className="mb-3 grid grid-cols-4 gap-1" role="group" aria-label="Where to post this video">
+    <div className="border-t border-border px-4 pb-1 pt-2.5">
+      <p className="mb-1 font-display text-sm font-extrabold text-foreground">Post this video</p>
+      <div className="mb-2 flex flex-wrap gap-0.5" role="group" aria-label="Where to post this video">
         {BUTTONS.map((b) => {
           const selected = open === b.key;
           return (
@@ -46,7 +46,7 @@ export function PostThisVideo({
               aria-pressed={selected}
               onClick={() => setOpen(selected ? null : b.key)}
               className={[
-                "flex flex-col items-center gap-1 rounded-xl px-1 pb-1.5 pt-1.5 transition-colors",
+                "flex w-16 flex-col items-center gap-0.5 rounded-xl px-0.5 pb-1 pt-1 transition-colors",
                 selected ? "bg-secondary ring-2 ring-foreground" : "hover:bg-secondary/60",
               ].join(" ")}
             >

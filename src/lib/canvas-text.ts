@@ -469,6 +469,11 @@ export async function compositeImage(
 
   const fontScale = editOptions?.fontScale ?? 1;
   const style = STYLE_TEXT_CONFIG[visualDirection ?? ""] ?? DEFAULT_STYLE_CONFIG;
+  // Tall 9:16 pictures (Stories / Reels): Instagram draws its own bars over roughly the top and bottom 10-14% of
+  // the screen, so text, the logo and the "Made with Punqle" badge are kept inside that safe area (2026-11-11).
+  const isTall = canvas.height / canvas.width > 1.6;
+  const safeTop = isTall ? canvas.height * 0.1 : 0;
+  const safeBottom = isTall ? canvas.height * 0.1 : 0;
 
   await ensureFontsReady([
     `${style.headlineWeight} 16px ${style.headlineFamily}`,
@@ -635,15 +640,16 @@ export async function compositeImage(
     }
     const supportingGap = supportingLines.length ? headlineSize * 0.3 : 0;
 
-    const barHeight = Math.min(
-      maxBarHeight,
-      padding * 2 +
-        headlineHeight +
-        supportingGap +
-        supportingLines.length * supportingLineHeight +
-        ctaGap +
-        ctaBadgeHeight,
-    );
+    const barHeight =
+      Math.min(
+        maxBarHeight,
+        padding * 2 +
+          headlineHeight +
+          supportingGap +
+          supportingLines.length * supportingLineHeight +
+          ctaGap +
+          ctaBadgeHeight,
+      ) + safeBottom;
 
     // The bar always fades from transparent (blending into the photo, at
     // whichever edge is closest to the photo's center) to solid (at the
@@ -722,6 +728,7 @@ export async function compositeImage(
     // it, mirroring how Facebook/Instagram ads pair a small profile
     // picture with the page name.
     const pad = canvas.width * 0.03;
+    const topY = pad + safeTop;
     let cursorX = pad;
     let badgeHeight = 0;
 
@@ -742,9 +749,9 @@ export async function compositeImage(
       badgeHeight = plateH;
       ctx.fillStyle = "rgba(255,255,255,0.92)";
       ctx.beginPath();
-      ctx.roundRect(cursorX, pad, plateW, plateH, 10);
+      ctx.roundRect(cursorX, topY, plateW, plateH, 10);
       ctx.fill();
-      ctx.drawImage(logo, cursorX + pad / 2, pad + pad / 2, logoW, logoH);
+      ctx.drawImage(logo, cursorX + pad / 2, topY + pad / 2, logoW, logoH);
       cursorX += plateW + pad * 0.5;
     }
 
@@ -758,16 +765,16 @@ export async function compositeImage(
 
       ctx.fillStyle = "rgba(255,255,255,0.92)";
       ctx.beginPath();
-      ctx.roundRect(cursorX, pad, nameBadgeW, nameBadgeH, nameBadgeH / 2);
+      ctx.roundRect(cursorX, topY, nameBadgeW, nameBadgeH, nameBadgeH / 2);
       ctx.fill();
 
       ctx.fillStyle = "#1a1a1a";
       ctx.textBaseline = "middle";
-      ctx.fillText(brandKit.name, cursorX + namePadX, pad + nameBadgeH / 2);
+      ctx.fillText(brandKit.name, cursorX + namePadX, topY + nameBadgeH / 2);
     }
   }
 
-  drawWatermarkBadge(ctx, canvas.width, canvas.height);
+  drawWatermarkBadge(ctx, canvas.width, canvas.height, safeTop);
 
   return canvas.toDataURL("image/jpeg", 0.92);
 }
@@ -782,7 +789,7 @@ export async function compositeImage(
 // since the defaults put the logo top-left and the caption bar at the
 // bottom edge; a user's own dragged caption/logo can still cover it, same
 // tradeoff every watermarked tool accepts.
-function drawWatermarkBadge(ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number) {
+function drawWatermarkBadge(ctx: CanvasRenderingContext2D, canvasWidth: number, _canvasHeight: number, safeTop = 0) {
   const badgeText = "Made with Punqle";
   const fontSize = Math.round(canvasWidth * 0.026);
   ctx.font = `600 ${fontSize}px "Inter", "Plus Jakarta Sans", sans-serif`;
@@ -793,7 +800,7 @@ function drawWatermarkBadge(ctx: CanvasRenderingContext2D, canvasWidth: number, 
   const badgeH = fontSize + padY * 2;
   const margin = canvasWidth * 0.025;
   const badgeX = canvasWidth - badgeW - margin;
-  const badgeY = margin;
+  const badgeY = margin + safeTop;
 
   ctx.fillStyle = "rgba(0,0,0,0.45)";
   ctx.beginPath();

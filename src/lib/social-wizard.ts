@@ -89,16 +89,20 @@ export const IDEA_CHIPS: IdeaChip[] = [
   { label: "Announcement", starter: "Create an announcement post for my business." },
 ];
 
-export type Platform = "instagram" | "facebook" | "linkedin" | "other";
+export type Platform = "instagram" | "facebook" | "story" | "linkedin" | "other";
 
+// The picture shapes advertisers actually use (2026-11-11): 4:5 tall feed posts for Instagram and Facebook (the
+// biggest feed shape, what most tools default to), 9:16 for Stories / Reels, 1:1 square for LinkedIn and anywhere
+// else. Instagram used to be 1:1 only and there was no Story shape in the picker at all, although the backend
+// has always been able to make one.
 export const PLATFORM_OPTIONS: { id: Platform; label: string; aspectRatio: AspectRatio; hint: string }[] = [
-  { id: "instagram", label: "Instagram", aspectRatio: "square", hint: "Square feed post" },
-  { id: "facebook", label: "Facebook", aspectRatio: "feed", hint: "Feed post" },
-  // LinkedIn's own recommended ad ratio isn't one of the 3 the image
-  // pipeline supports today (square/feed/story) — square is the closest
-  // existing fit rather than adding a new Gemini aspect value for this.
-  { id: "linkedin", label: "LinkedIn", aspectRatio: "square", hint: "Feed post" },
-  { id: "other", label: "Other", aspectRatio: "square", hint: "Square" },
+  { id: "instagram", label: "Instagram · 4:5", aspectRatio: "feed", hint: "Tall feed post (4:5)" },
+  { id: "facebook", label: "Facebook · 4:5", aspectRatio: "feed", hint: "Tall feed post (4:5)" },
+  { id: "story", label: "Story / Reel · 9:16", aspectRatio: "story", hint: "Full-screen Story or Reel (9:16)" },
+  // LinkedIn's own recommended ad ratio isn't one of the 3 the image pipeline supports
+  // (square/feed/story) — square is the closest existing fit rather than adding a new value.
+  { id: "linkedin", label: "LinkedIn · 1:1", aspectRatio: "square", hint: "Square feed post (1:1)" },
+  { id: "other", label: "Square · 1:1", aspectRatio: "square", hint: "Square (1:1) — fits anywhere" },
 ];
 
 export const VERSION_COUNTS = [1, 3, 5] as const;

@@ -7,10 +7,9 @@ import { PlatformTile } from "@/components/PlatformTile";
 
 // Inline in the Post Kit, next to Download/Schedule — not a modal, matching
 // CarouselBuilder's "tool sits right where the image already is" pattern.
-// Note: this app's Post Kit only ever produces "square"/"feed" aspect
-// ratios today (see social-wizard.ts's PLATFORM_OPTIONS) — Instagram's
-// 4:5–1.91:1 feed limit isn't a live concern yet, but would need handling
-// here if a "story" (9:16) option is ever added to that entry point.
+// Shapes: the Post Kit makes 1:1, 4:5 and 9:16 pictures (social-wizard.ts's PLATFORM_OPTIONS). Instagram's feed
+// only takes 4:5 to 1.91:1, so the backend publishes a 9:16 picture as an Instagram Story instead
+// (_publish_to_instagram); this panel just tells the person so.
 export function PublishToMeta({
   compositedUrl,
   caption,
@@ -34,6 +33,8 @@ export function PublishToMeta({
   const [expanded, setExpanded] = useState(false);
   const [postFacebook, setPostFacebook] = useState(true);
   const [postInstagram, setPostInstagram] = useState(false);
+  // A tall 9:16 picture (the "Story / Reel" shape) is posted to Instagram as a Story, which has no caption.
+  const [isStoryShape, setIsStoryShape] = useState(false);
   const [instagramCanSchedule, setInstagramCanSchedule] = useState(false); // true only while the server's own alarm clock is on
   const [scheduling, setScheduling] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
@@ -49,6 +50,16 @@ export function PublishToMeta({
     if (result.facebook && !result.facebook.posted) showToast(`Facebook: ${result.facebook.error}`, { tone: "error" });
     if (result.instagram && !result.instagram.posted) showToast(`Instagram: ${result.instagram.error}`, { tone: "error" });
   }, [result]);
+
+  useEffect(() => {
+    if (!compositedUrl) {
+      setIsStoryShape(false);
+      return;
+    }
+    const probe = new Image();
+    probe.onload = () => setIsStoryShape(probe.naturalHeight > 0 && probe.naturalWidth / probe.naturalHeight < 0.7);
+    probe.src = compositedUrl;
+  }, [compositedUrl]);
 
   useEffect(() => {
     fetchSchedulingCapabilities().then((c) => setInstagramCanSchedule(!!c.instagram)).catch(() => setInstagramCanSchedule(false));
@@ -203,6 +214,9 @@ export function PublishToMeta({
           {tile("facebook", postFacebook, setPostFacebook, "Facebook", pageName || "Your Page")}
           {tile("instagram", postInstagram, setPostInstagram, "Instagram", hasInstagram ? (igName ? `@${igName}` : "Linked") : "Not linked", !hasInstagram)}
         </div>
+        {postInstagram && isStoryShape && (
+          <p className="-mt-1 text-xs text-muted-foreground">This tall picture goes to Instagram as a Story (Stories have no caption).</p>
+        )}
 
         <div className="flex rounded-full bg-secondary p-1" role="tablist" aria-label="When to post">
           <button

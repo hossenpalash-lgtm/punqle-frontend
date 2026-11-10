@@ -9,6 +9,7 @@ import {
   Link2,
   Linkedin,
   Loader2,
+  Smartphone,
   Sparkles,
 } from "lucide-react";
 import { useState } from "react";
@@ -21,6 +22,7 @@ import { StockPhotoSearch } from "./StockPhotoSearch";
 const PLATFORM_ICONS: Record<Platform, typeof Instagram> = {
   instagram: Instagram,
   facebook: Facebook,
+  story: Smartphone,
   linkedin: Linkedin,
   other: Globe,
 };

@@ -349,25 +349,52 @@ export function deriveOnImageText(whatsappMessage: string, facebookCaption: stri
   let rest = sentences.slice(1).join(" ");
   const join = (extra: string) => [extra, rest].filter(Boolean).join(" ");
 
-  if (wordsOf(first).length > 7) {
+  // Up to 9 words stays one headline (it wraps to 2-3 lines). Longer is split at a dash / colon, a comma, or a
+  // joining word (with, for, that...) so each half still reads as a thought — never at a fixed word count, which
+  // once left "Support!" alone on its own line after "...our expert legal" (2026-11-11).
+  const HOOK_MAX = 9;
+  // A medium sentence with a clear break after a short opening ("Fresh roasted coffee, delivered to your door...",
+  // "Join the men who trust us—experience expert grooming!") reads best as hook + smaller line.
+  if (wordsOf(first).length > 6 && wordsOf(first).length <= HOOK_MAX) {
+    const m = first.match(/^(.+?)\s*(?:—|–| - |:|;|,)\s*(.+)$/);
+    if (m && wordsOf(m[1]).length >= 2 && wordsOf(m[1]).length <= 6 && wordsOf(m[2]).length >= 2) {
+      first = m[1];
+      rest = join(m[2]);
+    }
+  }
+  if (wordsOf(first).length > HOOK_MAX) {
     const dash = first.match(/^(.+?)\s*(?:—|–| - |:|;)\s*(.+)$/);
     const comma = first.match(/^(.+?),\s*(.+)$/);
+    const w = wordsOf(first);
+    let joint = -1;
+    for (let i = 7; i >= 3; i--) {
+      if (JOINT_WORDS.has(w[i].toLowerCase().replace(/[^a-z]/g, "")) && w.length - i >= 3) {
+        joint = i;
+        break;
+      }
+    }
     if (dash && wordsOf(dash[1]).length >= 2 && wordsOf(dash[1]).length <= 8) {
       first = dash[1];
       rest = join(dash[2]);
     } else if (comma && wordsOf(comma[1]).length >= 3 && wordsOf(comma[1]).length <= 8) {
       first = comma[1];
       rest = join(comma[2]);
+    } else if (joint > 0) {
+      first = w.slice(0, joint).join(" ");
+      rest = join(w.slice(joint).join(" "));
+    } else if (w.length <= 12) {
+      // no natural joint and only a little too long: keep it whole rather than strand a word or two
     } else {
-      const w = wordsOf(first);
-      first = w.slice(0, 7).join(" ");
-      rest = join(w.slice(7).join(" "));
+      first = w.slice(0, 8).join(" ");
+      rest = join(w.slice(8).join(" "));
     }
   }
 
   const headline = tidy(first);
   return { headline, supporting: shortSupporting(rest) };
 }
+
+const JOINT_WORDS = new Set(["with", "for", "that", "and", "to", "in", "on", "at", "from", "who", "so", "because", "when", "while", "without", "like"]);
 
 const TRAILING_CONNECTOR = /\s+(and|or|the|a|an|to|of|with|for|in|on|that|which|but|so)$/i;
 

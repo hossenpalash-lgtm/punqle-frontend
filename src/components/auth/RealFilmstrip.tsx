@@ -36,23 +36,23 @@
 type FilmCard = { image: string; caption: string; tall?: boolean; video?: string; stack?: string[] };
 
 const ROW_1: FilmCard[] = [
-  { image: "/showcase-ads/tryon-result.jpg", caption: "Try-On — Real result" },
+  { image: "/thumbs/tryon-result.jpg", caption: "Try-On — Real result" },
   {
-    image: "/showcase-ads/food.jpg",
-    stack: ["/showcase-ads/food.jpg", "/showcase-ads/fashion.jpg"],
+    image: "/thumbs/food.jpg",
+    stack: ["/thumbs/food.jpg", "/thumbs/fashion.jpg"],
     caption: "Carousel — Auto-designed",
   },
-  { image: "/showcase-ads/product-showcase-poster.jpg", video: "/showcase-ads/product-showcase.mp4", caption: "Video Ad" },
-  { image: "/showcase-ads/coffee-pour.jpg", caption: "Real, dynamic moments" },
-  { image: "/showcase-ads/sneaker-lace.jpg", caption: "Image Ad — real moment" },
+  { image: "/thumbs/product-showcase-poster.jpg", video: "/thumbs/product-showcase-sm.mp4", caption: "Video Ad" },
+  { image: "/thumbs/coffee-pour.jpg", caption: "Real, dynamic moments" },
+  { image: "/thumbs/sneaker-lace.jpg", caption: "Image Ad — real moment" },
 ];
 
 const ROW_2: FilmCard[] = [
-  { image: "/actors/face1.jpg", caption: "Real, filmed actor", tall: true },
-  { image: "/actors/liam.jpg", caption: "Liam — Car", tall: true },
-  { image: "/actors/ethan.jpg", caption: "Ethan — Bedroom", tall: true },
-  { image: "/actors/face5.jpg", caption: "Real, filmed actor", tall: true },
-  { image: "/actors/face6.jpg", caption: "Real, filmed actor", tall: true },
+  { image: "/thumbs/face1.jpg", caption: "Real, filmed actor", tall: true },
+  { image: "/thumbs/liam.jpg", caption: "Liam — Car", tall: true },
+  { image: "/thumbs/ethan.jpg", caption: "Ethan — Bedroom", tall: true },
+  { image: "/thumbs/face5.jpg", caption: "Real, filmed actor", tall: true },
+  { image: "/thumbs/face6.jpg", caption: "Real, filmed actor", tall: true },
 ];
 
 function FilmCardEl({ image, caption, tall, video, stack }: FilmCard) {

@@ -100,6 +100,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      // Open the connection to the Punqle backend while the page's JavaScript is still downloading, so the
+      // first logged-in request does not also pay for DNS + TLS (2026-11-10). Only when the address is known.
+      ...(import.meta.env.VITE_API_BASE ? [{ rel: "preconnect", href: import.meta.env.VITE_API_BASE as string, crossOrigin: "anonymous" as const }] : []),
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

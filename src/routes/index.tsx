@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams, useNavigate } from "@tanstack/react-router";
 import {
   ArrowUp,
   Check,
@@ -99,6 +99,10 @@ type Tab = "home" | "single" | "plan" | "calendar" | "performance" | "history" |
 
 export const Route = createFileRoute("/")({
   component: HomeScreen,
+  // "home" is the default tab, so leave it out of the URL. Before (2026-11-10) the router added
+  // `?tab=home` to every plain `/` visit, which cost a whole extra round trip (a 307 from
+  // Virginia, ~0.35 s from Melbourne) before the page started loading.
+  search: { middlewares: [stripSearchParams({ tab: "home" })] },
   validateSearch: (search: Record<string, unknown>): { tab: Tab } => ({
     tab:
       search.tab === "plan"
@@ -586,6 +590,9 @@ function HomeScreen() {
   // which reuses this same actor catalog as a "pick an actor" option
   // (matches Arcads' own "Presets" picker on their Product tab).
   useEffect(() => {
+    // Only on the Home tab (2026-11-10): opening Ads/Social/etc. straight from a link used to pull the
+    // whole actor catalog (~480 KB) that those screens never show.
+    if (tab !== "home") return;
     if (homeMode !== "talking_actors" && homeMode !== "product" && homeMode !== "video") return;
     if (actors.length === 0 && !actorsLoading) {
       setActorsLoading(true);
@@ -612,7 +619,7 @@ function HomeScreen() {
         .finally(() => setCustomActorsLoading(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [homeMode]);
+  }, [homeMode, tab]);
 
   const goTo = (t: Tab) => navigate({ to: "/", search: { tab: t } });
 

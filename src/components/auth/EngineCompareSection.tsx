@@ -1,3 +1,4 @@
+import { useNearViewport } from "@/lib/use-near-viewport";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Columns3 } from "lucide-react";
 
@@ -42,6 +43,8 @@ const SCENES = [
 
 export function EngineCompareSection({ onTry }: { onTry: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const videoNear = useNearViewport(frameRef);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [active, setActive] = useState<(typeof SCENES)[number]["id"]>("product");
   const scene = SCENES.find((x) => x.id === active) ?? SCENES[0];
@@ -95,12 +98,12 @@ export function EngineCompareSection({ onTry }: { onTry: () => void }) {
           </div>
 
           <div className={`mt-2 w-full ${scene.maxWidth}`}>
-            <div className="overflow-hidden rounded-2xl bg-[#1E1F24]" style={{ aspectRatio: scene.aspect }}>
+            <div ref={frameRef} className="overflow-hidden rounded-2xl bg-[#1E1F24]" style={{ aspectRatio: scene.aspect }}>
               <video
                 key={scene.id}
                 ref={videoRef}
                 className="h-full w-full object-cover"
-                src={scene.video}
+                src={videoNear ? scene.video : undefined}
                 poster={scene.poster}
                 autoPlay={!reducedMotion}
                 controls={reducedMotion}

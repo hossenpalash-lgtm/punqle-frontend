@@ -1,3 +1,4 @@
+import { useNearViewport } from "@/lib/use-near-viewport";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Wand2 } from "lucide-react";
 
@@ -39,6 +40,8 @@ export function EnhancerShowcase({ onTry }: { onTry: () => void }) {
   const [active, setActive] = useState<(typeof SCENES)[number]["id"]>("cafe");
   const [reducedMotion, setReducedMotion] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const videoNear = useNearViewport(frameRef);
   const scene = SCENES.find((s) => s.id === active) ?? SCENES[0];
 
   // People who ask their device for less motion get a still picture with play controls instead of a loop.
@@ -92,12 +95,12 @@ export function EnhancerShowcase({ onTry }: { onTry: () => void }) {
               <p className="text-[13px] font-semibold text-muted-foreground sm:text-sm">As the engine makes it</p>
               <p className="text-[13px] font-semibold text-foreground sm:text-sm">With the Enhancer</p>
             </div>
-            <div className="overflow-hidden rounded-2xl bg-[#1E1F24]" style={{ aspectRatio: "720 / 646" }}>
+            <div ref={frameRef} className="overflow-hidden rounded-2xl bg-[#1E1F24]" style={{ aspectRatio: "720 / 646" }}>
               <video
                 key={scene.id}
                 ref={videoRef}
                 className="h-full w-full object-cover"
-                src={scene.video}
+                src={videoNear ? scene.video : undefined}
                 poster={scene.poster}
                 autoPlay={!reducedMotion}
                 controls={reducedMotion}

@@ -4,7 +4,23 @@ import { getAccessToken } from "./supabase";
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || "http://localhost:8000";
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+// Plain GETs that are already on their way are shared (2026-11-10): when two parts of a screen ask for
+// the same thing at the same moment (the home screen asked for /ads/feature-trials twice on every
+// start), the second one waits for the first one's answer instead of making its own trip. Only while a
+// request is still in flight — nothing is kept afterwards, so data is never stale.
+const inflightGets = new Map<string, Promise<unknown>>();
+
+function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const isPlainGet = !init || ((!init.method || init.method.toUpperCase() === "GET") && !init.body && !init.signal);
+  if (!isPlainGet) return apiFetchNow<T>(path, init);
+  const existing = inflightGets.get(path);
+  if (existing) return existing.then((v) => structuredClone(v) as T);
+  const p = apiFetchNow<T>(path, init).finally(() => inflightGets.delete(path));
+  inflightGets.set(path, p);
+  return p;
+}
+
+async function apiFetchNow<T>(path: string, init?: RequestInit): Promise<T> {
   const token = await getAccessToken();
   if (!token) {
     throw new Error("Your session has expired. Please log in again.");

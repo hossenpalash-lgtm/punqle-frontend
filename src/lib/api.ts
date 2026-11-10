@@ -1269,17 +1269,27 @@ export function selectContentPlanPost(
   });
 }
 
+// One row of the history list: text only. The picture is loaded separately (fetchHistoryThumb for the small preview,
+// fetchHistoryImage for the full picture when the customer taps Download). Asking for all pictures in one call made
+// the server time out (2026-11-10: 20 pictures x ~2.5 MB, HTTP 500 after ~37 s).
 export interface ApiGeneratedPost {
   id: string;
   item_description: string;
   facebook_caption: string;
   whatsapp_message: string;
-  image_base64: string;
   created_at: string;
 }
 
 export function fetchHistory(): Promise<{ posts: ApiGeneratedPost[] }> {
   return apiFetch<{ posts: ApiGeneratedPost[] }>("/ads/history");
+}
+
+export function fetchHistoryThumb(id: string): Promise<{ image_base64: string }> {
+  return apiFetch<{ image_base64: string }>(`/ads/history/${id}/thumb`);
+}
+
+export function fetchHistoryImage(id: string): Promise<{ image_base64: string }> {
+  return apiFetch<{ image_base64: string }>(`/ads/history/${id}/image`);
 }
 
 export function deleteHistoryPost(id: string): Promise<void> {

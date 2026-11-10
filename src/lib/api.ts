@@ -1612,6 +1612,37 @@ export function publishToMeta(
   });
 }
 
+// A finished video to the Facebook Page and/or as an Instagram Reel, right now (no scheduling for videos yet). videoDataUrl is the
+// same "data:video/mp4;base64,..." shape the YouTube and TikTok panels take. Instagram can take up to ~90 s to process the video,
+// and the server waits for it, so this call is slow on purpose.
+export function publishVideoToMeta(
+  videoDataUrl: string,
+  caption: string,
+  postToFacebook: boolean,
+  postToInstagram: boolean,
+  goal?: string | null,
+  angle?: string | null,
+  style?: string | null,
+): Promise<ApiMetaPublishResponse> {
+  const match = videoDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) {
+    return Promise.reject(new Error("Couldn't read the generated video."));
+  }
+  const [, mimeType, base64] = match;
+  const formData = new FormData();
+  formData.append("file", base64ToFile(base64, mimeType, "ad-video.mp4"));
+  formData.append("caption", caption);
+  formData.append("post_to_facebook", String(postToFacebook));
+  formData.append("post_to_instagram", String(postToInstagram));
+  if (goal) formData.append("goal", goal);
+  if (angle) formData.append("angle", angle);
+  if (style) formData.append("style", style);
+  return apiFetch<ApiMetaPublishResponse>("/meta/publish-video", {
+    method: "POST",
+    body: formData,
+  });
+}
+
 // analytics=true also asks for yt-analytics.readonly (watch time, retention,
 // impressions) — opt-in until Google verifies the scope (requested 2026-10-12).
 export function getYouTubeConnectUrl(analytics = false): Promise<{ authorize_url: string }> {

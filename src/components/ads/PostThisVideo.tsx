@@ -1,12 +1,25 @@
+import { useState } from "react";
+import { PlatformTile, type PlatformKey } from "@/components/PlatformTile";
 import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
+import { PublishVideoToMeta } from "./PublishVideoToMeta";
 import type { VideoAspectRatio } from "@/lib/api";
 
 // "Post this video" under a finished video (the home screens' result panel and Recent videos). Until 2026-11-11 a finished
-// video could only be downloaded there, which sent the customer out of Punqle at the moment they liked the result; the
-// posting buttons lived only in the Video tab's form. This reuses those same two panels (YouTube, which tags a vertical
-// video as a Short, and TikTok), so title / privacy / schedule / AI-content flags behave exactly as they already do.
-// Instagram Reels and Facebook video are not built yet; the line at the bottom says so instead of hiding it.
+// video could only be downloaded there, which sent the customer out of Punqle at the moment they liked the result.
+// Four platform buttons in a row (founder's design, same colours as the sidebar's four); tapping one opens just that
+// platform's form below, tapping it again closes it. Each form is the platform's own existing panel, so title / privacy /
+// schedule / AI-content flags behave exactly as they do elsewhere.
+//
+// Labels say what actually gets posted: Instagram gets a Reel and YouTube a Short (the backend tags a vertical video as a
+// Short). Facebook gets a normal Page video, not the separate Facebook Reels API, so it is NOT labelled "Reels".
+const BUTTONS: { key: PlatformKey; name: string; kind: string }[] = [
+  { key: "facebook", name: "Facebook", kind: "video" },
+  { key: "instagram", name: "Instagram", kind: "Reel" },
+  { key: "tiktok", name: "TikTok", kind: "video" },
+  { key: "youtube", name: "YouTube", kind: "Shorts" },
+];
+
 export function PostThisVideo({
   videoUrl,
   headline,
@@ -18,12 +31,42 @@ export function PostThisVideo({
   aspectRatio: VideoAspectRatio;
   videoKept?: boolean; // true when the server keeps finished videos for 14 days (Recent videos)
 }) {
+  const [open, setOpen] = useState<PlatformKey | null>(null);
+
   return (
     <div className="border-t border-border px-4 pb-1 pt-3">
       <p className="mb-2 font-display text-sm font-extrabold text-foreground">Post this video</p>
-      <PublishToYouTube videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} videoKept={videoKept} />
-      <PublishToTikTok videoUrl={videoUrl} headline={headline} videoKept={videoKept} />
-      <p className="mb-2 text-xs text-muted-foreground">Instagram Reels and Facebook video are coming next.</p>
+      <div className="mb-3 grid grid-cols-4 gap-2" role="group" aria-label="Where to post this video">
+        {BUTTONS.map((b) => {
+          const selected = open === b.key;
+          return (
+            <button
+              key={b.key}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => setOpen(selected ? null : b.key)}
+              className={[
+                "flex flex-col items-center gap-1.5 rounded-2xl px-1 pb-2 pt-2.5 transition-colors",
+                selected ? "bg-secondary ring-2 ring-foreground" : "hover:bg-secondary/60",
+              ].join(" ")}
+            >
+              <PlatformTile platform={b.key} size="xl" />
+              <span className="text-center leading-tight">
+                <span className="block text-[12px] font-bold text-foreground">{b.name}</span>
+                <span className="block text-[11px] text-muted-foreground">{b.kind}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {open === "youtube" && (
+        <PublishToYouTube key="youtube" videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} videoKept={videoKept} startOpen />
+      )}
+      {open === "tiktok" && <PublishToTikTok key="tiktok" videoUrl={videoUrl} headline={headline} videoKept={videoKept} startOpen />}
+      {(open === "facebook" || open === "instagram") && (
+        <PublishVideoToMeta key={open} videoUrl={videoUrl} headline={headline} videoKept={videoKept} startOpen initial={open} />
+      )}
     </div>
   );
 }

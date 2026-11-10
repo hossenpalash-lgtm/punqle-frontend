@@ -41,6 +41,7 @@ export function PublishToTikTok({
   angle,
   style,
   videoKept,
+  startOpen,
 }: {
   videoUrl: string | null;
   headline: string;
@@ -48,13 +49,14 @@ export function PublishToTikTok({
   angle?: string | null;
   style?: string | null;
   videoKept?: boolean; // the server keeps this video 14 days (Recent videos), so connecting does not lose it
+  startOpen?: boolean; // open the form straight away (the caller already showed a button for it)
 }) {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [connected, setConnected] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
 
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!!startOpen);
   const [caption, setCaption] = useState("");
 
   const [creatorInfo, setCreatorInfo] = useState<ApiTikTokCreatorInfo | null>(null);

@@ -312,16 +312,7 @@ export function PostKit({
           </p>
         )}
 
-        <a
-          href={compositedUrl ?? undefined}
-          download="post.jpg"
-          className="mb-3 flex w-full items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-primary-foreground"
-          style={{ background: "var(--gradient-primary)" }}
-        >
-          <Download className="h-5 w-5" />
-          Download image
-        </a>
-
+        {/* No second "Download image" button here (2026-11-11): the Download on the picture does the same. */}
         <PublishToMeta compositedUrl={compositedUrl} caption={editedCaption} goal={goal} angle={angle} style={visualDirection} />
 
         <button

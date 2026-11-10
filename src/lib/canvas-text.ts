@@ -127,13 +127,18 @@ const INTER = '"Inter","Plus Jakarta Sans",sans-serif';
 const LORA = '"Lora","Georgia",serif';
 
 const STYLE_TEXT_CONFIG: Record<string, StyleTextConfig> = {
+  // The DEFAULT look (the style that is preselected, and what every caller that passes no style gets). Founder,
+  // 2026-11-10, looking at ten real sample ads: only the one made with the serif look felt right ("ei tar caption er
+  // likhar style and font valo laglo, baki gulor na"), so the default text look is now the Lora headline + italic
+  // supporting line + white pill button, the same as Warm & Lifestyle below. Only the TEXT changed; the picture
+  // prompt of Clean & Premium is untouched. Bold, Vibrant and Minimal keep their own loud / flat looks on purpose.
   clean_premium: {
-    headlineFamily: INTER,
-    headlineWeight: 700,
+    headlineFamily: LORA,
+    headlineWeight: 500,
     headlineCase: "none",
-    headlineScale: 1,
+    headlineScale: 0.95,
     supportingWeight: 500,
-    supportingItalic: false,
+    supportingItalic: true,
     ctaShape: "pill-filled",
     panelSolid: false,
   },

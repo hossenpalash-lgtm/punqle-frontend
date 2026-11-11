@@ -265,7 +265,17 @@ function PlanBox({ onPick }: { onPick: (t: UnlockTarget) => void }) {
   );
 }
 
-export function UnlockRow({ subscribed, firstVisit = false, onPick }: { subscribed: boolean; firstVisit?: boolean; onPick: (t: UnlockTarget) => void }) {
+export function UnlockRow({
+  subscribed,
+  firstVisit = false,
+  intro,
+  onPick,
+}: {
+  subscribed: boolean;
+  firstVisit?: boolean;
+  intro?: string; // replaces the line under the heading (the landing page uses its own)
+  onPick: (t: UnlockTarget) => void;
+}) {
   const locked = !subscribed;
   return (
     <section className="mb-10 w-full" aria-labelledby="unlock-row-heading">
@@ -273,11 +283,12 @@ export function UnlockRow({ subscribed, firstVisit = false, onPick }: { subscrib
         {locked ? "Unlock the premium features" : "More from Punqle"}
       </h2>
       <p className="mb-4 mt-1 max-w-xl text-sm text-muted-foreground">
-        {firstVisit
+        {intro ??
+          (firstVisit
           ? "Make your free video first. After that, everything below opens with a plan. Slide sideways to look around."
           : locked
             ? "Everything Punqle can do, in the order a business needs it. Slide sideways, then tap a box to open that tool."
-            : "Slide sideways, then tap a box to open that tool."}
+            : "Slide sideways, then tap a box to open that tool.")}
       </p>
       <StyleCarousel label="Punqle tools" cardWidth={CARD_WIDTH} noun="tools">
         {ITEMS.map((item, i) => {

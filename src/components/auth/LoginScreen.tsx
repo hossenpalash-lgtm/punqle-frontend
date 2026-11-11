@@ -2,20 +2,22 @@ import { useState } from "react";
 import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { signInWithPassword, signUpWithPassword } from "@/lib/supabase";
 import { useScrolled } from "@/lib/use-scrolled";
-import { RealFilmstrip } from "@/components/auth/RealFilmstrip";
-import { FormatSwitcher } from "@/components/auth/FormatSwitcher";
 import { TechPartners } from "@/components/auth/TechPartners";
 import { EngineCompareSection } from "@/components/auth/EngineCompareSection";
 import { EnhancerShowcase } from "@/components/auth/EnhancerShowcase";
 import { CompetitiveEdgeShowcase } from "@/components/auth/CompetitiveEdgeShowcase";
-import { ReadyActorsSection } from "@/components/auth/ReadyActorsSection";
-import { FormatGrid } from "@/components/auth/FormatGrid";
 import { PublishSection } from "@/components/auth/PublishSection";
-import { BeyondTheAd } from "@/components/auth/BeyondTheAd";
 import { PricingTeaser } from "@/components/auth/PricingTeaser";
+import { UnlockRow } from "@/components/home/UnlockRow";
 import { PunqleLogo } from "@/components/PunqleLogo";
 import { LegalFooter } from "@/components/LegalFooter";
 
+// 2026-11-12 trim (founder: keep what is still needed, drop the rest). The page is now one story: the hero and its
+// free video, the proof of the two killer features (3-engine compare, one-click post), the Enhancer, then the same
+// "Unlock the premium features" row the app shows (every box opens the sign-up form here), prices, one closing button.
+// Dropped because that row already tells them: the format switcher, the nine-format grid, the Ready Actors section, the
+// "plan, publish, see what worked" cards and the moving photo strip.
+//
 // 2026-09-23 redesign — replaces the earlier Arcads-referenced hero
 // (floating photo cards + "Go from idea to ad in minutes" 2-step mockup)
 // with a design grounded in Punqle's own real product: a headline that
@@ -142,25 +144,28 @@ export function LoginScreen() {
           // Cloud OAuth app + Supabase provider setup that hasn't been
           // done yet, so this stays honestly non-functional rather than
           // faking it.
-          <div className="mt-1.5 flex flex-col items-center gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => setFormVisible(true)}
-              className="flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-base font-semibold text-primary-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
-              style={{ background: "var(--gradient-primary)" }}
-            >
-              Create your first ad
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              disabled
-              title="Coming soon"
-              className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-6 py-3.5 text-base font-semibold text-foreground opacity-60 disabled:cursor-not-allowed"
-            >
-              Continue with Google
-              <GoogleIcon />
-            </button>
+          <div className="mt-1.5 flex flex-col items-center gap-2.5">
+            <div className="flex flex-col items-center gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setFormVisible(true)}
+                className="flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-base font-semibold text-primary-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                style={{ background: "var(--gradient-primary)" }}
+              >
+                Make my free video
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                disabled
+                title="Coming soon"
+                className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-6 py-3.5 text-base font-semibold text-foreground opacity-60 disabled:cursor-not-allowed"
+              >
+                Continue with Google
+                <GoogleIcon />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">One free try · 4 seconds · Punqle watermark · no card needed</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="animate-splash-in w-full max-w-sm">
@@ -216,24 +221,26 @@ export function LoginScreen() {
           </form>
         )}
 
-        {/* Interactive proof panel — the real home bar, not a generic mockup. */}
+        {/* Real tech-vendor row sits right under the hero, matching real "powered by" placement convention. */}
         <div className="mt-11 w-full">
-          <FormatSwitcher />
+          <TechPartners />
         </div>
-        {/* Real tech-vendor row sits right under the hero, matching real
-            "powered by" placement convention. */}
-        <TechPartners />
       </div>
 
-      <RealFilmstrip />
+      {/* The two killer features first (compare engines, post in one click), then the plus point, then the rest of
+          Punqle as the same story row the app shows, then prices. */}
       <EngineCompareSection onTry={openForm} />
+      <PublishSection />
       <EnhancerShowcase onTry={openForm} />
       {/* Reserved: renders nothing until a real Competitive Edge result is added (see the file). */}
       <CompetitiveEdgeShowcase onTry={openForm} />
-      <ReadyActorsSection />
-      <FormatGrid />
-      <PublishSection />
-      <BeyondTheAd />
+      <div className="relative z-10 mx-auto mt-20 w-full max-w-4xl px-1">
+        <UnlockRow
+          subscribed={false}
+          intro="From your first photo to a week of posts, in the order a business needs it. Start with the free video, then slide sideways to see what a plan opens."
+          onPick={openForm}
+        />
+      </div>
       <PricingTeaser />
 
       {/* 2026-09-24 — founder asked to drop the real-ad gallery
@@ -242,7 +249,7 @@ export function LoginScreen() {
           section used to end on, so the page still has exactly one. */}
       <div className="relative z-10 mt-4 flex flex-col items-center gap-5 text-center">
         <h2 className="text-balance font-display text-[30px] font-extrabold sm:text-[44px]">
-          Your next ad is a few taps away.
+          Your first video is a few taps away.
         </h2>
         <button
           type="button"
@@ -250,7 +257,7 @@ export function LoginScreen() {
           className="flex items-center justify-center gap-2 rounded-full px-7 py-4 text-base font-semibold text-primary-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
           style={{ background: "var(--gradient-primary)" }}
         >
-          Create your first ad
+          Make my free video
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>

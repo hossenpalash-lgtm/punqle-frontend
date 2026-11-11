@@ -75,7 +75,8 @@ export function EngineCompareSection({ onTry }: { onTry: () => void }) {
             One photo. Three AI video engines. You pick.
           </h2>
           <p className="max-w-lg text-[15px] leading-relaxed text-muted-foreground">
-            Punqle runs your photo through three AI video engines side by side. Keep the one you like.
+            Punqle runs your photo through the engines side by side and you keep the one you like. Your free video compares
+            two (Wan 3.0 and Kling 4.0). A plan adds Seedance 2.5, longer clips and 1080p.
           </p>
 
           <div role="tablist" aria-label="Choose an example" className="mt-3 flex gap-2">
@@ -131,7 +132,7 @@ export function EngineCompareSection({ onTry }: { onTry: () => void }) {
             className="mt-1 flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-base font-semibold text-primary-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
             style={{ background: "var(--gradient-primary)" }}
           >
-            Try it on your own photo
+            Make my free video
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>

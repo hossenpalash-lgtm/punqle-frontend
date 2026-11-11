@@ -15,15 +15,17 @@
 // same trick twice) — same reused seamless-loop technique, small dot
 // dividers between names instead of individual pill borders, so it
 // reads as one continuous line of real names rather than a button row.
+// 2026-11-12: Wan 3.0 and Seedance 2.5 added (Wan runs the free test); HeyGen removed while its AI Presenter is switched off.
 const PARTNERS = [
+  "Wan 3.0",
+  "Kling AI",
+  "Seedance 2.5",
   "Gemini Omni",
   "OpenAI",
-  "Kling AI",
   "Sync Labs",
   "FASHN",
   "Fal.ai",
   "Topaz Labs",
-  "HeyGen",
   "ElevenLabs",
 ];
 

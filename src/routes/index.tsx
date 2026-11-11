@@ -218,6 +218,9 @@ const IMAGE_VIDEO_MODEL_OPTIONS: { id: ImageVideoModel; label: string; blurb: st
   { id: "seedance_2_5", label: "Seedance 2.5", blurb: "The most cinematic, lifelike look." },
   { id: "seedance_2_5_hd", label: "Seedance 2.5 · 1080p", blurb: "Seedance in full 1080p. Takes longer, costs more." },
 ];
+// The tool a new video starts on. Wan 3.0 beat Gemini Omni in the 2026-11-08 blind test (2 of 3 pairs, and Omni
+// repeated a spoken line); Omni stays in the code for Video Ad, Try-On, Cinematic UGC, actors and the studio voice.
+const DEFAULT_VIDEO_MODEL: ImageVideoModel = "wan_3";
 const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
   omni: "Gemini Omni",
   wan_3: "Wan 3.0",
@@ -369,7 +372,7 @@ function HomeScreen() {
   // result (the video itself, replacing the image in the same card).
   const [videoPanel, setVideoPanel] = useState<"closed" | "composer" | "generating" | "compare" | "result">("closed");
   const [videoPrompt, setVideoPrompt] = useState("");
-  const [videoModel, setVideoModel] = useState<ImageVideoModel>("omni");
+  const [videoModel, setVideoModel] = useState<ImageVideoModel>(DEFAULT_VIDEO_MODEL);
   const [videoAspectRatio, setVideoAspectRatio] = useState<VideoAspectRatio>("1:1");
   const [videoDuration, setVideoDuration] = useState(8);
   // Up to 3 versions from one prompt, same idea as Ad Creation's own
@@ -921,7 +924,7 @@ function HomeScreen() {
     }
     setVideoPrompt("");
     setVideoLines("");
-    setVideoModel("omni");
+    setVideoModel(DEFAULT_VIDEO_MODEL);
     setVideoAspectRatio("1:1");
     setVideoDuration(8);
     setVideoError(null);
@@ -980,7 +983,7 @@ function HomeScreen() {
     setVideoPrompt("");
     setVideoLines("");
     setVideoCompare(false);
-    setVideoModel("omni");
+    setVideoModel(DEFAULT_VIDEO_MODEL);
     setVideoAspectRatio(aspect);
     setVideoDuration(8);
     setVideoError(null);
@@ -2500,7 +2503,7 @@ function HomeScreen() {
                     <div>
                       <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Tool</p>
                       <div className="grid grid-cols-2 gap-2">
-                        {IMAGE_VIDEO_MODEL_OPTIONS.filter((m) => !videoNarrationEnabled || STUDIO_VOICE_MAX[m.id] !== undefined).map((m) => {
+                        {IMAGE_VIDEO_MODEL_OPTIONS.filter((m) => (videoNarrationEnabled ? STUDIO_VOICE_MAX[m.id] !== undefined : m.id !== "omni" || videoModel === "omni")).map((m) => {
                           const selected = !videoCompare && videoModel === m.id;
                           return (
                             <button
@@ -2650,6 +2653,11 @@ function HomeScreen() {
                                 const m = STUDIO_VOICE_MAX[videoModel] !== undefined ? videoModel : "omni";
                                 setVideoModel(m);
                                 const chips = lengthChipsFor(m, true);
+                                setVideoDuration((d) => (chips.some((c) => c.seconds === d) ? d : chips[0].seconds));
+                              } else if (videoModel === "omni") {
+                                // Omni is only listed while the studio voice is on, so leaving that mode returns to the default tool.
+                                setVideoModel(DEFAULT_VIDEO_MODEL);
+                                const chips = lengthChipsFor(DEFAULT_VIDEO_MODEL, false);
                                 setVideoDuration((d) => (chips.some((c) => c.seconds === d) ? d : chips[0].seconds));
                               }
                             }}

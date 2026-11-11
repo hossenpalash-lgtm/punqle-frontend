@@ -5,16 +5,16 @@ import { StyleCarousel } from "@/components/ads/StyleCarousel";
 // "Unlock the premium features" (2026-11-12, founder): the row a visitor sees right after the free video test and the
 // post. It tells the rest of Punqle as a short story, one sideways row of boxes, each box the answer to a problem the
 // visitor has at that moment:
-//   1 Make that video better  ->  2 More kinds of video from the same photo  ->  3 No good photo yet?  ->  4 Keep going every week
+//   1 Make that video better  ->  2 More ways to show your product  ->  3 No good photo yet?  ->  4 Keep going every week
 // The order goes from "the thing you just did" to "what a business needs next", and inside each chapter from the tools
 // most businesses need to the ones only some do (Show Your App and Try-On come last in chapter 2).
 // A box only opens that tool; it starts nothing and costs nothing. For people who already pay the same row is simply
 // "More from Punqle" with no padlocks and no plan box. For a brand-new account (free video test still unused) the row sits
 // under the free-test screen as a preview, and a tap sends them back up to the free test (see handleUnlockPick).
 // Hover motion (never for people who ask their device for less motion): a short silent clip where a real clip of that
-// tool exists (Full video, Product, Ready Actors) or a 2 s Wan 3.0 clip made from the box's own picture (Unboxing, Show Your
-// App, Try-On, made 2026-11-12); for the others the picture itself moves, truthfully: Image cycles three real looks, Upscale
-// sweeps from soft to sharp, Weekly Plan lands its six days one by one, Performance pans across the report.
+// tool exists (Full video, Product, Ready Actors) or a 2 s Wan 3.0 clip made from the box's own picture (Show Your App,
+// Try-On, made 2026-11-12); for the others the picture itself moves, truthfully: Unboxing and Image cycle real samples of what
+// the tool makes, Upscale sweeps from soft to sharp, Weekly Plan lands its six days one by one, Performance pans across the report.
 
 export type UnlockTarget =
   | "video"
@@ -33,7 +33,7 @@ type Chapter = 0 | 1 | 2 | 3;
 
 const CHAPTERS: { name: string; tone: string }[] = [
   { name: "Make that video better", tone: "bg-emerald-100 text-emerald-800" },
-  { name: "More kinds of video from the same photo", tone: "bg-blue-100 text-blue-800" },
+  { name: "More ways to show your product", tone: "bg-blue-100 text-blue-800" },
   { name: "No good photo yet?", tone: "bg-amber-100 text-amber-900" },
   { name: "Keep going every week", tone: "bg-rose-100 text-rose-800" },
 ];
@@ -57,8 +57,8 @@ const ITEMS: Item[] = [
   { target: "video", chapter: 0, problem: "Only 4 seconds, with a watermark?", name: "Full video", blurb: "Up to 30 s, 1080p, no watermark. 3 engines and the Enhancer.", image: "/demo/engine-compare-poster.jpg", clip: "/demo/engine-compare.mp4", chip: "from 15 credits" },
   { target: "product", chapter: 1, problem: "Want a person showing your product?", name: "Product", blurb: "Someone holds it and talks about it.", image: "/video-style-previews/cinematic_ugc.jpg", clip: "/video-style-previews/cinematic_ugc.mp4", chip: "from 3 credits" },
   { target: "actors", chapter: 1, problem: "Don't want to be on camera yourself?", name: "Ready Actors", blurb: "A real filmed actor says your words.", image: "/video-style-previews/ai_actor.jpg", clip: "/video-style-previews/ai_actor.mp4", chip: "from 30 credits" },
-  { target: "unboxing", chapter: 1, problem: "Selling something people open?", name: "Unboxing", blurb: "Hands open your product on camera.", image: "/showcase-ads/product-in-hand.jpg", clip: "/unlock-previews/unboxing.mp4" },
-  { target: "show_app", chapter: 1, problem: "Have an app or a website?", name: "Show Your App", blurb: "Your screen, on a phone, in a hand.", image: "/showcase-ads/saas.jpg", clip: "/unlock-previews/show_app.mp4" },
+  { target: "unboxing", chapter: 1, problem: "Product photo looks plain?", name: "Unboxing", blurb: "A fresh surface around your own photo, like it was just unboxed.", image: "/scene-previews/marble.jpg", frames: ["/scene-previews/marble.jpg", "/scene-previews/wood.jpg", "/scene-previews/linen.jpg", "/scene-previews/outdoor.jpg", "/scene-previews/tile.jpg"] },
+  { target: "show_app", chapter: 1, problem: "Have an app or a website?", name: "Show Your App", blurb: "Puts your app on an actor's phone screen.", image: "/showcase-ads/saas.jpg", clip: "/unlock-previews/show_app.mp4" },
   { target: "tryon", chapter: 1, problem: "Selling clothes?", name: "Try-On", blurb: "Your clothes on a model, then bring it to life.", image: "/showcase-ads/tryon-result.jpg", clip: "/unlock-previews/tryon.mp4", chip: "from 2 credits" },
   { target: "image", chapter: 2, problem: "Nothing to start from?", name: "Image", blurb: "Studio ad images from one line.", image: "/home/image.jpg", frames: ["/home/image.jpg", "/style-previews/clean_premium.jpg", "/style-previews/bold_energetic.jpg"], chip: "from 2 credits" },
   { target: "upscale", chapter: 2, problem: "Photo or clip a bit blurry?", name: "Upscale", blurb: "Sharpen it to 1080p or 4K.", image: "/examples/jewellery.jpg", picture: "sharpen" },

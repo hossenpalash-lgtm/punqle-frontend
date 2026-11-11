@@ -27,6 +27,7 @@ import {
   ZoomIn,
 } from "lucide-react";
 import { HomeShowcase } from "@/components/home/HomeShowcase";
+import { UnlockRow, type UnlockTarget } from "@/components/home/UnlockRow";
 import { useEffect, useRef, useState } from "react";
 import { consumePostReturn } from "@/lib/post-return";
 import type { PlatformKey } from "@/components/PlatformTile";
@@ -43,6 +44,7 @@ import {
   checkImageVideoStatus,
   fetchRecentVideos,
   fetchFreeTasterStatus,
+  fetchSubscriptionStatus,
   fetchMetaStatus,
   fetchTikTokStatus,
   fetchYouTubeStatus,
@@ -433,19 +435,33 @@ function HomeScreen() {
   const [tasterResultJobId, setTasterResultJobId] = useState<string | null>(null); // the free-comparison job whose video is on screen (needed to unlock it)
   const [tasterActionError, setTasterActionError] = useState<string | null>(null);
   const [exampleLoading, setExampleLoading] = useState<string | null>(null); // which "Try an example" card is loading its photo
+  // True once the server has answered about the free test (so the "Unlock" row below never flashes for a new account
+  // whose answer has not arrived yet), and whether the account pays (the row then reads "More from Punqle", no padlocks).
+  const [tasterChecked, setTasterChecked] = useState(false);
+  const [subscribed, setSubscribed] = useState<boolean | null>(null);
   const refreshTasterStatus = () => {
     fetchFreeTasterStatus()
       .then((s) => {
         setTasterAvailable(s.available);
         if (s.models?.length) setTasterModelCount(s.models.length);
       })
-      .catch(() => setTasterAvailable(false));
+      .catch(() => setTasterAvailable(false))
+      .finally(() => setTasterChecked(true));
   };
   useEffect(() => {
     if (homeMode !== "video") return;
     refreshTasterStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeMode]);
+  // Does this account pay? Asked only when the "Unlock" row could show (free test already used or not offered).
+  useEffect(() => {
+    if (homeMode !== "video" || !tasterChecked || tasterAvailable || subscribed !== null) return;
+    let cancelled = false;
+    fetchSubscriptionStatus()
+      .then((s) => { if (!cancelled) setSubscribed(!!s.subscribed); })
+      .catch(() => { if (!cancelled) setSubscribed(false); });
+    return () => { cancelled = true; };
+  }, [homeMode, tasterChecked, tasterAvailable, subscribed]);
   // Back from connecting Instagram / Facebook / TikTok / YouTube from a Post panel (lib/post-return.ts): go straight to the
   // newest video with that platform's Post panel open, instead of dropping the customer on the home screen to hunt for it.
   const [returnTile, setReturnTile] = useState<PlatformKey | null>(null);
@@ -965,6 +981,54 @@ function HomeScreen() {
     setHomeMode(mode);
     // Arriving on Ready Actors shows the actors straight away.
     if (mode === "talking_actors") setActorPickerOpen(true);
+  };
+
+  // The "Unlock the premium features" row under the Video box.
+  const showUnlockRow =
+    homeMode === "video" &&
+    tasterChecked &&
+    !tasterAvailable &&
+    subscribed !== null &&
+    (videoPanel === "closed" || videoPanel === "result");
+  const handleUnlockPick = (target: UnlockTarget) => {
+    const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+    switch (target) {
+      case "billing":
+        window.dispatchEvent(new Event("punqle:open-billing"));
+        return;
+      case "video":
+        // On the free result the upgrade buttons are right above, so just go up to them; otherwise open a fresh Video box.
+        if (!(videoPanel === "result" && resultFromTaster)) handleSwitchMode("video");
+        break;
+      case "product":
+        handleSwitchMode("product");
+        break;
+      case "actors":
+        handleSwitchMode("talking_actors");
+        break;
+      case "unboxing":
+        handleSwitchMode("unboxing");
+        break;
+      case "show_app":
+        handleSwitchMode("show_app");
+        break;
+      case "image":
+        handleSwitchMode("image");
+        break;
+      case "upscale":
+        handleSwitchMode("upscale");
+        break;
+      case "tryon":
+        goTo("tryon");
+        break;
+      case "plan":
+        goTo("plan");
+        break;
+      case "performance":
+        goTo("performance");
+        break;
+    }
+    scrollTop();
   };
 
   const handleOpenVideoComposer = () => {
@@ -3642,6 +3706,11 @@ function HomeScreen() {
               </>
             )}
           </div>
+
+          {/* "Unlock the premium features" (2026-11-12): the rest of Punqle as a story, right under the Video box once the
+              free video test is used (or not offered) and the box is waiting or showing a result. Not while a video is
+              being made, and never over the first-visit free-test screen (that screen has one job). */}
+          {showUnlockRow && <UnlockRow subscribed={subscribed === true} onPick={handleUnlockPick} />}
         </div>
       )}
 

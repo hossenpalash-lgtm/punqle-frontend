@@ -11,7 +11,19 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 // Phone widths leave the next card visibly peeking (about 2 cards + a sliver); wider screens get the medium 156 px card.
 const CARD_WIDTH = "w-[120px] min-[400px]:w-[132px] sm:w-[156px]";
 
-export function StyleCarousel({ label, children }: { label: string; children: ReactNode }) {
+// `cardWidth` lets another row (the home screen's "Unlock the premium features") use bigger cards with the same
+// scrolling behaviour; `noun` names what the arrows move ("styles" by default).
+export function StyleCarousel({
+  label,
+  children,
+  cardWidth = CARD_WIDTH,
+  noun = "styles",
+}: {
+  label: string;
+  children: ReactNode;
+  cardWidth?: string;
+  noun?: string;
+}) {
   const scroller = useRef<HTMLDivElement>(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(false);
@@ -68,7 +80,7 @@ export function StyleCarousel({ label, children }: { label: string; children: Re
         }}
       >
         {Children.map(children, (child) => (
-          <div data-carousel-cell className={`${CARD_WIDTH} shrink-0 snap-start text-left last:snap-end [&>button]:h-full [&>button]:w-full`}>
+          <div data-carousel-cell className={`${cardWidth} shrink-0 snap-start text-left last:snap-end [&>button]:h-full [&>button]:w-full`}>
             {child}
           </div>
         ))}
@@ -76,7 +88,7 @@ export function StyleCarousel({ label, children }: { label: string; children: Re
       {canLeft && (
         <button
           type="button"
-          aria-label="Show earlier styles"
+          aria-label={`Show earlier ${noun}`}
           onClick={() => page(-1)}
           className="absolute left-1 top-[calc(50%-18px)] z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-md transition-colors hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground sm:flex"
         >
@@ -86,7 +98,7 @@ export function StyleCarousel({ label, children }: { label: string; children: Re
       {canRight && (
         <button
           type="button"
-          aria-label="Show more styles"
+          aria-label={`Show more ${noun}`}
           onClick={() => page(1)}
           className="absolute right-1 top-[calc(50%-18px)] z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-md transition-colors hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground sm:flex"
         >

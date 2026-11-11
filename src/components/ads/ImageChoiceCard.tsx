@@ -20,6 +20,7 @@ export function ImageChoiceCard({
   selected,
   video = false,
   videoSrc,
+  badge,
   onClick,
 }: {
   image: string;
@@ -28,6 +29,7 @@ export function ImageChoiceCard({
   selected: boolean;
   video?: boolean;
   videoSrc?: string;
+  badge?: string; // a small tag over the picture, e.g. "Recommended"
   onClick: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -89,6 +91,11 @@ export function ImageChoiceCard({
         {video && (
           <span className="glass-chip absolute bottom-1.5 left-1.5 flex h-5 w-5 items-center justify-center rounded-full">
             <Play className="h-2.5 w-2.5 fill-current" />
+          </span>
+        )}
+        {badge && (
+          <span className="absolute left-1.5 top-1.5 rounded-full bg-[#C13584] px-2 py-0.5 text-[10px] font-semibold leading-none text-white">
+            {badge}
           </span>
         )}
         {selected && (

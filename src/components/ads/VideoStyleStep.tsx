@@ -1,6 +1,7 @@
-import { Check, Sparkles } from "lucide-react";
-import { AI_PRESENTER_AVAILABLE, VIDEO_STYLES, type VideoStyle, type VideoStyleOption } from "@/lib/video-style";
+import { Check } from "lucide-react";
+import { AI_PRESENTER_AVAILABLE, VIDEO_STYLES, type VideoStyle } from "@/lib/video-style";
 import { ImageChoiceCard } from "./ImageChoiceCard";
+import { StyleCarousel } from "./StyleCarousel";
 
 const STYLE_PREVIEW: Record<VideoStyle, string> = {
   product_showcase: "/video-style-previews/product_showcase.jpg",
@@ -31,11 +32,7 @@ const STYLE_PREVIEW: Record<VideoStyle, string> = {
 // members — Ready Actors is genuinely filmed, Cinematic UGC is fully
 // AI-generated (see video-style.ts). "Own" is the accurate shared claim:
 // both are Punqle's own pipelines, not a shared realism claim.
-const STYLE_GROUPS: { key: VideoStyleOption["group"]; title: string; subtitle: string }[] = [
-  { key: "ai_ugc", title: "AI UGC — Recommended", subtitle: "Punqle's own actors and product-in-hand video" },
-  { key: "product", title: "Product Videos", subtitle: "Product-focused styles without a presenter" },
-  { key: "presenter", title: "AI Presenter", subtitle: "A stock avatar reads your script" },
-];
+const PRESENTER_SUBTITLE = "A stock avatar reads your script";
 
 // Most cards cost the same, so a "30 credits" line on each of them was five copies of one
 // fact (the button at the bottom already shows the price of the picked style, 2026-11-10).
@@ -62,91 +59,56 @@ export function VideoStyleStep({
   selected: VideoStyle;
   onSelect: (v: VideoStyle) => void;
 }) {
+  // One sideways row (2026-11-11): Punqle's own AI UGC styles first, tagged "Recommended", then the product-focused ones.
+  const rowStyles = [
+    ...VIDEO_STYLES.filter((s) => s.group === "ai_ugc"),
+    ...VIDEO_STYLES.filter((s) => s.group === "product"),
+  ];
+  const presenter = AI_PRESENTER_AVAILABLE ? VIDEO_STYLES.find((s) => s.group === "presenter") : undefined;
   return (
     <div className="flex flex-col items-center text-center">
-      {/* No own heading here (2026-09-23) — this only ever renders inline
-          under AdVideoForm's own "Style" label now, so a second "How
-          should it look?" title was pure duplication. */}
+      {/* No own heading here (2026-09-23) - this only ever renders inline under AdVideoForm's own "Style" label. */}
       <div className="flex w-full flex-col gap-3">
-        {STYLE_GROUPS.filter((g) => AI_PRESENTER_AVAILABLE || g.key !== "presenter").map((group) => {
-          const isAiUgc = group.key === "ai_ugc";
-          // The presenter group is one card, so as a 3-column grid it left two thirds of a
-          // ~300px block empty under its own "Also available" heading. One compact row now
-          // (2026-11-10): same choice, same price note, a fifth of the height.
-          if (group.key === "presenter") {
-            const style = VIDEO_STYLES.find((s) => s.group === "presenter");
-            if (!style) return null;
-            const isSelected = selected === style.id;
-            return (
-              <button
-                key={group.key}
-                type="button"
-                onClick={() => onSelect(style.id)}
-                aria-pressed={isSelected}
-                className={[
-                  "flex items-center gap-3 rounded-2xl border bg-card p-1.5 text-left transition-colors",
-                  isSelected ? "border-foreground ring-1 ring-foreground" : "border-border hover:border-foreground/40",
-                ].join(" ")}
-              >
-                <img src={STYLE_PREVIEW[style.id]} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
-                <span className="min-w-0 flex-1">
-                  <span className="block font-display text-[13px] leading-tight text-foreground">{style.label}</span>
-                  <span className="block text-xs text-muted-foreground">{group.subtitle}</span>
-                </span>
-                {style.creditHint !== COMMON_CREDIT_HINT && (
-                  <span className="shrink-0 text-[11.5px] font-semibold text-muted-foreground">{style.creditHint}</span>
-                )}
-                {isSelected && (
-                  <span className="mr-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-                    <Check className="h-3 w-3" />
-                  </span>
-                )}
-              </button>
-            );
-          }
-          return (
-          <div
-            key={group.key}
-            className={["flex flex-col gap-1.5", isAiUgc ? "rounded-3xl border border-[#F0CBE3] p-2.5" : ""].join(" ")}
-            style={isAiUgc ? { background: "linear-gradient(135deg, #FDF0F5 0%, #FBEAF4 50%, #F3EAFB 100%)" } : undefined}
+        <StyleCarousel label="Video styles">
+          {rowStyles.map((style) => (
+            <ImageChoiceCard
+              key={style.id}
+              image={STYLE_PREVIEW[style.id]}
+              videoSrc={STYLE_CLIP[style.id]}
+              label={style.label}
+              badge={style.group === "ai_ugc" ? "Recommended" : undefined}
+              sublabel={style.creditHint === COMMON_CREDIT_HINT ? undefined : style.creditHint}
+              video
+              selected={selected === style.id}
+              onClick={() => onSelect(style.id)}
+            />
+          ))}
+        </StyleCarousel>
+        {presenter && (
+          <button
+            type="button"
+            onClick={() => onSelect(presenter.id)}
+            aria-pressed={selected === presenter.id}
+            className={[
+              "flex items-center gap-3 rounded-2xl border bg-card p-1.5 text-left transition-colors",
+              selected === presenter.id ? "border-foreground ring-1 ring-foreground" : "border-border hover:border-foreground/40",
+            ].join(" ")}
           >
-            <div className="flex items-center gap-1.5 px-1 text-left">
-              {isAiUgc && <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#C13584]" />}
-              <span className={["text-xs font-semibold uppercase tracking-wide", isAiUgc ? "text-[#C13584]" : "text-foreground"].join(" ")}>
-                {group.title}
+            <img src={STYLE_PREVIEW[presenter.id]} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+            <span className="min-w-0 flex-1">
+              <span className="block font-display text-[13px] leading-tight text-foreground">{presenter.label}</span>
+              <span className="block text-xs text-muted-foreground">{PRESENTER_SUBTITLE}</span>
+            </span>
+            {presenter.creditHint !== COMMON_CREDIT_HINT && (
+              <span className="shrink-0 text-[11.5px] font-semibold text-muted-foreground">{presenter.creditHint}</span>
+            )}
+            {selected === presenter.id && (
+              <span className="mr-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+                <Check className="h-3 w-3" />
               </span>
-            </div>
-            <p className="px-1 text-left text-xs text-muted-foreground">{group.subtitle}</p>
-            {(() => {
-              const groupStyles = VIDEO_STYLES.filter((s) => s.group === group.key);
-              // Image cards (2026-10-05, founder liked AdCreative.ai's pickers
-              // and asked for this step too — reversing the earlier
-              // "compact chips only" call). The recommended AI UGC group
-              // gets 2 larger columns so it still reads as the hero
-              // choice; the other groups use 3. Ready Actors shows a real
-              // Punqle actor; the rest are one-time illustrative stills
-              // under /public/video-style-previews.
-              const colsClass = isAiUgc ? "grid-cols-2" : "grid-cols-3";
-              return (
-                <div className={["grid gap-2", colsClass].join(" ")}>
-                  {groupStyles.map((style) => (
-                    <ImageChoiceCard
-                      key={style.id}
-                      image={STYLE_PREVIEW[style.id]}
-                      videoSrc={STYLE_CLIP[style.id]}
-                      label={style.label}
-                      sublabel={style.creditHint === COMMON_CREDIT_HINT ? undefined : style.creditHint}
-                      video
-                      selected={selected === style.id}
-                      onClick={() => onSelect(style.id)}
-                    />
-                  ))}
-                </div>
-              );
-            })()}
-          </div>
-          );
-        })}
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

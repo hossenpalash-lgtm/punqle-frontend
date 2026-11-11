@@ -1,6 +1,7 @@
 import { AlertCircle, Check, ChevronDown, Loader2, Settings2, Sparkles } from "lucide-react";
 import { GOALS } from "./AdBriefStep";
 import { PillSelect } from "./SettingPills";
+import { StyleCarousel } from "./StyleCarousel";
 import { TopUpButton } from "./TopUpButton";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -134,7 +135,6 @@ export function AdCreationForm({
   const errorBannerRef = useRef<HTMLDivElement>(null);
   const [angle, setAngle] = useState<string | null>(null);
   const [visualDirection, setVisualDirection] = useState<VisualDirection>("clean_premium");
-  const [showMoreStyles, setShowMoreStyles] = useState(false);
 
   useEffect(() => {
     if (!initialGeneratedImage) return;
@@ -522,7 +522,6 @@ export function AdCreationForm({
     setGoalChosen(false);
     setAngle(null);
     setVisualDirection("clean_premium");
-    setShowMoreStyles(false);
     handleFileChange(null);
     setActorId(undefined);
     setActorGenderFilter("all");
@@ -547,7 +546,7 @@ export function AdCreationForm({
     setError(null);
   };
 
-  const allDirections = [...VISUAL_DIRECTIONS, ...(showMoreStyles ? MORE_VISUAL_DIRECTIONS : [])];
+  const allDirections = [...VISUAL_DIRECTIONS, ...MORE_VISUAL_DIRECTIONS];
 
   return (
     <>
@@ -688,7 +687,8 @@ export function AdCreationForm({
                 style pickers): real sample thumbnails in /public/
                 style-previews, one per direction id, generated once
                 with the exact promptModifier each style sends. */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* All five styles in one sideways row (2026-11-11), so there is no "Show more styles" link any more. */}
+            <StyleCarousel label="Ad styles">
               {allDirections.map((d) => (
                 <ImageChoiceCard
                   key={d.id}
@@ -698,15 +698,7 @@ export function AdCreationForm({
                   onClick={() => setVisualDirection(d.id)}
                 />
               ))}
-            </div>
-            {!showMoreStyles && (
-              <button
-                onClick={() => setShowMoreStyles(true)}
-                className="mt-2 text-[12px] font-semibold text-muted-foreground underline"
-              >
-                Show more styles
-              </button>
-            )}
+            </StyleCarousel>
           </div>
 
           <button

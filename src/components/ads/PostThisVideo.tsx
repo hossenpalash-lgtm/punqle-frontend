@@ -4,6 +4,7 @@ import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
 import { PublishVideoToMeta } from "./PublishVideoToMeta";
 import type { VideoAspectRatio } from "@/lib/api";
+import { rememberPostTile } from "@/lib/post-return";
 
 // "Post this video" under a finished video (the home screens' result panel and Recent videos). Until 2026-11-11 a finished
 // video could only be downloaded there, which sent the customer out of Punqle at the moment they liked the result.
@@ -25,13 +26,15 @@ export function PostThisVideo({
   headline,
   aspectRatio,
   videoKept,
+  initialOpen,
 }: {
   videoUrl: string | null; // a "data:video/mp4;base64,..." URL, the shape the publish panels expect
   headline: string;
   aspectRatio: VideoAspectRatio;
   videoKept?: boolean; // true when the server keeps finished videos for 14 days (Recent videos)
+  initialOpen?: PlatformKey; // reopen this platform's panel straight away (the customer just came back from connecting it)
 }) {
-  const [open, setOpen] = useState<PlatformKey | null>(null);
+  const [open, setOpen] = useState<PlatformKey | null>(initialOpen ?? null);
 
   return (
     <div className="border-t border-border px-4 pb-1 pt-2.5">
@@ -44,7 +47,10 @@ export function PostThisVideo({
               key={b.key}
               type="button"
               aria-pressed={selected}
-              onClick={() => setOpen(selected ? null : b.key)}
+              onClick={() => {
+                if (!selected) rememberPostTile(b.key);
+                setOpen(selected ? null : b.key);
+              }}
               className={[
                 "flex w-16 flex-col items-center gap-0.5 rounded-xl px-0.5 pb-1 pt-1 transition-colors",
                 selected ? "bg-secondary ring-2 ring-foreground" : "hover:bg-secondary/60",

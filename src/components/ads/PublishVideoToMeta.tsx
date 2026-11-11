@@ -1,6 +1,7 @@
 import { AlertCircle, Check, CheckCircle2, ChevronRight, Facebook, Loader2, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchMetaStatus, getMetaConnectUrl, publishVideoToMeta, type ApiMetaPublishResponse } from "@/lib/api";
+import { markPostReturn } from "@/lib/post-return";
 import { showToast } from "@/components/GlassToast";
 import { PlatformTile } from "@/components/PlatformTile";
 
@@ -77,10 +78,9 @@ export function PublishVideoToMeta({
 
   const handleConnect = async () => {
     if (connecting) return;
-    const warning = videoKept
-      ? "Connecting will leave this page. Your video stays in Recent videos for 14 days: open it there and tap Post. Continue?"
-      : "Connecting will leave this page — your current video won't be saved. Continue?";
-    if (!window.confirm(warning)) return;
+    // A kept video needs no warning: Punqle brings the customer straight back to it afterwards (lib/post-return.ts).
+    if (!videoKept && !window.confirm("Connecting will leave this page — your current video won't be saved. Continue?")) return;
+    if (videoKept) markPostReturn();
     setConnecting(true);
     setError(null);
     try {

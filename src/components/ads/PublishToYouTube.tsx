@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle2, ChevronRight, Loader2, Send, Youtube } from "lucide-react";
 import { useEffect, useState } from "react";
 import { showToast } from "@/components/GlassToast";
+import { markPostReturn } from "@/lib/post-return";
 import { PlatformTile } from "@/components/PlatformTile";
 import { ScheduleSwitch } from "./ScheduleSwitch";
 import {
@@ -96,12 +97,11 @@ export function PublishToYouTube({
     // Reached mid-flow with a freshly generated (already paid-for) video
     // sitting only in memory — a bare OAuth redirect would silently
     // discard it, same reason PublishToMeta warns before navigating away.
-    const warning = videoKept
-      ? "Connecting will leave this page. Your video stays in Recent videos for 14 days: open it there and tap Post. Continue?"
-      : "Connecting will leave this page — your current video and headline won't be saved. Continue?";
-    if (!window.confirm(warning)) {
+    // A kept video needs no warning: Punqle brings the customer straight back to it afterwards (lib/post-return.ts).
+    if (!videoKept && !window.confirm("Connecting will leave this page — your current video and headline won't be saved. Continue?")) {
       return;
     }
+    if (videoKept) markPostReturn();
     setConnecting(true);
     setError(null);
     try {

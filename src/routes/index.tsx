@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import { HomeShowcase } from "@/components/home/HomeShowcase";
 import { useEffect, useRef, useState } from "react";
+import { consumePostReturn } from "@/lib/post-return";
+import type { PlatformKey } from "@/components/PlatformTile";
 import {
   addEmotionTags,
   type ActorVoiceEngine,
@@ -41,6 +43,9 @@ import {
   checkImageVideoStatus,
   fetchRecentVideos,
   fetchFreeTasterStatus,
+  fetchMetaStatus,
+  fetchTikTokStatus,
+  fetchYouTubeStatus,
   startFreeTaster,
   checkTalkingVideoStatus,
   checkVideoUpscaleStatus,
@@ -441,6 +446,26 @@ function HomeScreen() {
     refreshTasterStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeMode]);
+  // Back from connecting Instagram / Facebook / TikTok / YouTube from a Post panel (lib/post-return.ts): go straight to the
+  // newest video with that platform's Post panel open, instead of dropping the customer on the home screen to hunt for it.
+  const [returnTile, setReturnTile] = useState<PlatformKey | null>(null);
+  useEffect(() => {
+    const tile = consumePostReturn();
+    if (!tile) return;
+    let cancelled = false;
+    const check = tile === "youtube" ? fetchYouTubeStatus() : tile === "tiktok" ? fetchTikTokStatus() : fetchMetaStatus();
+    check
+      .then((st) => {
+        if (cancelled || !st.connected) return;
+        setHomeMode("video");
+        setShowRecent(true);
+        setReturnTile(tile);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   // A brand-new account (its free video test still unused) opens on Video instead of Ready Actors, so the free test is the
   // first thing it sees. Skipped when the customer already tapped anything before the answer arrived.
   const touchedRef = useRef(false);
@@ -2401,7 +2426,13 @@ function HomeScreen() {
                     />
                   </>
                 ) : !videoRefImage && showRecent ? (
-                  <RecentVideos onClose={() => setShowRecent(false)} />
+                  <RecentVideos
+                    onClose={() => {
+                      setShowRecent(false);
+                      setReturnTile(null);
+                    }}
+                    returningFrom={returnTile}
+                  />
                 ) : !videoRefImage ? (
                   <div className="flex flex-col items-center gap-3 px-4 py-8 text-center sm:py-10">
                     {freeFirst ? (

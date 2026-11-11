@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { fetchRecentVideos } from "@/lib/api";
 import type { ApiRecentVideo, VideoAspectRatio } from "@/lib/api";
 import { PostThisVideo } from "./PostThisVideo";
+import type { PlatformKey } from "@/components/PlatformTile";
 
 const LABELS: Record<string, string> = { omni: "Gemini Omni", kling_3_pro: "Kling", kling_4: "Kling 4.0", seedance_2_5: "Seedance 2.5" };
 
@@ -36,15 +37,24 @@ function readAspect(blobUrl: string): Promise<VideoAspectRatio> {
 // The user's videos from the last 14 days. Videos that finished while the page was closed show up here.
 // "Post" opens the same YouTube / TikTok panels as the result screen, so a customer who had to leave to connect an account
 // can come back here and post the very same video.
-export function RecentVideos({ onClose }: { onClose: () => void }) {
+// `returningFrom`: set when the customer has just connected that platform, so the newest video opens for posting at once.
+export function RecentVideos({ onClose, returningFrom }: { onClose: () => void; returningFrom?: PlatformKey | null }) {
   const [videos, setVideos] = useState<ApiRecentVideo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [posting, setPosting] = useState<{ id: string; dataUrl: string | null; aspect: VideoAspectRatio; failed: boolean } | null>(null);
+  const [autoOpened, setAutoOpened] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     fetchRecentVideos()
-      .then((r) => !cancelled && setVideos(r.videos))
+      .then((r) => {
+        if (cancelled) return;
+        setVideos(r.videos);
+        if (returningFrom && r.videos.length > 0) {
+          setAutoOpened(true);
+          void startPosting(r.videos[0]);
+        }
+      })
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Couldn't load your videos."));
     return () => {
       cancelled = true;
@@ -64,6 +74,11 @@ export function RecentVideos({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="space-y-3 px-4 py-3">
+      {returningFrom && (
+        <p className="rounded-2xl bg-secondary px-3 py-2.5 text-xs font-semibold text-foreground">
+          Connected. Your newest video is open below: tap Post to send it.
+        </p>
+      )}
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-display text-sm font-extrabold text-foreground">Recent videos</p>
@@ -126,7 +141,14 @@ export function RecentVideos({ onClose }: { onClose: () => void }) {
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
-          <PostThisVideo videoUrl={posting.dataUrl} headline="My ad video" aspectRatio={posting.aspect} videoKept />
+          <PostThisVideo
+            key={posting.id}
+            videoUrl={posting.dataUrl}
+            headline="My ad video"
+            aspectRatio={posting.aspect}
+            videoKept
+            initialOpen={autoOpened && returningFrom && videos && posting.id === videos[0]?.id ? returningFrom : undefined}
+          />
         </div>
       )}
     </div>

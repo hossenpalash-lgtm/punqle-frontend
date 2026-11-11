@@ -721,7 +721,7 @@ export function AdCreationForm({
           {settingsOpen && (
             <div className="mb-4 w-full rounded-2xl border border-border bg-card p-4 text-left">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Button on the ad</p>
-              <div className="mb-4">
+              <div className="mb-4 flex">
                 <PillSelect
                   label="Goal"
                   value={goal}

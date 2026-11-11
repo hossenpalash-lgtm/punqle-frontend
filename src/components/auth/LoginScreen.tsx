@@ -12,6 +12,8 @@ import { UnlockRow } from "@/components/home/UnlockRow";
 import { PunqleLogo } from "@/components/PunqleLogo";
 import { LegalFooter } from "@/components/LegalFooter";
 
+// 2026-11-12 (later): the headline now says what a visitor gets (a video from one photo, posted in one click); the old
+// promise "Ads that don't look AI-made" lives on in the Enhancer section below. (Founder left the call to me.)
 // 2026-11-12 trim (founder: keep what is still needed, drop the rest). The page is now one story: the hero and its
 // free video, the proof of the two killer features (3-engine compare, one-click post), the Enhancer, then the same
 // "Unlock the premium features" row the app shows (every box opens the sign-up form here), prices, one closing button.
@@ -130,11 +132,11 @@ export function LoginScreen() {
           AI ads for every business
         </span>
         <h1 className="text-balance font-display text-[34px] font-extrabold leading-[1.05] sm:text-[52px]">
-          Ads that don't look <span className="italic text-accent">AI-made.</span>
+          Turn one photo into a <span className="italic text-accent">video.</span> Post it in one click.
         </h1>
         <p className="max-w-xl text-[17px] leading-relaxed text-muted-foreground">
-          One real filmed actor, your own product photo, or a blank page — Punqle turns any of them into
-          ready-to-post ads for Facebook, Instagram, TikTok and YouTube.
+          Add a photo and one line. Two AI video tools make it side by side, you pick your favourite, and it goes to
+          Facebook, Instagram, TikTok or YouTube. Your first one is free.
         </p>
 
         {!formVisible ? (

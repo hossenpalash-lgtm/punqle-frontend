@@ -13,7 +13,7 @@ import { StyleCarousel } from "@/components/ads/StyleCarousel";
 // under the free-test screen as a preview, and a tap sends them back up to the free test (see handleUnlockPick).
 // Hover motion (never for people who ask their device for less motion): a short silent clip where a real clip of that
 // tool exists (Full video, Product, Ready Actors) or a 2 s Wan 3.0 clip made from the box's own picture (Show Your App,
-// Try-On, made 2026-11-12); for the others the picture itself moves, truthfully: Unboxing and Image cycle real samples of what
+// Try-On, made 2026-11-12; Show Your App's picture is a real output of that tool, an actor holding a phone with Punqle's own page on it); for the others the picture itself moves, truthfully: Unboxing and Image cycle real samples of what
 // the tool makes, Upscale sweeps from soft to sharp, Weekly Plan lands its six days one by one, Performance pans across the report.
 
 export type UnlockTarget =
@@ -50,6 +50,7 @@ interface Item {
   picture?: "sharpen" | "week";
   frames?: string[]; // Image: three real looks that fade into each other while hovered (frames[0] is the resting picture)
   pan?: boolean; // Performance: a wide report picture that slides sideways while hovered
+  focus?: string; // where a taller picture is cropped from (a Tailwind object-position class), default top
 }
 
 // Credit chips only where the app itself already states a "from N credits" price.
@@ -58,7 +59,7 @@ const ITEMS: Item[] = [
   { target: "product", chapter: 1, problem: "Want a person showing your product?", name: "Product", blurb: "Someone holds it and talks about it.", image: "/video-style-previews/cinematic_ugc.jpg", clip: "/video-style-previews/cinematic_ugc.mp4", chip: "from 3 credits" },
   { target: "actors", chapter: 1, problem: "Don't want to be on camera yourself?", name: "Ready Actors", blurb: "A real filmed actor says your words.", image: "/video-style-previews/ai_actor.jpg", clip: "/video-style-previews/ai_actor.mp4", chip: "from 30 credits" },
   { target: "unboxing", chapter: 1, problem: "Product photo looks plain?", name: "Unboxing", blurb: "A fresh surface around your own photo, like it was just unboxed.", image: "/scene-previews/marble.jpg", frames: ["/scene-previews/marble.jpg", "/scene-previews/wood.jpg", "/scene-previews/linen.jpg", "/scene-previews/outdoor.jpg", "/scene-previews/tile.jpg"] },
-  { target: "show_app", chapter: 1, problem: "Have an app or a website?", name: "Show Your App", blurb: "Puts your app on an actor's phone screen.", image: "/showcase-ads/saas.jpg", clip: "/unlock-previews/show_app.mp4" },
+  { target: "show_app", chapter: 1, problem: "Have an app or a website?", name: "Show Your App", blurb: "Puts your app on an actor's phone screen.", image: "/unlock-previews/show_app_sample.jpg", clip: "/unlock-previews/show_app_sample.mp4", focus: "object-[50%_80%]" },
   { target: "tryon", chapter: 1, problem: "Selling clothes?", name: "Try-On", blurb: "Your clothes on a model, then bring it to life.", image: "/showcase-ads/tryon-result.jpg", clip: "/unlock-previews/tryon.mp4", chip: "from 2 credits" },
   { target: "image", chapter: 2, problem: "Nothing to start from?", name: "Image", blurb: "Studio ad images from one line.", image: "/home/image.jpg", frames: ["/home/image.jpg", "/style-previews/clean_premium.jpg", "/style-previews/bold_energetic.jpg"], chip: "from 2 credits" },
   { target: "upscale", chapter: 2, problem: "Photo or clip a bit blurry?", name: "Upscale", blurb: "Sharpen it to 1080p or 4K.", image: "/examples/jewellery.jpg", picture: "sharpen" },
@@ -163,7 +164,7 @@ function BoxPicture({ item, active, locked }: { item: Item; active: boolean; loc
             src={item.image}
             alt=""
             loading="lazy"
-            className={["h-full w-full object-cover", item.pan ? "transition-[object-position] duration-[2200ms] ease-in-out motion-reduce:transition-none" : "object-top"].join(" ")}
+            className={["h-full w-full object-cover", item.pan ? "transition-[object-position] duration-[2200ms] ease-in-out motion-reduce:transition-none" : (item.focus ?? "object-top")].join(" ")}
             style={item.pan ? { objectPosition: motion ? "100% 0%" : "0% 0%" } : undefined}
           />
           {item.picture === "sharpen" && (
@@ -203,7 +204,7 @@ function BoxPicture({ item, active, locked }: { item: Item; active: boolean; loc
           preload="none"
           aria-hidden="true"
           onPlaying={() => setRunning(true)}
-          className={["absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-200", running ? "opacity-100" : "opacity-0"].join(" ")}
+          className={["absolute inset-0 h-full w-full object-cover transition-opacity duration-200", item.focus ?? "object-top", running ? "opacity-100" : "opacity-0"].join(" ")}
         />
       )}
       {locked && (

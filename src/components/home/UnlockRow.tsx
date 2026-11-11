@@ -45,6 +45,7 @@ interface Item {
   clip?: string;
   chip?: string;
   picture?: "sharpen" | "week";
+  focus?: string; // where a wide picture is cropped from (a Tailwind object-position class), default top
 }
 
 // Credit chips only where the app itself already states a "from N credits" price.
@@ -58,7 +59,7 @@ const ITEMS: Item[] = [
   { target: "image", chapter: 2, problem: "Nothing to start from?", name: "Image", blurb: "Studio ad images from one line.", image: "/home/image.jpg", chip: "from 2 credits" },
   { target: "upscale", chapter: 2, problem: "Photo or clip a bit blurry?", name: "Upscale", blurb: "Sharpen it to 1080p or 4K.", image: "/examples/jewellery.jpg", picture: "sharpen" },
   { target: "plan", chapter: 3, problem: "Can't keep posting every week?", name: "Weekly Plan", blurb: "A week of posts planned for you, then posted.", picture: "week" },
-  { target: "performance", chapter: 3, problem: "What works, and what do others do?", name: "Performance and Competitive Edge", blurb: "Your real numbers, and what your competitors post.", image: "/demo/competitive-edge.jpg" },
+  { target: "performance", chapter: 3, problem: "What works, and what do others do?", name: "Performance and Competitive Edge", blurb: "Your real numbers, and what your competitors post.", image: "/demo/competitive-edge.jpg", focus: "object-left-top" },
 ];
 
 const WEEK_TILES = [
@@ -120,7 +121,7 @@ function BoxPicture({ item, active, locked }: { item: Item; active: boolean; loc
         </span>
       ) : (
         <>
-          <img src={item.image} alt="" loading="lazy" className="h-full w-full object-cover object-top" />
+          <img src={item.image} alt="" loading="lazy" className={["h-full w-full object-cover", item.focus ?? "object-top"].join(" ")} />
           {item.picture === "sharpen" && (
             <>
               {/* the left half is softened, the right half is left sharp: what Upscale does, drawn with the same photo */}

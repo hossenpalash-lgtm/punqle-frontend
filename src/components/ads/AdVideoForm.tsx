@@ -2,10 +2,12 @@ import {
   AlertCircle,
   Captions,
   Check,
+  ChevronDown,
   Clock,
   Download,
   Loader2,
   Music,
+  Settings2,
   Video,
   X,
 } from "lucide-react";
@@ -54,6 +56,9 @@ import { ProductPicker } from "./ProductPicker";
 import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
 import { VideoSettingsBar } from "./VideoSettingsBar";
+import { GOALS } from "./AdBriefStep";
+import { PillSelect } from "./SettingPills";
+import { inferGoalFromDescription } from "@/lib/ad-goal";
 import { VideoStyleStep } from "./VideoStyleStep";
 import { TopUpButton } from "./TopUpButton";
 
@@ -153,6 +158,11 @@ export function AdVideoForm({
 
   const [offerDescription, setOfferDescription] = useState("");
   const [goal, setGoal] = useState<AdGoal>(initialVideo?.goal ?? "sales");
+  // The Goal now lives under "Advanced". Until the customer picks one by hand, the goal follows what they typed (a
+  // salon gets "Book Now", not "Shop Now"; see lib/ad-goal.ts), exactly like Image Ad. A hand-picked goal always wins.
+  const [goalChosen, setGoalChosen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const effectiveGoal: AdGoal = goalChosen ? goal : (inferGoalFromDescription(`${mainInput} ${offerDescription}`) ?? goal);
   const [angle, setAngle] = useState<string | null>(null);
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("product_showcase");
   // Only matters if AI Presenter ends up picked — HeyGen has real Bangla
@@ -473,7 +483,7 @@ export function AdVideoForm({
       // auto-CTA already baked in by the goal-aware prompt. Not used for
       // the on-screen burned headline (wrong shape — this is 2-4 lines,
       // the headline needs to be a single <40-char hook).
-      const capResult = await generateAdCaptions(finalDescription, goal, override.angle, 1);
+      const capResult = await generateAdCaptions(finalDescription, effectiveGoal, override.angle, 1);
       setCaption(capResult.captions[0]?.facebook_caption ?? "");
 
       const style = findVideoStyle(videoStyle);
@@ -484,7 +494,7 @@ export function AdVideoForm({
         imageBase64,
         override.file?.type,
         aspectRatio,
-        goal,
+        effectiveGoal,
         override.angle ?? undefined,
         override.script ?? undefined,
       );
@@ -611,7 +621,7 @@ export function AdVideoForm({
       const baseVideoBase64 = videoUrl.split(",")[1] ?? videoUrl;
       const style = findVideoStyle("product_showcase");
       const styledDescription = `${offerDescription.trim()}, ${style.promptModifier}`;
-      const r = await startVideoGeneration(styledDescription, undefined, undefined, aspectRatio, goal, angle);
+      const r = await startVideoGeneration(styledDescription, undefined, undefined, aspectRatio, effectiveGoal, angle);
       await pollProductScene(r.operation, baseVideoBase64);
     } catch (err) {
       setSceneError(err instanceof Error ? err.message : "Couldn't add a product scene.");
@@ -661,7 +671,7 @@ export function AdVideoForm({
     setStep("generating");
     elapsedIntervalRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
     try {
-      const capResult = await generateAdCaptions(descriptionOverride.trim(), goal, angle, 1);
+      const capResult = await generateAdCaptions(descriptionOverride.trim(), effectiveGoal, angle, 1);
       setCaption(capResult.captions[0]?.facebook_caption ?? "");
       setHeadline(scriptOverride.headline);
 
@@ -701,7 +711,7 @@ export function AdVideoForm({
     setStep("generating");
     elapsedIntervalRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
     try {
-      const capResult = await generateAdCaptions(descriptionOverride.trim(), goal, angle, 1);
+      const capResult = await generateAdCaptions(descriptionOverride.trim(), effectiveGoal, angle, 1);
       setCaption(capResult.captions[0]?.facebook_caption ?? "");
       setHeadline(scriptOverride.headline);
 
@@ -798,7 +808,7 @@ export function AdVideoForm({
     setStep("generating");
     elapsedIntervalRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
     try {
-      const capResult = await generateAdCaptions(finalDescription, goal, angle, 1);
+      const capResult = await generateAdCaptions(finalDescription, effectiveGoal, angle, 1);
       setCaption(capResult.captions[0]?.facebook_caption ?? "");
       setHeadline(capResult.captions[0]?.whatsapp_message ?? finalDescription);
 
@@ -833,7 +843,7 @@ export function AdVideoForm({
     setAnglesLoading(true);
     setInputError(null);
     try {
-      const anglesResult = await generateVideoScriptAngles(description, goal, scriptLanguage);
+      const anglesResult = await generateVideoScriptAngles(description, effectiveGoal, scriptLanguage);
       const chosenIdx = angle ? anglesResult.angles.findIndex((a) => a.angle === angle) : -1;
       const picked = chosenIdx >= 0 ? anglesResult.angles[chosenIdx] : (anglesResult.angles[anglesResult.recommended_index] ?? anglesResult.angles[0]);
       const script = { headline: picked.headline, narration: picked.narration };
@@ -912,6 +922,7 @@ export function AdVideoForm({
     setInputError(null);
     setOfferDescription("");
     setGoal("sales");
+    setGoalChosen(false);
     setAngle(null);
     setAnglesLoading(false);
     setPickedScript(null);
@@ -1130,8 +1141,8 @@ export function AdVideoForm({
             <p className="text-sm text-foreground">{caption}</p>
           </div>
         )}
-        <PublishToYouTube videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} goal={goal} angle={angle} style={videoStyle} />
-        <PublishToTikTok videoUrl={videoUrl} headline={headline} goal={goal} angle={angle} style={videoStyle} />
+        <PublishToYouTube videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} goal={effectiveGoal} angle={angle} style={videoStyle} />
+        <PublishToTikTok videoUrl={videoUrl} headline={headline} goal={effectiveGoal} angle={angle} style={videoStyle} />
         <a
           href={videoUrl}
           download="ad-video.mp4"
@@ -1363,8 +1374,6 @@ export function AdVideoForm({
       <VideoSettingsBar
         aspectRatio={aspectRatio}
         onAspectRatio={setAspectRatio}
-        goal={goal}
-        onGoal={setGoal}
         showProductOptions={videoStyle !== "avatar" && videoStyle !== "cinematic_ugc" && videoStyle !== "ai_actor"}
         angle={angle}
         onAngle={setAngle}
@@ -1549,6 +1558,38 @@ export function AdVideoForm({
             </div>
           )}
       </div>
+
+      <button
+        type="button"
+        onClick={() => setAdvancedOpen((v) => !v)}
+        aria-expanded={advancedOpen}
+        className="mb-3 flex items-center gap-1.5 self-center text-xs font-semibold text-muted-foreground"
+      >
+        <Settings2 className="h-3.5 w-3.5" />
+        Advanced
+        <ChevronDown className={["h-3.5 w-3.5 transition-transform", advancedOpen ? "rotate-180" : ""].join(" ")} />
+      </button>
+      {advancedOpen && (
+        <div className="mb-4 w-full rounded-2xl border border-border bg-card p-4 text-left">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Button on the video</p>
+          <div className="flex">
+            <PillSelect
+              label="Goal"
+              value={effectiveGoal}
+              onChange={(v) => {
+                setGoalChosen(true);
+                setGoal(v as AdGoal);
+              }}
+            >
+              {GOALS.map((g) => (
+                <option key={g.value} value={g.value}>
+                  {g.label}
+                </option>
+              ))}
+            </PillSelect>
+          </div>
+        </div>
+      )}
 
       {currentInsufficientCredits && (
         <div className="mb-4 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">

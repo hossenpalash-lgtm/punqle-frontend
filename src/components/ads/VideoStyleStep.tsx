@@ -46,6 +46,15 @@ const COMMON_CREDIT_HINT = (() => {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
 })();
 
+// Short silent clips that play on a card while it is hovered or picked (see ImageChoiceCard). Made from clips we
+// already had, plus one 2-second Wan 3.0 clip for Cinematic UGC; each is a few hundred KB.
+const STYLE_CLIP: Partial<Record<VideoStyle, string>> = {
+  cinematic_ugc: "/video-style-previews/cinematic_ugc.mp4",
+  product_showcase: "/video-style-previews/product_showcase.mp4",
+  lifestyle: "/video-style-previews/lifestyle.mp4",
+  cinematic: "/video-style-previews/cinematic.mp4",
+};
+
 export function VideoStyleStep({
   selected,
   onSelect,
@@ -124,6 +133,7 @@ export function VideoStyleStep({
                     <ImageChoiceCard
                       key={style.id}
                       image={STYLE_PREVIEW[style.id]}
+                      videoSrc={STYLE_CLIP[style.id]}
                       label={style.label}
                       sublabel={style.creditHint === COMMON_CREDIT_HINT ? undefined : style.creditHint}
                       video

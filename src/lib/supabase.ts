@@ -1,4 +1,5 @@
 import { createClient, type Session } from "@supabase/supabase-js";
+import { captureAttribution, readAttribution } from "./attribution";
 
 // Safe to embed client-side — this is the anon/public key, scoped by
 // Row Level Security on the database, not by secrecy.
@@ -20,12 +21,18 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
+// Runs once when the page loads in the browser, before the router can tidy the address bar (no-op on the server).
+captureAttribution();
+
 export function signInWithPassword(email: string, password: string) {
   return supabase.auth.signInWithPassword({ email, password });
 }
 
 export function signUpWithPassword(email: string, password: string) {
-  return supabase.auth.signUp({ email, password });
+  // If the visitor arrived through a tagged link (see attribution.ts), the tags ride along as account metadata
+  // so the growth report can tell which link brought them. Without tags this is exactly the old call.
+  const source = readAttribution();
+  return supabase.auth.signUp(source ? { email, password, options: { data: source } } : { email, password });
 }
 
 export function signOut() {

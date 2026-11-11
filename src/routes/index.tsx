@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { HomeShowcase } from "@/components/home/HomeShowcase";
 import { UnlockRow, type UnlockTarget } from "@/components/home/UnlockRow";
+import { showToast } from "@/components/GlassToast";
 import { useEffect, useRef, useState } from "react";
 import { consumePostReturn } from "@/lib/post-return";
 import type { PlatformKey } from "@/components/PlatformTile";
@@ -984,18 +985,25 @@ function HomeScreen() {
   };
 
   // The "Unlock the premium features" row under the Video box.
+  // Two cases: a brand-new account (free test unused, so the row is a preview under the free-test screen and a tap sends
+  // them back up to it) and an account whose free test is used or not offered (the row is the way forward).
   const showUnlockRow =
-    homeMode === "video" &&
     tasterChecked &&
-    !tasterAvailable &&
-    subscribed !== null &&
-    (videoPanel === "closed" || videoPanel === "result");
+    (freeFirst ||
+      (homeMode === "video" && !tasterAvailable && subscribed !== null && (videoPanel === "closed" || videoPanel === "result")));
   const handleUnlockPick = (target: UnlockTarget) => {
     const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+    if (target === "billing") {
+      window.dispatchEvent(new Event("punqle:open-billing"));
+      return;
+    }
+    if (freeFirst) {
+      // The free video comes first: send them back up to it instead of opening a tool they cannot use yet (0 credits).
+      showToast("Make your free video first. Everything below opens after that.", { tone: "info" });
+      scrollTop();
+      return;
+    }
     switch (target) {
-      case "billing":
-        window.dispatchEvent(new Event("punqle:open-billing"));
-        return;
       case "video":
         // On the free result the upgrade buttons are right above, so just go up to them; otherwise open a fresh Video box.
         if (!(videoPanel === "result" && resultFromTaster)) handleSwitchMode("video");
@@ -3710,7 +3718,7 @@ function HomeScreen() {
           {/* "Unlock the premium features" (2026-11-12): the rest of Punqle as a story, right under the Video box once the
               free video test is used (or not offered) and the box is waiting or showing a result. Not while a video is
               being made, and never over the first-visit free-test screen (that screen has one job). */}
-          {showUnlockRow && <UnlockRow subscribed={subscribed === true} onPick={handleUnlockPick} />}
+          {showUnlockRow && <UnlockRow subscribed={subscribed === true} firstVisit={freeFirst} onPick={handleUnlockPick} />}
         </div>
       )}
 

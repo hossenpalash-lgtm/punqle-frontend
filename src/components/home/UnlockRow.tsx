@@ -9,9 +9,12 @@ import { StyleCarousel } from "@/components/ads/StyleCarousel";
 // The order goes from "the thing you just did" to "what a business needs next", and inside each chapter from the tools
 // most businesses need to the ones only some do (Show Your App and Try-On come last in chapter 2).
 // A box only opens that tool; it starts nothing and costs nothing. For people who already pay the same row is simply
-// "More from Punqle" with no padlocks and no plan box.
-// Real clips play (silent, once the box is hovered or focused) only where a real clip of that very tool exists; the
-// other boxes stay still pictures on purpose, so no box promises something it does not show.
+// "More from Punqle" with no padlocks and no plan box. For a brand-new account (free video test still unused) the row sits
+// under the free-test screen as a preview, and a tap sends them back up to the free test (see handleUnlockPick).
+// Hover motion (never for people who ask their device for less motion): a short silent clip where a real clip of that
+// tool exists (Full video, Product, Ready Actors) or a 2 s Wan 3.0 clip made from the box's own picture (Unboxing, Show Your
+// App, Try-On, made 2026-11-12); for the others the picture itself moves, truthfully: Image cycles three real looks, Upscale
+// sweeps from soft to sharp, Weekly Plan lands its six days one by one, Performance pans across the report.
 
 export type UnlockTarget =
   | "video"
@@ -45,7 +48,8 @@ interface Item {
   clip?: string;
   chip?: string;
   picture?: "sharpen" | "week";
-  focus?: string; // where a wide picture is cropped from (a Tailwind object-position class), default top
+  frames?: string[]; // Image: three real looks that fade into each other while hovered (frames[0] is the resting picture)
+  pan?: boolean; // Performance: a wide report picture that slides sideways while hovered
 }
 
 // Credit chips only where the app itself already states a "from N credits" price.
@@ -53,13 +57,13 @@ const ITEMS: Item[] = [
   { target: "video", chapter: 0, problem: "Only 4 seconds, with a watermark?", name: "Full video", blurb: "Up to 30 s, 1080p, no watermark. 3 engines and the Enhancer.", image: "/demo/engine-compare-poster.jpg", clip: "/demo/engine-compare.mp4", chip: "from 15 credits" },
   { target: "product", chapter: 1, problem: "Want a person showing your product?", name: "Product", blurb: "Someone holds it and talks about it.", image: "/video-style-previews/cinematic_ugc.jpg", clip: "/video-style-previews/cinematic_ugc.mp4", chip: "from 3 credits" },
   { target: "actors", chapter: 1, problem: "Don't want to be on camera yourself?", name: "Ready Actors", blurb: "A real filmed actor says your words.", image: "/video-style-previews/ai_actor.jpg", clip: "/video-style-previews/ai_actor.mp4", chip: "from 30 credits" },
-  { target: "unboxing", chapter: 1, problem: "Selling something people open?", name: "Unboxing", blurb: "Hands open your product on camera.", image: "/showcase-ads/product-in-hand.jpg" },
-  { target: "show_app", chapter: 1, problem: "Have an app or a website?", name: "Show Your App", blurb: "Your screen, on a phone, in a hand.", image: "/showcase-ads/saas.jpg" },
-  { target: "tryon", chapter: 1, problem: "Selling clothes?", name: "Try-On", blurb: "Your clothes on a model, then bring it to life.", image: "/showcase-ads/tryon-result.jpg", chip: "from 2 credits" },
-  { target: "image", chapter: 2, problem: "Nothing to start from?", name: "Image", blurb: "Studio ad images from one line.", image: "/home/image.jpg", chip: "from 2 credits" },
+  { target: "unboxing", chapter: 1, problem: "Selling something people open?", name: "Unboxing", blurb: "Hands open your product on camera.", image: "/showcase-ads/product-in-hand.jpg", clip: "/unlock-previews/unboxing.mp4" },
+  { target: "show_app", chapter: 1, problem: "Have an app or a website?", name: "Show Your App", blurb: "Your screen, on a phone, in a hand.", image: "/showcase-ads/saas.jpg", clip: "/unlock-previews/show_app.mp4" },
+  { target: "tryon", chapter: 1, problem: "Selling clothes?", name: "Try-On", blurb: "Your clothes on a model, then bring it to life.", image: "/showcase-ads/tryon-result.jpg", clip: "/unlock-previews/tryon.mp4", chip: "from 2 credits" },
+  { target: "image", chapter: 2, problem: "Nothing to start from?", name: "Image", blurb: "Studio ad images from one line.", image: "/home/image.jpg", frames: ["/home/image.jpg", "/style-previews/clean_premium.jpg", "/style-previews/bold_energetic.jpg"], chip: "from 2 credits" },
   { target: "upscale", chapter: 2, problem: "Photo or clip a bit blurry?", name: "Upscale", blurb: "Sharpen it to 1080p or 4K.", image: "/examples/jewellery.jpg", picture: "sharpen" },
   { target: "plan", chapter: 3, problem: "Can't keep posting every week?", name: "Weekly Plan", blurb: "A week of posts planned for you, then posted.", picture: "week" },
-  { target: "performance", chapter: 3, problem: "What works, and what do others do?", name: "Performance and Competitive Edge", blurb: "Your real numbers, and what your competitors post.", image: "/demo/competitive-edge.jpg", focus: "object-left-top" },
+  { target: "performance", chapter: 3, problem: "What works, and what do others do?", name: "Performance and Competitive Edge", blurb: "Your real numbers, and what your competitors post.", image: "/demo/competitive-edge.jpg", pan: true },
 ];
 
 const WEEK_TILES = [
@@ -80,60 +84,109 @@ const PLANS = [
 const CARD_WIDTH = "w-[172px] min-[400px]:w-[184px] sm:w-[200px]";
 const PICTURE_HEIGHT = "h-[128px] sm:h-[140px]";
 
-// The still picture, with an optional silent clip over it that plays while the box is hovered or focused. The clip file is
-// asked for only the first time it is needed, and never for people who ask their device for less motion.
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    try {
+      setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    } catch {
+      /* no matchMedia: keep the motion */
+    }
+  }, []);
+  return reduced;
+}
+
+// The still picture, which comes alive while the box is hovered or focused (see the header comment). A clip file is asked
+// for only the first time it is needed, and nothing moves for people who ask their device for less motion.
 function BoxPicture({ item, active, locked }: { item: Item; active: boolean; locked: boolean }) {
+  const reduced = usePrefersReducedMotion();
+  const motion = active && !reduced;
   const [wanted, setWanted] = useState(false);
   const [running, setRunning] = useState(false);
+  const [frame, setFrame] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (!item.clip) return;
-    if (active) {
-      try {
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      } catch {
-        /* no matchMedia: carry on */
-      }
-      setWanted(true);
-    }
+    if (motion) setWanted(true);
     const v = videoRef.current;
     if (!v) return;
-    if (active) {
+    if (motion) {
       v.play().catch(() => {});
     } else {
       v.pause();
       v.currentTime = 0;
       setRunning(false);
     }
-  }, [active, wanted, item.clip]);
+  }, [motion, wanted, item.clip]);
+
+  useEffect(() => {
+    const frames = item.frames;
+    if (!frames) return;
+    if (!motion) {
+      setFrame(0);
+      return;
+    }
+    const t = setInterval(() => setFrame((f) => (f + 1) % frames.length), 800);
+    return () => clearInterval(t);
+  }, [motion, item.frames]);
 
   return (
     <span className={["relative block w-full overflow-hidden bg-secondary", PICTURE_HEIGHT].join(" ")}>
       {item.picture === "week" ? (
         <span className="grid h-full w-full grid-cols-3 grid-rows-2 gap-1 bg-secondary p-1.5">
-          {WEEK_TILES.map((t) => (
-            <span key={t.day} className="relative overflow-hidden rounded-md">
+          {WEEK_TILES.map((t, i) => (
+            <span
+              key={t.day}
+              className={["relative overflow-hidden rounded-md", motion ? "animate-unlock-pop" : ""].join(" ")}
+              style={motion ? { animationDelay: `${i * 0.2}s` } : undefined}
+            >
               <img src={t.image} alt="" loading="lazy" className="h-full w-full object-cover" />
               <span className="absolute left-1 top-0.5 text-[10px] font-bold leading-none text-white [text-shadow:0_1px_2px_rgb(0_0_0/70%)]">{t.day}</span>
             </span>
           ))}
         </span>
+      ) : item.frames ? (
+        item.frames.map((src, i) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-500 motion-reduce:transition-none"
+            style={{ opacity: i === frame ? 1 : 0 }}
+          />
+        ))
       ) : (
         <>
-          <img src={item.image} alt="" loading="lazy" className={["h-full w-full object-cover", item.focus ?? "object-top"].join(" ")} />
+          <img
+            src={item.image}
+            alt=""
+            loading="lazy"
+            className={["h-full w-full object-cover", item.pan ? "transition-[object-position] duration-[2200ms] ease-in-out motion-reduce:transition-none" : "object-top"].join(" ")}
+            style={item.pan ? { objectPosition: motion ? "100% 0%" : "0% 0%" } : undefined}
+          />
           {item.picture === "sharpen" && (
             <>
-              {/* the left half is softened, the right half is left sharp: what Upscale does, drawn with the same photo */}
+              {/* the left half is softened and the right half is left sharp (what Upscale does, drawn with the same photo); on hover the soft part sweeps away */}
               <img
                 src={item.image}
                 alt=""
                 aria-hidden="true"
                 loading="lazy"
-                className="absolute inset-0 h-full w-full scale-110 object-cover object-top blur-[5px] [clip-path:inset(0_50%_0_0)]"
+                className="absolute inset-0 h-full w-full scale-110 object-cover object-top blur-[5px] transition-[clip-path] duration-[1100ms] ease-in-out motion-reduce:transition-none"
+                style={{ clipPath: motion ? "inset(0 100% 0 0)" : "inset(0 50% 0 0)" }}
               />
-              <span className="absolute inset-y-0 left-1/2 w-px bg-white/90" />
-              <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold leading-none text-white">Before</span>
+              <span
+                className="absolute inset-y-0 w-px bg-white/90 transition-[left] duration-[1100ms] ease-in-out motion-reduce:transition-none"
+                style={{ left: motion ? "100%" : "50%" }}
+              />
+              <span
+                className="absolute bottom-1.5 left-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold leading-none text-white transition-opacity duration-300"
+                style={{ opacity: motion ? 0 : 1 }}
+              >
+                Before
+              </span>
               <span className="absolute bottom-1.5 right-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold leading-none text-white">After</span>
             </>
           )}
@@ -150,7 +203,7 @@ function BoxPicture({ item, active, locked }: { item: Item; active: boolean; loc
           preload="none"
           aria-hidden="true"
           onPlaying={() => setRunning(true)}
-          className={["absolute inset-0 h-full w-full object-cover transition-opacity duration-200", running ? "opacity-100" : "opacity-0"].join(" ")}
+          className={["absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-200", running ? "opacity-100" : "opacity-0"].join(" ")}
         />
       )}
       {locked && (
@@ -212,7 +265,7 @@ function PlanBox({ onPick }: { onPick: (t: UnlockTarget) => void }) {
   );
 }
 
-export function UnlockRow({ subscribed, onPick }: { subscribed: boolean; onPick: (t: UnlockTarget) => void }) {
+export function UnlockRow({ subscribed, firstVisit = false, onPick }: { subscribed: boolean; firstVisit?: boolean; onPick: (t: UnlockTarget) => void }) {
   const locked = !subscribed;
   return (
     <section className="mb-10 w-full" aria-labelledby="unlock-row-heading">
@@ -220,9 +273,11 @@ export function UnlockRow({ subscribed, onPick }: { subscribed: boolean; onPick:
         {locked ? "Unlock the premium features" : "More from Punqle"}
       </h2>
       <p className="mb-4 mt-1 max-w-xl text-sm text-muted-foreground">
-        {locked
-          ? "Everything Punqle can do, in the order a business needs it. Slide sideways, then tap a box to open that tool."
-          : "Slide sideways, then tap a box to open that tool."}
+        {firstVisit
+          ? "Make your free video first. After that, everything below opens with a plan. Slide sideways to look around."
+          : locked
+            ? "Everything Punqle can do, in the order a business needs it. Slide sideways, then tap a box to open that tool."
+            : "Slide sideways, then tap a box to open that tool."}
       </p>
       <StyleCarousel label="Punqle tools" cardWidth={CARD_WIDTH} noun="tools">
         {ITEMS.map((item, i) => {

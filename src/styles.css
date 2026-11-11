@@ -433,6 +433,27 @@
   }
 }
 
+/* UnlockRow.tsx: the Weekly Plan box's six little pictures land one after another while the box is hovered
+   (each tile sets its own animation-delay inline). */
+@keyframes unlock-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-unlock-pop {
+  animation: unlock-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-unlock-pop {
+    animation: none;
+  }
+}
+
 /* Infinite tool-pill marquee (ToolMarquee.tsx). The track holds the
    pill set twice back-to-back; translating by exactly -50% (one set's
    width) makes the loop restart land on pixel-identical content, so

@@ -1,16 +1,15 @@
 import { ChevronDown, UserRound } from "lucide-react";
-import type { AdGoal } from "@/lib/api";
 import { PLATFORM_OPTIONS, VERSION_COUNTS, type Platform } from "@/lib/social-wizard";
-import { ANGLES, GOALS } from "./AdBriefStep";
+import { ANGLES } from "./AdBriefStep";
 import { PhotoPill, PillSelect } from "./SettingPills";
 
+// (2026-11-11: the Goal pill moved into "Advanced" on the form. The goal still follows what the customer typed - a salon
+// gets "Book Now", see lib/ad-goal.ts - and can still be picked by hand there.)
 // Image Ad's settings as one row of small pills right under the idea box (2026-11-10), the same
 // arrangement the Video Ad page got: Higgsfield, Krea and Creatify keep every setting as a chip
 // beside the prompt, not as six headed sections between the prompt and the button. Same settings,
 // same state, same defaults — only where they sit changed.
 export function ImageSettingsBar({
-  goal,
-  onGoal,
   angle,
   onAngle,
   platform,
@@ -24,8 +23,6 @@ export function ImageSettingsBar({
   personOpen,
   onTogglePerson,
 }: {
-  goal: AdGoal;
-  onGoal: (v: AdGoal) => void;
   angle: string | null;
   onAngle: (v: string | null) => void;
   platform: Platform;
@@ -42,14 +39,6 @@ export function ImageSettingsBar({
 }) {
   return (
     <div className="mb-4 flex w-full flex-wrap items-center gap-2 text-left">
-      <PillSelect label="Goal" value={goal} onChange={(v) => onGoal(v as AdGoal)}>
-        {GOALS.map((g) => (
-          <option key={g.value} value={g.value}>
-            {g.label}
-          </option>
-        ))}
-      </PillSelect>
-
       <PillSelect label="Message" value={angle ?? ""} onChange={(v) => onAngle(v === "" ? null : v)}>
         {ANGLES.map((a) => (
           <option key={a.label} value={a.value ?? ""}>

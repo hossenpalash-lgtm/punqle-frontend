@@ -8,6 +8,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+// The AI Presenter (a HeyGen stock avatar) is hidden from the Video Ad page while the HeyGen account has no balance
+// (founder, 2026-11-11: "taka vori ni"): picking it would only end in an error for a customer.
+// Set to true again once HeyGen is topped up. Nothing else about the presenter code changed.
+export const AI_PRESENTER_AVAILABLE = false;
+
 // Mirrors social-wizard.ts's VISUAL_DIRECTIONS shape, deliberately
 // minimal — no rich Pexels-backed preview components exist for video
 // (nothing like VisualDirectionStep's per-card stock-photo search), and

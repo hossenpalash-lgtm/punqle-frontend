@@ -55,6 +55,7 @@ import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
 import { VideoSettingsBar } from "./VideoSettingsBar";
 import { VideoStyleStep } from "./VideoStyleStep";
+import { TopUpButton } from "./TopUpButton";
 
 // Mirrors main.py's VIDEO_CREDIT_COST: one fixed 8 s Gemini Omni clip at
 // 1080p, sound included. Was 10 on Veo 3.1 Lite until Veo's 22 Oct 2026
@@ -1550,9 +1551,12 @@ export function AdVideoForm({
       </div>
 
       {currentInsufficientCredits && (
-        <p className="mb-4 text-sm text-muted-foreground">
-          You have {credits} credits — not enough for this video. Upgrade to keep generating.
-        </p>
+        <div className="mb-4 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
+          <span>
+            You have {credits} {credits === 1 ? "credit" : "credits"} — not enough for this video.
+          </span>
+          <TopUpButton />
+        </div>
       )}
       {styleNeedsMoreInput && videoStyle === "avatar" && (
         <p className="mb-4 text-xs text-muted-foreground">Pick an AI presenter above first.</p>

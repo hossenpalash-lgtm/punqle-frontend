@@ -1,5 +1,5 @@
 import { Check, Sparkles } from "lucide-react";
-import { VIDEO_STYLES, type VideoStyle, type VideoStyleOption } from "@/lib/video-style";
+import { AI_PRESENTER_AVAILABLE, VIDEO_STYLES, type VideoStyle, type VideoStyleOption } from "@/lib/video-style";
 import { ImageChoiceCard } from "./ImageChoiceCard";
 
 const STYLE_PREVIEW: Record<VideoStyle, string> = {
@@ -59,7 +59,7 @@ export function VideoStyleStep({
           under AdVideoForm's own "Style" label now, so a second "How
           should it look?" title was pure duplication. */}
       <div className="flex w-full flex-col gap-3">
-        {STYLE_GROUPS.map((group) => {
+        {STYLE_GROUPS.filter((g) => AI_PRESENTER_AVAILABLE || g.key !== "presenter").map((group) => {
           const isAiUgc = group.key === "ai_ugc";
           // The presenter group is one card, so as a 3-column grid it left two thirds of a
           // ~300px block empty under its own "Also available" heading. One compact row now

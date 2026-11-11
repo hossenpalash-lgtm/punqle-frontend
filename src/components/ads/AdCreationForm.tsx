@@ -1,4 +1,7 @@
 import { AlertCircle, Check, ChevronDown, Loader2, Settings2, Sparkles } from "lucide-react";
+import { GOALS } from "./AdBriefStep";
+import { PillSelect } from "./SettingPills";
+import { TopUpButton } from "./TopUpButton";
 import { useEffect, useRef, useState } from "react";
 import {
   base64ToFile,
@@ -561,7 +564,8 @@ export function AdCreationForm({
               className="mb-3 flex w-full items-start gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-left text-sm font-medium text-destructive"
             >
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{error}</span>
+              <span className="flex-1">{error}</span>
+              {/credits?\b/i.test(error) && <TopUpButton className="shrink-0" />}
             </div>
           )}
           <textarea
@@ -587,11 +591,6 @@ export function AdCreationForm({
           </div>
 
           <ImageSettingsBar
-            goal={goal}
-            onGoal={(g) => {
-              setGoalChosen(true);
-              setGoal(g);
-            }}
             angle={angle}
             onAngle={setAngle}
             platform={platform}
@@ -721,6 +720,23 @@ export function AdCreationForm({
 
           {settingsOpen && (
             <div className="mb-4 w-full rounded-2xl border border-border bg-card p-4 text-left">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Button on the ad</p>
+              <div className="mb-4">
+                <PillSelect
+                  label="Goal"
+                  value={goal}
+                  onChange={(v) => {
+                    setGoalChosen(true);
+                    setGoal(v as AdGoal);
+                  }}
+                >
+                  {GOALS.map((g) => (
+                    <option key={g.value} value={g.value}>
+                      {g.label}
+                    </option>
+                  ))}
+                </PillSelect>
+              </div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Image model</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {IMAGE_MODEL_OPTIONS.map((m) => (
@@ -742,7 +758,10 @@ export function AdCreationForm({
           {inputError && <p className="mb-4 text-sm font-medium text-destructive">{inputError}</p>}
 
           {outOfCredits && !imageTrialAvailable && (
-            <p className="mb-4 text-sm text-muted-foreground">You're out of credits — top up to keep creating.</p>
+            <div className="mb-4 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
+              <span>You're out of credits — top up to keep creating.</span>
+              <TopUpButton />
+            </div>
           )}
 
           {/* Sticky so "Create My Ad" stays in view while the style cards scroll past (2026-11-10);

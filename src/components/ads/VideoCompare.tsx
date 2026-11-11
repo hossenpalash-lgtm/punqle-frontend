@@ -165,6 +165,18 @@ export function VideoCompare({
               </div>
               {taster && onUnlock && onUpgrade && c?.status === "done" && c.video ? (
                 <div className="flex flex-col gap-1.5">
+                  {/* The free path comes first (2026-11-12): pick it, then post it straight away. The paid options sit below. */}
+                  <button
+                    disabled={busy[m]}
+                    onClick={() => c.video && onUse(c.video, m)}
+                    className="flex flex-col items-center justify-center rounded-2xl bg-primary px-3 py-2.5 text-primary-foreground disabled:opacity-60"
+                  >
+                    <span className="flex items-center gap-1.5 text-xs font-bold">
+                      <Check className="h-3.5 w-3.5" />
+                      Post this one
+                    </span>
+                    <span className="text-[11px] font-medium opacity-80">Free · with the Punqle watermark</span>
+                  </button>
                   <button
                     disabled={busy[m]}
                     onClick={async () => {
@@ -176,13 +188,13 @@ export function VideoCompare({
                         setBusy((b) => ({ ...b, [m]: false }));
                       }
                     }}
-                    className="flex flex-col items-center justify-center rounded-2xl bg-primary px-3 py-2 text-primary-foreground disabled:opacity-60"
+                    className="flex flex-col items-center justify-center rounded-2xl border border-border bg-background px-3 py-2 text-foreground disabled:opacity-60"
                   >
                     <span className="flex items-center gap-1.5 text-xs font-bold">
-                      {busy[m] ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                      {busy[m] ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                       No watermark, 720p
                     </span>
-                    <span className="text-[11px] font-medium opacity-80">This exact video · {unlockCost} credits</span>
+                    <span className="text-[11px] font-medium text-muted-foreground">This exact video · {unlockCost} credits</span>
                   </button>
                   <button
                     disabled={busy[m]}
@@ -191,12 +203,6 @@ export function VideoCompare({
                   >
                     <span className="text-xs font-bold">1080p, no watermark</span>
                     <span className="text-[11px] font-medium text-muted-foreground">New video · {upgradeCost ? upgradeCost(m) : "?"} credits</span>
-                  </button>
-                  <button
-                    onClick={() => c.video && onUse(c.video, m)}
-                    className="rounded-full px-3 py-1 text-[11px] font-semibold text-muted-foreground underline underline-offset-2"
-                  >
-                    Keep it with the watermark
                   </button>
                   {cardErrors[m] && <p className="text-center text-[11px] text-destructive">{cardErrors[m]}</p>}
                 </div>
@@ -217,7 +223,7 @@ export function VideoCompare({
 
       {taster && allSettled && (
         <p className="rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground">
-          "No watermark" keeps the exact video you see. "1080p" makes a new video in full quality.
+          "Post this one" is free. "No watermark" keeps the exact video you see; "1080p" makes a new video in full quality.
         </p>
       )}
 

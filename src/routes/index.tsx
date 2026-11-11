@@ -394,6 +394,9 @@ function HomeScreen() {
   const [recentSaved, setRecentSaved] = useState(false);
   const [recentCount, setRecentCount] = useState(0);
   const [showRecent, setShowRecent] = useState(false);
+  // While the free video test is still unused, the Video box shows only photo + one line + one big button; every other
+  // control (tools, length, versions, prices) waits behind "More options" (2026-11-12).
+  const [showPaidOptions, setShowPaidOptions] = useState(false);
   useEffect(() => {
     if (homeMode !== "video") return;
     let cancelled = false;
@@ -438,6 +441,28 @@ function HomeScreen() {
     refreshTasterStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeMode]);
+  // A brand-new account (its free video test still unused) opens on Video instead of Ready Actors, so the free test is the
+  // first thing it sees. Skipped when the customer already tapped anything before the answer arrived.
+  const touchedRef = useRef(false);
+  useEffect(() => {
+    const mark = () => {
+      touchedRef.current = true;
+    };
+    window.addEventListener("pointerdown", mark, { once: true });
+    let cancelled = false;
+    fetchFreeTasterStatus()
+      .then((st) => {
+        if (cancelled || !st.available) return;
+        setTasterAvailable(true);
+        if (st.models?.length) setTasterModelCount(st.models.length);
+        if (!touchedRef.current) setHomeMode((m) => (m === "talking_actors" ? "video" : m));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      window.removeEventListener("pointerdown", mark);
+    };
+  }, []);
   // "Punqle Enhancer": opt-in, off by default (the engines keep their own natural motion); the choice is remembered in this browser (best effort)
   const [videoEnhance, setVideoEnhanceState] = useState(false);
   useEffect(() => {
@@ -898,6 +923,10 @@ function HomeScreen() {
     !homeGeneratedVideo &&
     !upscaleResultImage &&
     !upscaleResultVideo;
+
+  // The very first thing a brand-new account sees: its free video test is still unused and the Video start screen is up.
+  const freeFirst = tasterAvailable && homeMode === "video" && (videoPanel === "closed" || videoPanel === "composer") && !showRecent;
+  const freeComposer = tasterAvailable && !videoNarrationEnabled && !showPaidOptions;
 
   const handleSwitchMode = (mode: HomeMode) => {
     setShowMoreMenu(false);
@@ -1564,15 +1593,19 @@ function HomeScreen() {
           to every destination. Mobile lands on the fallback block just
           below instead (same Social Content grid it's always shown). */}
       {tab === "home" && (
-        <div className="hidden flex-1 lg:flex lg:flex-col">
+        <div className="flex flex-1 flex-col">
           <div className="flex flex-col items-center pt-6 text-center">
-            <h1 className="font-display mb-4 text-4xl leading-[1.05] tracking-[-0.02em] text-foreground xl:text-5xl">
-              What are we creating today?
+            <h1 className="font-display mb-3 text-3xl leading-[1.05] tracking-[-0.02em] text-foreground sm:mb-4 sm:text-4xl xl:text-5xl">
+              {freeFirst ? "Make your first video free" : "What are we creating today?"}
             </h1>
-            <p className="max-w-md text-sm text-muted-foreground">Pick a tool below, describe what you need, and Punqle makes it.</p>
+            <p className="max-w-md px-4 text-sm text-muted-foreground">
+              {freeFirst
+                ? "Add a photo and one line. Punqle makes it with 2 AI video tools. Pick your favourite and post it in one tap."
+                : "Pick a tool below, describe what you need, and Punqle makes it."}
+            </p>
           </div>
 
-          <div className="flex flex-1 items-center justify-center py-9">
+          <div className={freeFirst ? "hidden" : "hidden flex-1 items-center justify-center py-9 lg:flex"}>
             {homeIdle && (
               <HomeShowcase
                 cards={[
@@ -1607,7 +1640,7 @@ function HomeScreen() {
             <button
               onClick={() => handleSwitchMode("talking_actors")}
               className={[
-                "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors",
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors sm:gap-2 sm:px-4 sm:py-2 sm:text-sm",
                 homeMode === "talking_actors" ? "text-white" : "text-foreground hover:bg-white/60",
               ].join(" ")}
               style={homeMode === "talking_actors" ? { background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN } : undefined}
@@ -1618,7 +1651,7 @@ function HomeScreen() {
             <button
               onClick={() => handleSwitchMode("video")}
               className={[
-                "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors",
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors sm:gap-2 sm:px-4 sm:py-2 sm:text-sm",
                 homeMode === "video" ? "text-white" : "text-foreground hover:bg-white/60",
               ].join(" ")}
               style={homeMode === "video" ? { background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN } : undefined}
@@ -1629,7 +1662,7 @@ function HomeScreen() {
             <button
               onClick={() => handleSwitchMode("image")}
               className={[
-                "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors",
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors sm:gap-2 sm:px-4 sm:py-2 sm:text-sm",
                 homeMode === "image" ? "text-white" : "text-foreground hover:bg-white/60",
               ].join(" ")}
               style={homeMode === "image" ? { background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN } : undefined}
@@ -1640,7 +1673,7 @@ function HomeScreen() {
             <button
               onClick={() => handleSwitchMode("product")}
               className={[
-                "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors",
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors sm:gap-2 sm:px-4 sm:py-2 sm:text-sm",
                 homeMode === "product" ? "text-white" : "text-foreground hover:bg-white/60",
               ].join(" ")}
               style={homeMode === "product" ? { background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN } : undefined}
@@ -1651,7 +1684,7 @@ function HomeScreen() {
             <div className="relative">
               <button
                 onClick={() => setShowMoreMenu((v) => !v)}
-                className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold text-foreground transition-colors hover:bg-white/60"
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold text-foreground transition-colors hover:bg-white/60 sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
               >
                 <MoreHorizontal className="h-4 w-4" />
                 See more
@@ -2370,20 +2403,38 @@ function HomeScreen() {
                 ) : !videoRefImage && showRecent ? (
                   <RecentVideos onClose={() => setShowRecent(false)} />
                 ) : !videoRefImage ? (
-                  <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-                    <Video className="h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Upload a photo to turn into a short video.</p>
-                    <label className="flex cursor-pointer items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground">
+                  <div className="flex flex-col items-center gap-3 px-4 py-8 text-center sm:py-10">
+                    {freeFirst ? (
+                      /* A brand-new account: the free video test is the whole point of this screen (2026-11-12). */
+                      <ol className="grid w-full max-w-xl grid-cols-3 gap-2 text-left">
+                        {[
+                          { n: 1, t: "Add a photo", d: "Your product, or a person" },
+                          { n: 2, t: "Write one line", d: "What should happen" },
+                          { n: 3, t: "Pick and post", d: `Your favourite of ${tasterModelCount} videos` },
+                        ].map((st) => (
+                          <li key={st.n} className="rounded-2xl bg-secondary px-3 py-2.5">
+                            <span className="mb-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-[11px] font-bold text-background">{st.n}</span>
+                            <p className="text-[13px] font-bold leading-tight text-foreground">{st.t}</p>
+                            <p className="text-[11px] leading-snug text-muted-foreground">{st.d}</p>
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <>
+                        <Video className="h-8 w-8 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Upload a photo to turn into a short video.</p>
+                      </>
+                    )}
+                    <label className="flex cursor-pointer items-center gap-1.5 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground">
                       <Upload className="h-4 w-4" />
-                      Upload a photo
+                      {freeFirst ? "Add a photo, it's free" : "Upload a photo"}
                       <input type="file" accept="image/*" className="hidden" onChange={handleUploadOwnImageForVideo} />
                     </label>
-                    {/* Shown only when the server says this account still has its free comparison, so a new visitor
-                        learns about it BEFORE choosing a photo (the card with the button only appears afterwards). */}
+                    {/* Shown only when the server says this account still has its free comparison. */}
                     {tasterAvailable && (
-                      <p className="flex items-center gap-1.5 rounded-full bg-secondary px-3.5 py-1.5 text-xs font-semibold text-foreground">
+                      <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                         <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                        Your first comparison is free: see {tasterModelCount} video tools side by side
+                        One free try · 4 seconds · Punqle watermark{freeFirst ? " · no card needed" : ""}
                       </p>
                     )}
                     {recentSaved && recentCount > 0 && (
@@ -2481,7 +2532,11 @@ function HomeScreen() {
                         <textarea
                           value={videoPrompt}
                           onChange={(e) => setVideoPrompt(e.target.value)}
-                          placeholder="Describe your ad: who is in it and what happens… (e.g. a woman with dry hair tries a new shampoo, rinses, and her hair looks smooth and shiny)"
+                          placeholder={
+                            freeComposer
+                              ? "One line: what should happen? e.g. Slow push-in on the latte as the steam curls up"
+                              : "Describe your ad: who is in it and what happens… (e.g. a woman with dry hair tries a new shampoo, rinses, and her hair looks smooth and shiny)"
+                          }
                           rows={3}
                           className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-placeholder focus:outline-none"
                         />
@@ -2500,6 +2555,8 @@ function HomeScreen() {
                       </>
                     )}
 
+                    {!freeComposer && (
+                    <>
                     <div>
                       <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Tool</p>
                       <div className="grid grid-cols-2 gap-2">
@@ -2695,8 +2752,10 @@ function HomeScreen() {
                         )}
                       </div>
                     </details>
+                    </>
+                    )}
 
-                    {tasterAvailable && !videoNarrationEnabled && (
+                    {tasterAvailable && !videoNarrationEnabled && !freeComposer && (
                       <div className="flex items-center justify-between gap-3 rounded-2xl bg-secondary px-3 py-2.5">
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-foreground">Free: compare {tasterModelCount} tools</p>
@@ -2712,6 +2771,29 @@ function HomeScreen() {
                       </div>
                     )}
 
+                    {freeComposer ? (
+                      <div className="flex flex-col items-center gap-2 pt-1">
+                        <button
+                          onClick={handleStartFreeTaster}
+                          disabled={!videoRefImage || !videoPrompt.trim()}
+                          className="w-full rounded-full px-6 py-3.5 text-sm font-bold text-white disabled:opacity-40"
+                          style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
+                        >
+                          Make my free video
+                        </button>
+                        <p className="text-center text-[11px] text-muted-foreground">
+                          {tasterModelCount} videos to pick from · 4 seconds · Punqle watermark · no card needed
+                        </p>
+                        <div className="flex items-center gap-4">
+                          <button onClick={() => setVideoRefImage(null)} className="text-xs font-semibold text-muted-foreground">
+                            Cancel
+                          </button>
+                          <button onClick={() => setShowPaidOptions(true)} className="text-xs font-semibold text-muted-foreground underline underline-offset-2">
+                            More options
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
                     <div className="flex items-center justify-between gap-2 pt-1">
                       <button
                         onClick={() => setVideoRefImage(null)}
@@ -2733,6 +2815,7 @@ function HomeScreen() {
                           : `Generate (${videoCostFor(videoModel, videoDuration, videoNarrationEnabled) * effectiveVideoVersions} credits)`}
                       </button>
                     </div>
+                    )}
                   </div>
                 )}
               </>
@@ -3535,7 +3618,7 @@ function HomeScreen() {
           from before this redesign) via lg:hidden — desktop shows the new
           hero+pill screen above instead. See the comment above that block. */}
       {(tab === "single" || tab === "video" || tab === "home") && (
-        <div className={tab === "home" ? "lg:hidden" : undefined}>
+        <div className={tab === "home" ? "hidden" : undefined}>
           <div className="mb-1 flex items-center justify-between gap-3">
             <h1 className="font-display flex items-center gap-2 text-xl font-extrabold text-foreground">
               {tab === "single" && entryHint === "carousel" ? (
@@ -3638,7 +3721,7 @@ function HomeScreen() {
           already applied to Video Ad's Style step. */}
 
       {(tab === "single" || tab === "home") && (
-        <div className={tab === "home" ? "lg:hidden" : undefined}>
+        <div className={tab === "home" ? "hidden" : undefined}>
           {/* key={tab} forces a real remount when transitioning between
               "home" (mobile fallback) and "single" — without it, both
               share this same render condition, so React would keep the

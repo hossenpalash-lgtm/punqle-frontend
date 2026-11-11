@@ -33,8 +33,8 @@ export const VISUAL_DIRECTIONS: VisualDirectionOption[] = [
   },
 ];
 
-// Revealed behind "Show more styles" — same reuse principle, just two more
-// prompt-modifier phrases rather than a real style-transfer model.
+// The rest of the looks. They all sit in the one sideways row on Image Ad now (the old "Show more styles" link is
+// gone) — same reuse principle: prompt-modifier phrases, not a real style-transfer model.
 export const MORE_VISUAL_DIRECTIONS: VisualDirectionOption[] = [
   {
     id: "minimal_editorial" as VisualDirection,
@@ -47,6 +47,38 @@ export const MORE_VISUAL_DIRECTIONS: VisualDirectionOption[] = [
     label: "Vibrant & Playful",
     description: "Bright colors, fun energy, casual composition.",
     promptModifier: "in a vibrant, playful style — bright saturated colors, fun casual energy, dynamic composition",
+  },
+  // Five more looks (2026-11-11), each previewed with a picture Punqle already made. They are only prompt phrases,
+  // like the five above, so nothing on the server needs to know about them.
+  {
+    id: "street_urban" as VisualDirection,
+    label: "Street Style",
+    description: "Urban, candid, golden-hour city feel.",
+    promptModifier: "in an urban street style — city backdrop, golden-hour light, candid and effortless, natural depth of field",
+  },
+  {
+    id: "artisan_fresh" as VisualDirection,
+    label: "Fresh & Handmade",
+    description: "Natural textures, homemade and artisan.",
+    promptModifier: "in a fresh, handmade style — natural textures like linen and wood, warm morning light, artisan and homemade feel",
+  },
+  {
+    id: "bright_active" as VisualDirection,
+    label: "Bright & Active",
+    description: "Airy daylight, clean and energetic.",
+    promptModifier: "in a bright, active style — airy daylight, clean modern surfaces, fresh and energetic yet calm",
+  },
+  {
+    id: "candid_inhand" as VisualDirection,
+    label: "Candid & Real",
+    description: "Hand-held, natural light, real-life feel.",
+    promptModifier: "in a candid, real-life style — the product held naturally in a hand, soft indoor window light, authentic and unposed",
+  },
+  {
+    id: "on_the_go" as VisualDirection,
+    label: "Out & About",
+    description: "Outdoor daylight, everyday movement.",
+    promptModifier: "in an out-and-about style — natural outdoor daylight, everyday movement, relaxed and spontaneous",
   },
 ];
 

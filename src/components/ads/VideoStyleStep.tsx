@@ -1,15 +1,16 @@
 import { Check } from "lucide-react";
 import { AI_PRESENTER_AVAILABLE, VIDEO_STYLES, type VideoStyle } from "@/lib/video-style";
+import { previewAsset } from "@/lib/preview-assets";
 import { ImageChoiceCard } from "./ImageChoiceCard";
 import { StyleCarousel } from "./StyleCarousel";
 
 const STYLE_PREVIEW: Record<VideoStyle, string> = {
-  product_showcase: "/video-style-previews/product_showcase.jpg",
-  lifestyle: "/video-style-previews/lifestyle.jpg",
-  cinematic: "/video-style-previews/cinematic.jpg",
-  cinematic_ugc: "/video-style-previews/cinematic_ugc.jpg",
-  avatar: "/video-style-previews/avatar.jpg",
-  ai_actor: "/actors/maya.jpg",
+  product_showcase: previewAsset("/video-style-previews/product_showcase.jpg"),
+  lifestyle: previewAsset("/video-style-previews/lifestyle.jpg"),
+  cinematic: previewAsset("/video-style-previews/cinematic.jpg"),
+  cinematic_ugc: previewAsset("/video-style-previews/cinematic_ugc.jpg"),
+  avatar: previewAsset("/video-style-previews/avatar.jpg"),
+  ai_actor: previewAsset("/video-style-previews/ai_actor.jpg"), // Victor (park bench), a real filmed actor
 };
 
 // Step 2 of Video Ad — deliberately just chips, no rich preview cards
@@ -46,10 +47,11 @@ const COMMON_CREDIT_HINT = (() => {
 // Short silent clips that play on a card while it is hovered or picked (see ImageChoiceCard). Made from clips we
 // already had, plus one 2-second Wan 3.0 clip for Cinematic UGC; each is a few hundred KB.
 const STYLE_CLIP: Partial<Record<VideoStyle, string>> = {
-  cinematic_ugc: "/video-style-previews/cinematic_ugc.mp4",
-  product_showcase: "/video-style-previews/product_showcase.mp4",
-  lifestyle: "/video-style-previews/lifestyle.mp4",
-  cinematic: "/video-style-previews/cinematic.mp4",
+  cinematic_ugc: previewAsset("/video-style-previews/cinematic_ugc.mp4"),
+  ai_actor: previewAsset("/video-style-previews/ai_actor.mp4"),
+  product_showcase: previewAsset("/video-style-previews/product_showcase.mp4"),
+  lifestyle: previewAsset("/video-style-previews/lifestyle.mp4"),
+  cinematic: previewAsset("/video-style-previews/cinematic.mp4"),
 };
 
 export function VideoStyleStep({

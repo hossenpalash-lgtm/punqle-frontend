@@ -2,6 +2,7 @@ import { AlertCircle, Check, ChevronDown, Loader2, Settings2, Sparkles } from "l
 import { GOALS } from "./AdBriefStep";
 import { PillSelect } from "./SettingPills";
 import { StyleCarousel } from "./StyleCarousel";
+import { previewAsset } from "@/lib/preview-assets";
 import { TopUpButton } from "./TopUpButton";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -687,12 +688,12 @@ export function AdCreationForm({
                 style pickers): real sample thumbnails in /public/
                 style-previews, one per direction id, generated once
                 with the exact promptModifier each style sends. */}
-            {/* All five styles in one sideways row (2026-11-11), so there is no "Show more styles" link any more. */}
+            {/* Every style in one sideways row (2026-11-11), so there is no "Show more styles" link any more. */}
             <StyleCarousel label="Ad styles">
               {allDirections.map((d) => (
                 <ImageChoiceCard
                   key={d.id}
-                  image={`/style-previews/${d.id}.jpg`}
+                  image={previewAsset(`/style-previews/${d.id}.jpg`)}
                   label={d.label}
                   selected={visualDirection === d.id}
                   onClick={() => setVisualDirection(d.id)}

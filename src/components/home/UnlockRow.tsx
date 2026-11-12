@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Lock } from "lucide-react";
 import { StyleCarousel } from "@/components/ads/StyleCarousel";
+import { previewAsset } from "@/lib/preview-assets";
 
 // "Unlock the premium features" (2026-11-12, founder): the row a visitor sees right after the free video test and the
 // post. It tells the rest of Punqle as a short story, one sideways row of boxes, each box the answer to a problem the
@@ -85,6 +86,10 @@ const PLANS = [
 const CARD_WIDTH = "w-[172px] min-[400px]:w-[184px] sm:w-[200px]";
 const PICTURE_HEIGHT = "h-[128px] sm:h-[140px]";
 
+// Every picture and clip goes through previewAsset (a ?v= tag), so a picture that was replaced under the same file name (the Product
+// box's woman, 2026-11-11) never shows an old cached still next to its new clip.
+const asset = (path?: string) => (path ? previewAsset(path) : undefined);
+
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
@@ -142,7 +147,7 @@ function BoxPicture({ item, active, locked }: { item: Item; active: boolean; loc
               className={["relative overflow-hidden rounded-md", motion ? "animate-unlock-pop" : ""].join(" ")}
               style={motion ? { animationDelay: `${i * 0.2}s` } : undefined}
             >
-              <img src={t.image} alt="" loading="lazy" className="h-full w-full object-cover" />
+              <img src={asset(t.image)} alt="" loading="lazy" className="h-full w-full object-cover" />
               <span className="absolute left-1 top-0.5 text-[10px] font-bold leading-none text-white [text-shadow:0_1px_2px_rgb(0_0_0/70%)]">{t.day}</span>
             </span>
           ))}
@@ -151,7 +156,7 @@ function BoxPicture({ item, active, locked }: { item: Item; active: boolean; loc
         item.frames.map((src, i) => (
           <img
             key={src}
-            src={src}
+            src={asset(src)}
             alt=""
             loading="lazy"
             className="absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-500 motion-reduce:transition-none"
@@ -161,7 +166,7 @@ function BoxPicture({ item, active, locked }: { item: Item; active: boolean; loc
       ) : (
         <>
           <img
-            src={item.image}
+            src={asset(item.image)}
             alt=""
             loading="lazy"
             className={["h-full w-full object-cover", item.pan ? "transition-[object-position] duration-[2200ms] ease-in-out motion-reduce:transition-none" : (item.focus ?? "object-top")].join(" ")}
@@ -171,7 +176,7 @@ function BoxPicture({ item, active, locked }: { item: Item; active: boolean; loc
             <>
               {/* the left half is softened and the right half is left sharp (what Upscale does, drawn with the same photo); on hover the soft part sweeps away */}
               <img
-                src={item.image}
+                src={asset(item.image)}
                 alt=""
                 aria-hidden="true"
                 loading="lazy"
@@ -196,8 +201,8 @@ function BoxPicture({ item, active, locked }: { item: Item; active: boolean; loc
       {item.clip && wanted && (
         <video
           ref={videoRef}
-          src={item.clip}
-          poster={item.image}
+          src={asset(item.clip)}
+          poster={asset(item.image)}
           muted
           loop
           playsInline

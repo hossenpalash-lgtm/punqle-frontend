@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { RetentionChart } from "@/components/ads/RetentionChart";
 import { TikTokIcon } from "@/components/TikTokIcon";
 import { YouTubeIcon } from "@/components/YouTubeIcon";
 import {
@@ -176,6 +177,13 @@ function formatSeconds(total: number): string {
   const m = Math.floor(total / 60);
   const s = Math.round(total % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// The video's length, worked out from the average view (seconds) and the share of the video that average represents.
+function estimateDuration(m: ApiPerformancePost["metrics"]): number | null {
+  if (!m || !m.avg_view_seconds || !m.avg_view_pct || m.avg_view_pct <= 0) return null;
+  const total = Math.round(m.avg_view_seconds / (m.avg_view_pct / 100));
+  return total >= 5 && total <= 3 * 3600 ? total : null;
 }
 
 // The longer YouTube numbers that don't fit as icons.
@@ -498,6 +506,9 @@ export function PerformanceView() {
                 ) : null}
                 {post.metrics && youtubeDetails(post.metrics).length > 0 && (
                   <p className="mt-1.5 text-[13px] text-foreground/75">{youtubeDetails(post.metrics).join(" · ")}</p>
+                )}
+                {post.platform === "youtube" && post.external_post_id && (
+                  <RetentionChart videoId={post.external_post_id} durationSeconds={estimateDuration(post.metrics)} />
                 )}
                 {post.metrics_note && <p className="mt-1 text-[13px] text-foreground/75">{post.metrics_note}</p>}
               </div>

@@ -1914,6 +1914,16 @@ export function fetchOrganicPerformance(): Promise<{ posts: ApiPerformancePost[]
   return apiFetch<{ posts: ApiPerformancePost[] }>("/performance/posts");
 }
 
+// "Where viewers leave" for one YouTube video: the share still watching at each of 100 points along it, plus the steepest fall.
+export interface ApiYouTubeRetention {
+  state: "ok" | "needs_permission" | "no_data" | "unavailable";
+  points: { t: number; watching: number }[];
+  biggest_drop: { at: number; lost_pct: number } | null;
+}
+export function fetchYouTubeRetention(videoId: string): Promise<ApiYouTubeRetention> {
+  return apiFetch<ApiYouTubeRetention>(`/performance/youtube-retention/${encodeURIComponent(videoId)}`);
+}
+
 export type SubscriptionTier = "starter" | "growth" | "pro";
 
 export interface ApiSubscriptionStatus {

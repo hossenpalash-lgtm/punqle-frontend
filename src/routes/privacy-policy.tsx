@@ -16,7 +16,7 @@ function PrivacyPolicyPage() {
         This Privacy Policy explains what information Punqle ("Punqle," "we," "us") collects when you use the
         Punqle app at punqle.com, how we use it, and what choices you have. Punqle is operated by HOSSEN, MD
         MOSHARRAF (ABN 47 183 516 336), based in Australia, whose registered business address is
-        [REGISTERED BUSINESS ADDRESS - FOUNDER TO FILL IN BEFORE THIS GOES LIVE]. HOSSEN, MD MOSHARRAF is the
+        6 Leicester Street, Carlton VIC 3053, Australia. HOSSEN, MD MOSHARRAF is the
         controller of the personal information described here. Privacy questions:{" "}
         <a href="mailto:hossenpalash@gmail.com">hossenpalash@gmail.com</a>.
       </p>

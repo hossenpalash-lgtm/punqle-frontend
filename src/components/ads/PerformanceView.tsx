@@ -8,6 +8,7 @@ import {
   Lock,
   MessageCircle,
   RefreshCw,
+  Repeat2,
   Share2,
   Trophy,
   TrendingUp,
@@ -16,7 +17,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { RetentionChart } from "@/components/ads/RetentionChart";
+import { YouTubeDeepDive } from "@/components/ads/RetentionChart";
 import { TikTokIcon } from "@/components/TikTokIcon";
 import { YouTubeIcon } from "@/components/YouTubeIcon";
 import {
@@ -190,6 +191,7 @@ function estimateDuration(m: ApiPerformancePost["metrics"]): number | null {
 function youtubeDetails(m: NonNullable<ApiPerformancePost["metrics"]>): string[] {
   const parts: string[] = [];
   if (m.watch_minutes !== null) parts.push(`${formatCount(Math.round(m.watch_minutes))} min watched`);
+  if (m.avg_watch_seconds !== null && m.avg_watch_seconds !== undefined) parts.push(`avg watch ${formatSeconds(m.avg_watch_seconds)}`);
   if (m.avg_view_seconds !== null) {
     parts.push(`avg view ${formatSeconds(m.avg_view_seconds)}${m.avg_view_pct !== null ? ` (${Math.round(m.avg_view_pct)}%)` : ""}`);
   }
@@ -499,6 +501,7 @@ export function PerformanceView() {
                     {post.metrics.likes !== null && <Metric icon={Heart} value={post.metrics.likes} one="like" many="likes" title="Likes" />}
                     {post.metrics.comments !== null && <Metric icon={MessageCircle} value={post.metrics.comments} one="comment" many="comments" title="Comments" />}
                     {post.metrics.shares !== null && <Metric icon={Share2} value={post.metrics.shares} one="share" many="shares" title="Shares" />}
+                    {post.metrics.reposts !== null && post.metrics.reposts !== undefined && <Metric icon={Repeat2} value={post.metrics.reposts} one="repost" many="reposts" title="Reposts" />}
                     {post.metrics.saves !== null && <Metric icon={Bookmark} value={post.metrics.saves} one="save" many="saves" title="Saves" />}
                   </div>
                 ) : post.metrics_unavailable_reason ? (
@@ -508,7 +511,7 @@ export function PerformanceView() {
                   <p className="mt-1.5 text-[13px] text-foreground/75">{youtubeDetails(post.metrics).join(" · ")}</p>
                 )}
                 {post.platform === "youtube" && post.external_post_id && (
-                  <RetentionChart videoId={post.external_post_id} durationSeconds={estimateDuration(post.metrics)} />
+                  <YouTubeDeepDive videoId={post.external_post_id} durationSeconds={estimateDuration(post.metrics)} />
                 )}
                 {post.metrics_note && <p className="mt-1 text-[13px] text-foreground/75">{post.metrics_note}</p>}
               </div>

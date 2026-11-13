@@ -1877,6 +1877,8 @@ export interface ApiPostMetrics {
   reach: number | null;
   saves: number | null;
   total_interactions: number | null;
+  reposts: number | null;
+  avg_watch_seconds: number | null; // Instagram Reels only
   // YouTube (Analytics + Reporting APIs).
   impressions: number | null;
   ctr_pct: number | null;
@@ -1922,6 +1924,16 @@ export interface ApiYouTubeRetention {
 }
 export function fetchYouTubeRetention(videoId: string): Promise<ApiYouTubeRetention> {
   return apiFetch<ApiYouTubeRetention>(`/performance/youtube-retention/${encodeURIComponent(videoId)}`);
+}
+
+// "Where viewers come from" for one YouTube video: traffic sources (share of views) and the search words used on YouTube.
+export interface ApiYouTubeSources {
+  state: "ok" | "needs_permission" | "no_data" | "unavailable";
+  sources: { type: string; label: string; views: number; share_pct: number }[];
+  search_terms: { term: string; views: number }[];
+}
+export function fetchYouTubeSources(videoId: string): Promise<ApiYouTubeSources> {
+  return apiFetch<ApiYouTubeSources>(`/performance/youtube-sources/${encodeURIComponent(videoId)}`);
 }
 
 export type SubscriptionTier = "starter" | "growth" | "pro";

@@ -1,6 +1,6 @@
 import { AlertCircle, Check, CheckCircle2, ChevronRight, Facebook, Loader2, Send } from "lucide-react";
 import { useEffect, useState } from "react";
-import { fetchMetaStatus, getMetaConnectUrl, publishVideoToMeta, type ApiMetaPublishResponse } from "@/lib/api";
+import { fetchMetaStatus, getMetaConnectUrl, publishVideoToMeta, type ApiMetaPublishResponse, type VideoPostTags } from "@/lib/api";
 import { markPostReturn } from "@/lib/post-return";
 import { showToast } from "@/components/GlassToast";
 import { PlatformTile } from "@/components/PlatformTile";
@@ -15,6 +15,7 @@ export function PublishVideoToMeta({
   goal,
   angle,
   style,
+  videoTags,
   startOpen,
   initial,
 }: {
@@ -24,6 +25,7 @@ export function PublishVideoToMeta({
   goal?: string | null;
   angle?: string | null;
   style?: string | null;
+  videoTags?: VideoPostTags; // length + Enhancer of this video (see PostThisVideo)
   startOpen?: boolean; // open the form straight away (the caller already showed a button for it)
   initial?: "facebook" | "instagram"; // which platform the customer tapped; the other one starts un-ticked
 }) {
@@ -98,7 +100,7 @@ export function PublishVideoToMeta({
     setError(null);
     setResult(null);
     try {
-      setResult(await publishVideoToMeta(videoUrl, caption.trim(), postFacebook, postInstagram, goal, angle, style));
+      setResult(await publishVideoToMeta(videoUrl, caption.trim(), postFacebook, postInstagram, goal, angle, style, videoTags));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't publish. Please try again.");
     } finally {

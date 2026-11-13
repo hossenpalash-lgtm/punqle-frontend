@@ -120,7 +120,15 @@ export function notSharedNote(post: ApiPerformancePost): string | null {
   return null;
 }
 
-export type TagDimension = "angle" | "style" | "goal";
+export type TagDimension = "angle" | "style" | "goal" | "length" | "enhancer";
+
+// One post's value for a tag, as text, or null when not recorded (older posts, posts that aren't videos, or an Enhancer state the
+// screen could not be sure of). length is "8s"; enhancer is "on" / "off".
+export function tagValue(post: ApiPerformancePost, dimension: TagDimension): string | null {
+  if (dimension === "length") return post.video_seconds ? `${Math.round(post.video_seconds)}s` : null;
+  if (dimension === "enhancer") return post.enhanced === true ? "on" : post.enhanced === false ? "off" : null;
+  return post[dimension] || null;
+}
 
 export interface GroupLeader {
   dimension: TagDimension;
@@ -135,10 +143,10 @@ export interface GroupLeader {
 // reports a lead that clears LEADER_MULTIPLE.
 export function groupLeaders(posts: ApiPerformancePost[], scores: Map<string, PostScore>): GroupLeader[] {
   const leaders: GroupLeader[] = [];
-  for (const dimension of ["angle", "style", "goal"] as TagDimension[]) {
+  for (const dimension of ["angle", "style", "goal", "length", "enhancer"] as TagDimension[]) {
     const groups = new Map<string, number[]>();
     for (const post of posts) {
-      const value = post[dimension];
+      const value = tagValue(post, dimension);
       const score = scores.get(post.id);
       if (!value || !score) continue;
       const list = groups.get(value) ?? [];

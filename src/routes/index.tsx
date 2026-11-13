@@ -404,10 +404,14 @@ function HomeScreen() {
   // Sent with every post made from a finished home video, so Performance can show which engine and goal worked.
   // Goal: "Book Now"/"Get a quote" businesses are recognised from the idea text, everything else is "sales" (the same default
   // Video Ad uses). Style: the video engine that made it. Angle: the home screen has no angle choice, so it stays empty.
+  // Enhancer: whether the video on screen was made with the Punqle Enhancer, noted at the moment each generation starts (the switch
+  // on screen can change afterwards). null = not known (Product mode, or nothing generated yet): then no value is sent.
+  const [resultEnhanced, setResultEnhanced] = useState<boolean | null>(null);
   const homeVideoTags = {
     goal: inferGoalFromDescription(`${homeIdea} ${videoPrompt}`) ?? "sales",
     angle: null,
     style: videoModel,
+    enhanced: homeMode === "product" ? null : resultEnhanced,
   };
   const [recentCount, setRecentCount] = useState(0);
   const [showRecent, setShowRecent] = useState(false);
@@ -910,6 +914,7 @@ function HomeScreen() {
 
   const handleResetHome = () => {
     setResultFromTaster(false);
+    setResultEnhanced(null);
     setHomeGeneratedImage(null);
     setHomeImageVariants([]);
     setHomeIdea("");
@@ -1166,6 +1171,7 @@ function HomeScreen() {
     setVideoError(null);
     setCompareJobs(null);
     setCompareStarting(true);
+    setResultEnhanced(videoEnhance);
     setVideoPanel("compare");
     const jobs = await startCompareJobs({ image: videoRefImage, prompt: videoFullPrompt, seconds: videoDuration, aspect: videoAspectRatio, enhance: videoEnhance });
     setCompareJobs(jobs);
@@ -1177,6 +1183,7 @@ function HomeScreen() {
     setCompareJobs(null);
     setCompareStarting(true);
     setTasterMode(true);
+    setResultEnhanced(true); // the server always runs the Enhancer on the free comparison
     setVideoPanel("compare");
     try {
       const r = await startFreeTaster(videoRefImage.base64, videoRefImage.mimeType, videoFullPrompt);
@@ -1508,6 +1515,7 @@ function HomeScreen() {
     if (!videoRefImage) return;
     try {
       if (videoNarrationEnabled) {
+        setResultEnhanced(false); // the talking-video path has no Enhancer
         setVideoStage("animating");
         const r = await generateTalkingVideo(
           videoRefImage.base64,
@@ -1521,6 +1529,7 @@ function HomeScreen() {
         videoPollRef.current = setTimeout(() => pollTalkingVideo(r.job_id, r.operation, versionIndex, totalVersions), 8000);
         return;
       }
+      setResultEnhanced(enhanceOverride ?? videoEnhance);
       const r = await generateImageVideo(
         videoRefImage.base64,
         videoRefImage.mimeType,

@@ -1615,6 +1615,12 @@ export function publishToMeta(
 // A finished video to the Facebook Page and/or as an Instagram Reel, right now (no scheduling for videos yet). videoDataUrl is the
 // same "data:video/mp4;base64,..." shape the YouTube and TikTok panels take. Instagram can take up to ~90 s to process the video,
 // and the server waits for it, so this call is slow on purpose.
+// What a video post is tagged with besides goal/angle/style, so Performance can compare lengths and Enhancer on/off.
+export interface VideoPostTags {
+  seconds?: number | null;
+  enhanced?: boolean | null;
+}
+
 export function publishVideoToMeta(
   videoDataUrl: string,
   caption: string,
@@ -1623,6 +1629,7 @@ export function publishVideoToMeta(
   goal?: string | null,
   angle?: string | null,
   style?: string | null,
+  videoTags?: VideoPostTags, // length + Enhancer of the video being posted; only known values are sent
 ): Promise<ApiMetaPublishResponse> {
   const match = videoDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
@@ -1637,6 +1644,8 @@ export function publishVideoToMeta(
   if (goal) formData.append("goal", goal);
   if (angle) formData.append("angle", angle);
   if (style) formData.append("style", style);
+  if (videoTags?.seconds) formData.append("video_seconds", String(Math.round(videoTags.seconds)));
+  if (videoTags?.enhanced !== null && videoTags?.enhanced !== undefined) formData.append("enhanced", String(videoTags.enhanced));
   return apiFetch<ApiMetaPublishResponse>("/meta/publish-video", {
     method: "POST",
     body: formData,
@@ -1705,6 +1714,7 @@ export function publishToYouTube(
   goal?: string | null,
   angle?: string | null,
   style?: string | null,
+  videoTags?: VideoPostTags, // length + Enhancer of the video being posted; only known values are sent
 ): Promise<ApiYouTubePublishResponse> {
   const match = videoDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
@@ -1725,6 +1735,8 @@ export function publishToYouTube(
   if (goal) formData.append("goal", goal);
   if (angle) formData.append("angle", angle);
   if (style) formData.append("style", style);
+  if (videoTags?.seconds) formData.append("video_seconds", String(Math.round(videoTags.seconds)));
+  if (videoTags?.enhanced !== null && videoTags?.enhanced !== undefined) formData.append("enhanced", String(videoTags.enhanced));
   return apiFetch<ApiYouTubePublishResponse>("/youtube/publish", {
     method: "POST",
     body: formData,
@@ -1786,6 +1798,7 @@ export function publishToTikTok(
   angle?: string | null,
   style?: string | null,
   scheduledTime?: string, // ISO8601; only when the server says TikTok can take a time (see fetchSchedulingCapabilities)
+  videoTags?: VideoPostTags, // length + Enhancer of the video being posted; only known values are sent
 ): Promise<ApiTikTokPublishResponse> {
   const match = videoDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
@@ -1810,6 +1823,8 @@ export function publishToTikTok(
   if (goal) formData.append("goal", goal);
   if (angle) formData.append("angle", angle);
   if (style) formData.append("style", style);
+  if (videoTags?.seconds) formData.append("video_seconds", String(Math.round(videoTags.seconds)));
+  if (videoTags?.enhanced !== null && videoTags?.enhanced !== undefined) formData.append("enhanced", String(videoTags.enhanced));
   return apiFetch<ApiTikTokPublishResponse>("/tiktok/publish", {
     method: "POST",
     body: formData,
@@ -1912,6 +1927,8 @@ export interface ApiPerformancePost {
   goal: string | null;
   angle: string | null;
   style: string | null;
+  video_seconds?: number | null; // length of the video, when the post was made from a video and Punqle knew it
+  enhanced?: boolean | null; // whether the Punqle Enhancer was used, when known
 }
 
 export function fetchOrganicPerformance(): Promise<{ posts: ApiPerformancePost[] }> {

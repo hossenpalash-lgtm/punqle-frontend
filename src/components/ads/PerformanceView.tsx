@@ -28,7 +28,7 @@ import {
   getYouTubeConnectUrl,
   type ApiPerformancePost,
 } from "@/lib/api";
-import { engagementRate, formatRate, groupLeaders, isWinner, MIN_RATE_BASE, notSharedNote, scorePosts, topPosts, type TagDimension } from "@/lib/performance-insights";
+import { engagementRate, formatRate, groupLeaders, isWinner, MIN_RATE_BASE, notSharedNote, scorePosts, tagValue, topPosts, type TagDimension } from "@/lib/performance-insights";
 
 function PlatformIcon({ platform, className, filled = false }: { platform: ApiPerformancePost["platform"]; className: string; filled?: boolean }) {
   if (platform === "youtube") return filled ? <YouTubeIcon className={className} /> : <Youtube className={className} />;
@@ -74,7 +74,14 @@ const PLATFORM_LABEL: Record<ApiPerformancePost["platform"], string> = {
   tiktok: "TikTok",
 };
 
-const DIMENSION_LABEL: Record<TagDimension, string> = { angle: "angle", style: "style", goal: "goal" };
+const DIMENSION_LABEL: Record<TagDimension, string> = { angle: "angle", style: "style", goal: "goal", length: "", enhancer: "" };
+
+// How a tag value reads on screen: a name, plus a small word after it when that helps ("Kling 4.0" + "style").
+function describeTag(dimension: TagDimension, value: string): { name: string; kind: string } {
+  if (dimension === "length") return { name: `${parseInt(value, 10)}-second videos`, kind: "" };
+  if (dimension === "enhancer") return { name: value === "on" ? "With the Enhancer" : "Without the Enhancer", kind: "" };
+  return { name: formatLabel(value), kind: DIMENSION_LABEL[dimension] };
+}
 
 function formatMultiple(n: number): string {
   return `${n.toFixed(1)}×`;
@@ -251,13 +258,15 @@ function youtubeDetails(m: NonNullable<ApiPerformancePost["metrics"]>): string[]
   return parts;
 }
 
-type GroupBy = "none" | "angle" | "style" | "goal";
+type GroupBy = "none" | "angle" | "style" | "goal" | "length" | "enhancer";
 
 const GROUP_OPTIONS: { value: GroupBy; label: string }[] = [
   { value: "none", label: "All posts" },
   { value: "angle", label: "By angle" },
   { value: "style", label: "By style" },
   { value: "goal", label: "By goal" },
+  { value: "length", label: "By length" },
+  { value: "enhancer", label: "By Enhancer" },
 ];
 
 interface GroupRow {
@@ -276,9 +285,13 @@ interface GroupRow {
 function groupPosts(posts: ApiPerformancePost[], by: Exclude<GroupBy, "none">): GroupRow[] {
   const rows = new Map<string, GroupRow>();
   for (const post of posts) {
-    const raw = post[by];
+    const raw = tagValue(post, by);
     const key = raw || "untagged";
-    const label = raw ? formatLabel(raw) : "Untagged (older post, or Social Content)";
+    const label = raw
+      ? describeTag(by, raw).name
+      : by === "length" || by === "enhancer"
+        ? "Not recorded (older post, or not made from a Punqle video)"
+        : "Untagged (older post, or Social Content)";
     if (!rows.has(key)) {
       rows.set(key, {
         key, label, postCount: 0, measuredCount: 0, views: 0, likes: 0, comments: 0, shares: 0, saves: 0, reach: 0,
@@ -473,8 +486,8 @@ export function PerformanceView() {
                 <li key={l.dimension}>
                   <div className="mb-1.5 flex items-baseline justify-between gap-2">
                     <span className="text-sm text-foreground">
-                      <span className="font-semibold">{formatLabel(l.value)}</span>{" "}
-                      <span className="text-muted-foreground">{DIMENSION_LABEL[l.dimension]}</span>
+                      <span className="font-semibold">{describeTag(l.dimension, l.value).name}</span>{" "}
+                      <span className="text-muted-foreground">{describeTag(l.dimension, l.value).kind}</span>
                     </span>
                     <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
                       {formatMultiple(l.averageMultiple)}{" "}

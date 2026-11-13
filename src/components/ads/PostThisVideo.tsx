@@ -1,15 +1,38 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PlatformTile, type PlatformKey } from "@/components/PlatformTile";
 import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
 import { PublishVideoToMeta } from "./PublishVideoToMeta";
-import type { VideoAspectRatio } from "@/lib/api";
+import type { VideoAspectRatio, VideoPostTags } from "@/lib/api";
 import { rememberPostTile } from "@/lib/post-return";
 
 export interface PostTags {
   goal?: string | null;
   angle?: string | null;
   style?: string | null;
+  enhanced?: boolean | null; // whether the Punqle Enhancer was used; null/undefined when the screen can't be sure
+}
+
+// The real length of the video, read from the file itself (so it is right whatever screen or engine made it, including the
+// 4-second free taster). null until the browser has read it, or if it can't.
+function useVideoSeconds(videoUrl: string | null): number | null {
+  const [seconds, setSeconds] = useState<number | null>(null);
+  useEffect(() => {
+    setSeconds(null);
+    if (!videoUrl) return;
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.onloadedmetadata = () => setSeconds(Number.isFinite(v.duration) && v.duration > 0 ? Math.round(v.duration) : null);
+    v.onerror = () => setSeconds(null);
+    v.src = videoUrl;
+    return () => {
+      v.onloadedmetadata = null;
+      v.onerror = null;
+      v.removeAttribute("src");
+      v.load();
+    };
+  }, [videoUrl]);
+  return seconds;
 }
 
 // "Post this video" under a finished video (the home screens' result panel and Recent videos). Until 2026-11-11 a finished
@@ -45,6 +68,8 @@ export function PostThisVideo({
   tags?: PostTags;
 }) {
   const [open, setOpen] = useState<PlatformKey | null>(initialOpen ?? null);
+  const seconds = useVideoSeconds(videoUrl);
+  const videoTags: VideoPostTags = { seconds, enhanced: tags?.enhanced ?? null };
 
   return (
     <div className="border-t border-border px-4 pb-1 pt-2.5">
@@ -77,11 +102,11 @@ export function PostThisVideo({
       </div>
 
       {open === "youtube" && (
-        <PublishToYouTube key="youtube" videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} videoKept={videoKept} startOpen goal={tags?.goal} angle={tags?.angle} style={tags?.style} />
+        <PublishToYouTube key="youtube" videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} videoKept={videoKept} startOpen goal={tags?.goal} angle={tags?.angle} style={tags?.style} videoTags={videoTags} />
       )}
-      {open === "tiktok" && <PublishToTikTok key="tiktok" videoUrl={videoUrl} headline={headline} videoKept={videoKept} startOpen goal={tags?.goal} angle={tags?.angle} style={tags?.style} />}
+      {open === "tiktok" && <PublishToTikTok key="tiktok" videoUrl={videoUrl} headline={headline} videoKept={videoKept} startOpen goal={tags?.goal} angle={tags?.angle} style={tags?.style} videoTags={videoTags} />}
       {(open === "facebook" || open === "instagram") && (
-        <PublishVideoToMeta key={open} videoUrl={videoUrl} headline={headline} videoKept={videoKept} startOpen initial={open} goal={tags?.goal} angle={tags?.angle} style={tags?.style} />
+        <PublishVideoToMeta key={open} videoUrl={videoUrl} headline={headline} videoKept={videoKept} startOpen initial={open} goal={tags?.goal} angle={tags?.angle} style={tags?.style} videoTags={videoTags} />
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import {
   getYouTubeConnectUrl,
   publishToYouTube,
   type ApiYouTubePublishResponse,
+  type VideoPostTags,
   type VideoAspectRatio,
 } from "@/lib/api";
 
@@ -36,6 +37,7 @@ export function PublishToYouTube({
   goal,
   angle,
   style,
+  videoTags,
   videoKept,
   startOpen,
 }: {
@@ -45,6 +47,7 @@ export function PublishToYouTube({
   goal?: string | null;
   angle?: string | null;
   style?: string | null;
+  videoTags?: VideoPostTags; // length + Enhancer of this video (see PostThisVideo)
   videoKept?: boolean; // the server keeps this video 14 days (Recent videos), so connecting does not lose it
   startOpen?: boolean; // open the form straight away (the caller already showed a button for it)
 }) {
@@ -125,7 +128,7 @@ export function PublishToYouTube({
       const scheduledIso = scheduling && scheduledAt ? new Date(scheduledAt).toISOString() : undefined;
       const r = await publishToYouTube(
         videoUrl, title.trim(), description.trim(), aspectRatio, scheduledIso,
-        undefined, undefined, goal, angle, style,
+        undefined, undefined, goal, angle, style, videoTags,
       );
       setResult(r);
     } catch (err) {

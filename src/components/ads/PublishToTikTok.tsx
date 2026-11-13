@@ -10,6 +10,7 @@ import {
   publishToTikTok,
   type ApiTikTokCreatorInfo,
   type ApiTikTokPublishResponse,
+  type VideoPostTags,
 } from "@/lib/api";
 import { TikTokIcon } from "@/components/TikTokIcon";
 import { PlatformTile } from "@/components/PlatformTile";
@@ -41,6 +42,7 @@ export function PublishToTikTok({
   goal,
   angle,
   style,
+  videoTags,
   videoKept,
   startOpen,
 }: {
@@ -49,6 +51,7 @@ export function PublishToTikTok({
   goal?: string | null;
   angle?: string | null;
   style?: string | null;
+  videoTags?: VideoPostTags; // length + Enhancer of this video (see PostThisVideo)
   videoKept?: boolean; // the server keeps this video 14 days (Recent videos), so connecting does not lose it
   startOpen?: boolean; // open the form straight away (the caller already showed a button for it)
 }) {
@@ -178,6 +181,7 @@ export function PublishToTikTok({
         style,
         // datetime-local gives the viewer's local time; toISOString() converts it to the UTC the backend expects.
         scheduling && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        videoTags,
       );
       setResult(r);
     } catch (err) {

@@ -15,6 +15,46 @@ function fmt(n: number | null | undefined): string {
   return `${Math.round(n)}`;
 }
 
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return <h3 className="mt-2 font-display text-sm font-extrabold text-foreground">{children}</h3>;
+}
+
+// One plain line for the "You vs them" card, from numbers already on screen. Engagement rate is per follower, so a small account can
+// beat a big one on it; the line says "engage" rather than claiming the audience is better.
+function versusTakeaway(data: ApiInstagramStats): string | null {
+  const own = data.own;
+  if (!own || own.analyzed_posts < 3) return null;
+  const { followers: mine, engagement_rate_pct: myRate } = own;
+  const { followers: theirs, engagement_rate_pct: theirRate } = data;
+  if (mine === null || theirs === null || myRate === null || theirRate === null) return null;
+  const theyAreBigger = theirs > mine;
+  const youEngageMore = myRate > theirRate;
+  if (theyAreBigger && youEngageMore) return "They have a larger audience, but your followers engage more.";
+  if (theyAreBigger) return "They have a larger audience and their followers engage more. Their top posts below are the place to look for ideas.";
+  if (youEngageMore) return "You have the larger audience, and your followers engage more.";
+  return "You have the larger audience, but theirs engages more. See what content works for them below.";
+}
+
+// "They post most on Tue and Fri, mostly 08-12 UTC." from the 7 x 6 grid already on screen (rows Mon..Sun, six 4-hour UTC slots).
+// Needs at least 8 posts (or some engagement) behind it, so a handful of posts never reads as a pattern.
+function bestTimesSentence(grid: number[][], mode: "posts" | "engagement"): string | null {
+  const total = grid.flat().reduce((a, b) => a + b, 0);
+  if (mode === "posts" && total < 8) return null;
+  if (mode === "engagement" && total <= 0) return null;
+  const days = grid.map((row, i) => ({ i, v: row.reduce((a, b) => a + b, 0) })).sort((a, b) => b.v - a.v).filter((d) => d.v > 0).slice(0, 2);
+  const slots = TIME_SLOTS.map((t, c) => ({ t, v: grid.reduce((a, row) => a + row[c], 0) })).sort((a, b) => b.v - a.v);
+  if (days.length === 0 || slots[0].v <= 0) return null;
+  const dayText = days.map((d) => WEEKDAYS[d.i]).join(" and ");
+  return mode === "posts"
+    ? `They post most on ${dayText}, mostly ${slots[0].t} UTC.`
+    : `Their posts earn the most on ${dayText}, especially ${slots[0].t} UTC.`;
+}
+
+function localOffsetLabel(): string {
+  const off = -new Date().getTimezoneOffset() / 60;
+  return off === 0 ? "UTC" : `UTC${off > 0 ? "+" : ""}${off}`;
+}
+
 function Card({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
@@ -140,6 +180,9 @@ function Heatmap({ posts, engagement }: { posts: number[][]; engagement: number[
           </button>
         ))}
       </div>
+      {bestTimesSentence(grid, mode) && (
+        <p className="mb-2 rounded-lg bg-secondary px-3 py-2 text-sm font-semibold text-foreground">{bestTimesSentence(grid, mode)}</p>
+      )}
       <div className="grid gap-1" style={{ gridTemplateColumns: "2.2rem repeat(6, 1fr)" }}>
         <div />
         {TIME_SLOTS.map((t) => (
@@ -158,7 +201,9 @@ function Heatmap({ posts, engagement }: { posts: number[][]; engagement: number[
           </div>
         ))}
       </div>
-      <p className="mt-1.5 text-[11px] text-muted-foreground">Times are UTC. Darker = more.</p>
+      <p className="mt-1.5 text-[11px] text-muted-foreground">
+        Times are UTC (your time is {localOffsetLabel()}). Darker = more. Use this as a starting point: posting time alone doesn't guarantee better results.
+      </p>
     </div>
   );
 }
@@ -321,6 +366,7 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
               title={`You vs @${data.username}`}
               note={`Your own Instagram${data.own.username ? ` (@${data.own.username})` : ""} against theirs, counted the same way`}
             >
+              {versusTakeaway(data) && <p className="mb-3 rounded-lg bg-secondary px-3 py-2 text-sm font-semibold text-foreground">{versusTakeaway(data)}</p>}
               <div className="space-y-3">
                 <VersusRow label="Followers" mine={data.own.followers} theirs={data.followers} />
                 <VersusRow label="Posts per week" mine={data.own.posts_per_week} theirs={data.posts_per_week} />
@@ -352,6 +398,8 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
             <Kpi label="Avg engagement" value={fmt(data.avg_engagement)} hint="likes + comments" />
             <Kpi label="Engagement rate" value={data.engagement_rate_pct === null ? "—" : `${data.engagement_rate_pct}%`} hint="of followers, per post" />
           </div>
+
+          <SectionHeading>What content works</SectionHeading>
 
           <Card title="Post types" note="What they post, and how each type performs">
             <div className="flex items-center gap-4">
@@ -406,34 +454,6 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
             </Card>
           )}
 
-          {data.timeline.length > 1 && (
-            <Card title="Engagement over time" note={`Total likes + comments per ${data.timeline_unit}`}>
-              <TimelineChart points={data.timeline} />
-            </Card>
-          )}
-
-          <Card title="Best times" note="Days and hours of their posts">
-            <Heatmap posts={data.heatmap_posts} engagement={data.heatmap_engagement} />
-          </Card>
-
-          {data.hashtags.length > 0 && (
-            <Card title="Hashtags they use">
-              <div className="space-y-1.5">
-                {data.hashtags.map((h) => (
-                  <div key={h.tag} className="flex items-center gap-2">
-                    <p className="w-28 shrink-0 truncate text-sm text-foreground">#{h.tag}</p>
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
-                      <div className="h-full rounded-full" style={{ width: `${(h.posts / maxTag) * 100}%`, background: COLORS[2] }} />
-                    </div>
-                    <p className="w-24 shrink-0 text-right text-xs text-muted-foreground">
-                      {h.posts} post{h.posts === 1 ? "" : "s"} · {fmt(h.avg_engagement)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
           <Card title="Top posts" note="Highest engagement (likes + comments)">
             <div className="space-y-2">
               {data.top_posts.map((p) => (
@@ -456,6 +476,38 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
               ))}
             </div>
           </Card>
+
+          <SectionHeading>When to post</SectionHeading>
+
+          {data.timeline.length > 1 && (
+            <Card title="Engagement over time" note={`Total likes + comments per ${data.timeline_unit}`}>
+              <TimelineChart points={data.timeline} />
+            </Card>
+          )}
+
+          <Card title="Best times" note="Days and hours of their posts">
+            <Heatmap posts={data.heatmap_posts} engagement={data.heatmap_engagement} />
+          </Card>
+
+          {data.hashtags.length > 0 && (
+            <>
+            <Card title="Hashtags they use">
+              <div className="space-y-1.5">
+                {data.hashtags.map((h) => (
+                  <div key={h.tag} className="flex items-center gap-2">
+                    <p className="w-28 shrink-0 truncate text-sm text-foreground">#{h.tag}</p>
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
+                      <div className="h-full rounded-full" style={{ width: `${(h.posts / maxTag) * 100}%`, background: COLORS[2] }} />
+                    </div>
+                    <p className="w-24 shrink-0 text-right text-xs text-muted-foreground">
+                      {h.posts} post{h.posts === 1 ? "" : "s"} · {fmt(h.avg_engagement)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+            </>
+          )}
 
           <p className="text-[11px] text-muted-foreground">
             Source: Instagram's official Business Discovery data for public Business and Creator accounts, last {data.analyzed_posts} posts. Themes are labelled by AI; all numbers are counted directly from the posts.

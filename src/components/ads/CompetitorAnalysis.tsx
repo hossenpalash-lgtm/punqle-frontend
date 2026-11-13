@@ -63,6 +63,60 @@ const KIND_STYLES: Record<string, { label: string; className: string }> = {
   social: { label: "Social", className: "bg-violet-500/15 text-violet-700 dark:text-violet-300" },
 };
 
+// One opportunity: a plain headline, one or two sentences, where it comes from in a few words, and the button. The reason
+// ("Why") and the source link stay one tap away instead of crowding every card.
+const BASED_ON: Record<string, string> = {
+  review: "Based on customer reviews",
+  news: "Based on recent news",
+  official: "Based on their own website",
+  discussion: "Based on customer discussions",
+  social: "Based on their social posts",
+};
+
+function OpportunityCard({
+  item,
+  kind,
+  onCreateAd,
+}: {
+  item: ApiCompetitorAnalysisResponse["opportunities"][number];
+  kind?: string;
+  onCreateAd: (idea: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const basedOn = kind ? BASED_ON[kind] : undefined;
+  return (
+    <div className="rounded-xl bg-secondary px-3 py-2.5">
+      <p className="text-sm font-bold text-foreground">{item.title}</p>
+      <p className="mt-0.5 text-sm text-secondary-foreground">{item.opportunity}</p>
+      {basedOn && <p className="mt-1 text-xs text-muted-foreground">{basedOn}</p>}
+      {(item.evidence || item.source_url) && (
+        <div className={open ? "mt-1.5" : "mt-1.5 hidden print:block"}>
+          {item.evidence && <p className="text-xs italic text-muted-foreground">Why: {item.evidence}</p>}
+          <SourceLink url={item.source_url} kind={kind} />
+        </div>
+      )}
+      <div className="no-print mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+        <button
+          onClick={() => onCreateAd(item.action || item.opportunity)}
+          className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+        >
+          Create an ad from this
+          <ArrowRight className="h-3 w-3" />
+        </button>
+        {(item.evidence || item.source_url) && (
+          <button
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+          >
+            {open ? "Hide the reason" : "Why this?"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{children}</p>;
 }
@@ -296,13 +350,17 @@ export function CompetitorAnalysis({
   const firstDoing = result?.what_theyre_doing[0];
   const firstSignal = result?.customer_signals[0];
   const firstOpp = result?.opportunities[0];
+  // The two things an owner wants first: what customers like and what they complain about. Only from comments that carry a tag.
+  const likedSignal = result?.customer_signals.find((s) => s.sentiment === "positive");
+  const complaintSignal = result?.customer_signals.find((s) => s.sentiment === "negative");
 
   return (
     <div>
       <h1 className="font-display mb-1 text-lg font-extrabold text-foreground">Competitive Edge</h1>
       <p className="mb-4 text-sm text-muted-foreground">
-        Paste a competitor's website or social page — Punqle searches the real web (not just that one page) to
-        find opportunities they've missed.
+        <span className="font-semibold text-foreground">What can I learn from others?</span> Paste a competitor's
+        website or social page — Punqle searches the real web (not just that one page) to find opportunities
+        they've missed.
       </p>
 
       <div className="mb-4 flex gap-2">
@@ -471,17 +529,36 @@ export function CompetitorAnalysis({
                 <div className="flex items-start gap-3 rounded-xl bg-secondary px-3 py-2.5">
                   <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Customers say</p>
-                    <p className="text-sm text-secondary-foreground">
-                      {firstSignal?.signal || "No reliable public customer feedback found."}
-                    </p>
+                    {likedSignal || complaintSignal ? (
+                      <div className="space-y-1.5">
+                        {likedSignal && (
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">What customers like</p>
+                            <p className="text-sm text-secondary-foreground">{likedSignal.signal}</p>
+                          </div>
+                        )}
+                        {complaintSignal && (
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">What customers complain about</p>
+                            <p className="text-sm text-secondary-foreground">{complaintSignal.signal}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Customers say</p>
+                        <p className="text-sm text-secondary-foreground">
+                          {firstSignal?.signal || "No reliable public customer feedback found."}
+                        </p>
+                      </>
+                    )}
                     <SentimentDonut signals={result.customer_signals} />
                   </div>
                 </div>
                 <div className="flex items-start gap-3 rounded-xl bg-secondary px-3 py-2.5">
                   <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your best move</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your opportunity</p>
                     {firstOpp ? (
                       <>
                         <p className="text-sm font-medium text-secondary-foreground">{firstOpp.title}</p>
@@ -536,19 +613,12 @@ export function CompetitorAnalysis({
               )}
               <div className="flex flex-col gap-2">
                 {result.opportunities.map((item, i) => (
-                  <div key={i} className="rounded-xl bg-secondary px-3 py-2">
-                    <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-primary">{item.title}</p>
-                    <p className="mb-1.5 text-sm text-secondary-foreground">{item.opportunity}</p>
-                    {item.evidence && <p className="mb-1.5 text-xs italic text-muted-foreground">Why: {item.evidence}</p>}
-                    <SourceLink url={item.source_url} kind={item.source_url ? kindByUrl[item.source_url] : undefined} />
-                    <button
-                      onClick={() => onCreateAd(item.action || item.opportunity)}
-                      className="no-print mt-1.5 flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                    >
-                      Create an ad from this
-                      <ArrowRight className="h-3 w-3" />
-                    </button>
-                  </div>
+                  <OpportunityCard
+                    key={i}
+                    item={item}
+                    kind={item.source_url ? kindByUrl[item.source_url] : undefined}
+                    onCreateAd={onCreateAd}
+                  />
                 ))}
               </div>
             </Section>

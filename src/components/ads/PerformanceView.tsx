@@ -262,12 +262,22 @@ type GroupBy = "none" | "angle" | "style" | "goal" | "length" | "enhancer";
 
 const GROUP_OPTIONS: { value: GroupBy; label: string }[] = [
   { value: "none", label: "All posts" },
-  { value: "angle", label: "By angle" },
+  { value: "angle", label: "By message" },
   { value: "style", label: "By style" },
   { value: "goal", label: "By goal" },
-  { value: "length", label: "By length" },
-  { value: "enhancer", label: "By Enhancer" },
+  { value: "length", label: "By video length" },
+  { value: "enhancer", label: "Enhancer on vs off" },
 ];
+
+// One plain sentence under the tabs, so a tab's name never has to be guessed.
+const GROUP_HELP: Record<GroupBy, string> = {
+  none: "Every post you've published, newest first.",
+  angle: "Which kind of message worked best (the angle you chose when you made the ad).",
+  style: "Which video look or tool got the most reactions.",
+  goal: "Posts grouped by what you wanted: sales, leads, traffic or bookings.",
+  length: "Do shorter or longer videos get more reactions?",
+  enhancer: "Do videos made with the Punqle Enhancer do better than ones made without it?",
+};
 
 interface GroupRow {
   key: string;
@@ -390,17 +400,18 @@ export function PerformanceView() {
         Performance
       </h1>
       <p className="mb-4 text-sm text-muted-foreground">
-        Organic performance for what you've published — paid ad tracking is a separate, later phase.
+        <span className="font-semibold text-foreground">What worked for me?</span> See which of your posts got the most
+        reactions, and what they have in common. (Paid ads aren't tracked yet.)
       </p>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1.5 rounded-full bg-secondary p-1">
+        <div className="flex max-w-full gap-1.5 overflow-x-auto rounded-full bg-secondary p-1">
           {GROUP_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => setGroupBy(opt.value)}
               className={[
-                "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                "shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
                 groupBy === opt.value
                   ? "bg-primary text-primary-foreground"
                   : "text-secondary-foreground hover:bg-background/60",
@@ -419,6 +430,7 @@ export function PerformanceView() {
           Refresh
         </button>
       </div>
+      <p className="-mt-2 mb-4 text-xs text-muted-foreground">{GROUP_HELP[groupBy]}</p>
 
       {error && <p className="mb-4 text-sm font-medium text-destructive">{error}</p>}
 
@@ -463,8 +475,8 @@ export function PerformanceView() {
                       <div className="min-w-0 flex-1">
                         <p className="flex items-center gap-2">
                           <span className="font-display text-2xl font-extrabold leading-none text-foreground">{formatMultiple(score.multiple)}</span>
-                          <span className="text-xs text-muted-foreground">vs your {PLATFORM_LABEL[post.platform]} average</span>
-                          {strict && <Trophy className="h-3.5 w-3.5 text-accent" aria-label="Winner" />}
+                          <span className="text-xs text-muted-foreground">the reactions of your usual {PLATFORM_LABEL[post.platform]} post</span>
+                          {strict && <Trophy className="h-3.5 w-3.5 text-accent" aria-label="Top performer" />}
                         </p>
                         <div className="my-1.5">
                           <MultipleBar multiple={score.multiple} max={barMax} />
@@ -501,7 +513,7 @@ export function PerformanceView() {
               ))}
             </ul>
           )}
-          <p className="mt-3 text-[11px] text-muted-foreground">The thin line is your average (1×).</p>
+          <p className="mt-3 text-[11px] text-muted-foreground">Reactions = likes, comments, shares and saves. The thin line is your usual post (1×).</p>
         </div>
       )}
 
@@ -557,7 +569,7 @@ export function PerformanceView() {
                   {isWinner(scores.get(post.id)) && (
                     <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
                       <Trophy className="h-2.5 w-2.5" />
-                      Winner · {formatMultiple(scores.get(post.id)!.multiple)}
+                      Top performer · {formatMultiple(scores.get(post.id)!.multiple)}
                     </span>
                   )}
                   {post.angle && (

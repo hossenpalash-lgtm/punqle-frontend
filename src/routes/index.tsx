@@ -3877,6 +3877,8 @@ function HomeScreen() {
       {tab === "history" && <HistoryTab />}
       {tab === "competitor" && (
         <CompetitorAnalysis
+          credits={credits}
+          setCredits={setCredits}
           onCreateAd={(idea) => {
             setPrefilledIdea(idea);
             setEntryHint(undefined);

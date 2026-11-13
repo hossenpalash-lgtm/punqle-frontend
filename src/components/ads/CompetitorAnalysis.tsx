@@ -23,6 +23,7 @@ import {
   type ApiSavedCompetitor,
 } from "@/lib/api";
 import { InstagramStats } from "./InstagramStats";
+import { TopUpButton } from "./TopUpButton";
 
 function timeAgo(iso?: string | null): string {
   if (!iso) return "";
@@ -174,7 +175,19 @@ function SourceLink({ url, kind }: { url: string | null; kind?: string }) {
   );
 }
 
-export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) => void }) {
+// What a new analysis or a Refresh costs. Display only: the server charges and enforces it (COMPETITOR_ANALYSIS_CREDITS on Render,
+// default 2). Opening a saved or recently cached analysis is free.
+const ANALYSIS_CREDITS = 2;
+
+export function CompetitorAnalysis({
+  onCreateAd,
+  credits,
+  setCredits,
+}: {
+  onCreateAd: (idea: string) => void;
+  credits: number | null;
+  setCredits: (n: number) => void;
+}) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -209,7 +222,9 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
     setLoading(true);
     setError(null);
     try {
-      showResult(await fetchCompetitorAnalysis(target, refresh));
+      const r = await fetchCompetitorAnalysis(target, refresh);
+      showResult(r);
+      if (typeof r.credits_remaining === "number") setCredits(r.credits_remaining);
       void loadSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't analyze that link.");
@@ -305,9 +320,18 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
           className="flex shrink-0 items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
           style={{ background: "var(--gradient-primary)" }}
         >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Analyze"}
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : `Analyze · ${ANALYSIS_CREDITS} credits`}
         </button>
       </div>
+      <p className="-mt-2 mb-4 text-xs text-muted-foreground">
+        A new analysis costs {ANALYSIS_CREDITS} credits. Opening one you saved is free.
+        {credits !== null && credits < ANALYSIS_CREDITS && (
+          <span className="mt-1.5 flex flex-wrap items-center gap-2 text-foreground">
+            You have {credits} {credits === 1 ? "credit" : "credits"}.
+            <TopUpButton />
+          </span>
+        )}
+      </p>
 
       {saved.length > 0 && (
         <div className="mb-4">
@@ -333,10 +357,13 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
       )}
 
       {error && (
-        <p className="mb-4 flex items-center gap-1.5 text-sm font-medium text-destructive">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          {error}
-        </p>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {error}
+          </p>
+          {/credits?\b/i.test(error) && <TopUpButton className="shrink-0" />}
+        </div>
       )}
 
       {loading && (
@@ -371,7 +398,7 @@ export function CompetitorAnalysis({ onCreateAd }: { onCreateAd: (idea: string) 
                 className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-secondary/70"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                Refresh
+                Refresh · {ANALYSIS_CREDITS} credits
               </button>
               <button
                 onClick={handleSavePdf}

@@ -2059,6 +2059,7 @@ export interface ApiCompetitorAnalysisResponse {
   id?: string | null;
   analyzed_at?: string | null;
   cached?: boolean;
+  credits_remaining?: number | null; // set only when this call was charged (a new analysis or a Refresh)
 }
 
 export function fetchCompetitorAnalysis(url: string, refresh = false): Promise<ApiCompetitorAnalysisResponse> {

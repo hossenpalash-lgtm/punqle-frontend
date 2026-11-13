@@ -11,11 +11,14 @@ export const Route = createFileRoute("/privacy-policy")({
 
 function PrivacyPolicyPage() {
   return (
-    <LegalLayout title="Privacy Policy" effectiveDate="November 9, 2026">
+    <LegalLayout title="Privacy Policy" effectiveDate="November 14, 2026">
       <p>
         This Privacy Policy explains what information Punqle ("Punqle," "we," "us") collects when you use the
         Punqle app at punqle.com, how we use it, and what choices you have. Punqle is operated by HOSSEN, MD
-        MOSHARRAF (ABN 47 183 516 336), based in Australia.
+        MOSHARRAF (ABN 47 183 516 336), based in Australia, whose registered business address is
+        [REGISTERED BUSINESS ADDRESS - FOUNDER TO FILL IN BEFORE THIS GOES LIVE]. HOSSEN, MD MOSHARRAF is the
+        controller of the personal information described here. Privacy questions:{" "}
+        <a href="mailto:hossenpalash@gmail.com">hossenpalash@gmail.com</a>.
       </p>
       <p>
         This policy describes what Punqle actually does today. If we add new features that change what data we
@@ -32,7 +35,7 @@ function PrivacyPolicyPage() {
         <li>Any web page URL you paste in for our competitor-analysis or product-import tools (we fetch the public content of that page)</li>
       </ul>
       <p><strong>Content we generate for you.</strong> We store the ad copy, captions, and images our AI generates for you, so you can view and reuse your recent posts. We keep your 20 most recently generated posts; older ones are automatically deleted as new ones are created.</p>
-      <p><strong>Payment and subscription information.</strong> If you subscribe to a paid plan, payment is handled entirely by our payment processor, Stripe, on Stripe's own hosted checkout page. We never see or store your card number. We store only a Stripe customer/subscription reference, your plan tier, and billing status, so we know what you're subscribed to.</p>
+      <p><strong>Payment and subscription information.</strong> If you subscribe to a paid plan, payment is handled entirely by our online reseller and Merchant of Record, Paddle (Paddle.com), on Paddle's own checkout. We never see or store your card number. Paddle collects the payment and billing details you enter and shares with us only what we need: your email, a Paddle customer/subscription reference, your plan tier, and billing status, so we know what you're subscribed to. Paddle's own privacy notice explains how it uses your data.</p>
       <p><strong>Shopify integration (optional).</strong> If you choose to connect a Shopify store, we store your store's domain and an access token that lets us read your product catalog, so we can import your products into Punqle. This only happens if you actively connect your store, and you can disconnect it at any time from within the app.</p>
       <p><strong>YouTube integration (optional).</strong> If you choose to connect your YouTube channel, we store your channel's ID and title, along with an OAuth access token and refresh token, so we can identify your connected channel, publish, only at your explicit request, videos you create inside Punqle to it, and show you how those videos are performing (views, likes, comments, watch time, and how often their thumbnails were shown). See "Google User Data (YouTube Integration)" below for full details. This only happens if you actively connect your channel, and you can disconnect it at any time from within the app.</p>
       <p><strong>Facebook and Instagram integration (optional).</strong> If you choose to connect a Facebook Page (and its linked Instagram account, if any), we store the Page's ID and name, a Page access token, and, if linked, the Instagram account's ID and username, so we can publish, only at your explicit request, ad content you create inside Punqle to those accounts, and show you how the posts you published through Punqle are performing (for example likes, comments, shares, saves, and how many people viewed or reached each post). We read these numbers only for posts you published through Punqle to your own connected Page or Instagram account, and only to show them to you. This only happens if you actively connect an account, and you can disconnect it at any time from within the app.</p>
@@ -50,7 +53,7 @@ function PrivacyPolicyPage() {
         <li><strong>Video engines (Replicate, fal.ai and Segmind)</strong> — when you make a video from a photo, the photo and your written prompt are sent to the video engine that makes it, solely to make that video. For Segmind (used for 1080p Seedance), the photo is shared through a private, temporary link that we delete as soon as the video is finished. We never send your account details to these providers.</li>
         <li><strong>Google (YouTube Data, Analytics and Reporting APIs)</strong> — only if you connect your YouTube channel; see "YouTube integration" above and "Google User Data (YouTube Integration)" below for full details.</li>
         <li><strong>Pexels</strong> — receives only a search term, if you choose to search their stock photo library instead of uploading your own photo. No personal information is sent.</li>
-        <li><strong>Stripe</strong> — handles billing and payment directly; see "Payment and subscription information" above.</li>
+        <li><strong>Paddle</strong> — our Merchant of Record: handles billing, payment, sales tax and refunds directly; see "Payment and subscription information" above.</li>
         <li><strong>Shopify</strong> — only if you connect your store; see "Shopify integration" above.</li>
         <li><strong>Meta (Facebook and Instagram)</strong> — only if you connect a Facebook Page or Instagram account; see "Facebook and Instagram integration" above.</li>
         <li><strong>TikTok</strong> — only if you connect a TikTok account; see "TikTok integration" above.</li>

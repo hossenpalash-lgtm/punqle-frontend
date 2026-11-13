@@ -21,6 +21,12 @@ export function LegalFooter({ className = "" }: { className?: string }) {
       <span className="text-border" aria-hidden="true">
         &middot;
       </span>
+      <Link to="/refund-policy" className="hover:text-foreground">
+        Refund Policy
+      </Link>
+      <span className="text-border" aria-hidden="true">
+        &middot;
+      </span>
       <Link to="/data-deletion" className="hover:text-foreground">
         Data Deletion
       </Link>

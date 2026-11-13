@@ -36,7 +36,7 @@ function DataDeletionPage() {
       </ul>
       <p>
         Where you have an active or past paid subscription, we may retain minimal billing records (such as your
-        Stripe customer/subscription reference) as required for tax, accounting, or legal compliance, even after
+        Paddle customer/subscription reference) as required for tax, accounting, or legal compliance, even after
         the rest of your data is deleted.
       </p>
 

@@ -102,6 +102,7 @@ import { StarterExamples } from "@/components/ads/StarterExamples";
 import type { StarterExample } from "@/components/ads/StarterExamples";
 import { RecentVideos } from "@/components/ads/RecentVideos";
 import { PostThisVideo } from "@/components/ads/PostThisVideo";
+import { inferGoalFromDescription } from "@/lib/ad-goal";
 import type { CompareJob } from "@/components/ads/VideoCompare";
 
 type Tab = "home" | "single" | "plan" | "calendar" | "performance" | "history" | "competitor" | "video" | "ad" | "ad-video" | "bulk-creative" | "tryon";
@@ -400,6 +401,14 @@ function HomeScreen() {
   const [videoNarrationEnabled, setVideoNarrationEnabled] = useState(false);
   // Finished videos are kept for 14 days when the server has saving switched on ("Recent videos"); then leaving the page is safe.
   const [recentSaved, setRecentSaved] = useState(false);
+  // Sent with every post made from a finished home video, so Performance can show which engine and goal worked.
+  // Goal: "Book Now"/"Get a quote" businesses are recognised from the idea text, everything else is "sales" (the same default
+  // Video Ad uses). Style: the video engine that made it. Angle: the home screen has no angle choice, so it stays empty.
+  const homeVideoTags = {
+    goal: inferGoalFromDescription(`${homeIdea} ${videoPrompt}`) ?? "sales",
+    angle: null,
+    style: videoModel,
+  };
   const [recentCount, setRecentCount] = useState(0);
   const [showRecent, setShowRecent] = useState(false);
   // While the free video test is still unused, the Video box shows only photo + one line + one big button; every other
@@ -2495,6 +2504,7 @@ function HomeScreen() {
                       headline={(homeIdea.trim() || videoPrompt.trim() || "My ad video").slice(0, 100)}
                       aspectRatio={videoAspectRatio}
                       videoKept={recentSaved}
+                      tags={homeVideoTags}
                     />
                   </>
                 ) : !videoRefImage && showRecent ? (
@@ -3167,6 +3177,7 @@ function HomeScreen() {
                       headline={(homeIdea.trim() || videoPrompt.trim() || "My ad video").slice(0, 100)}
                       aspectRatio={videoAspectRatio}
                       videoKept={recentSaved}
+                      tags={homeVideoTags}
                     />
                   </>
                 ) : productPanel === "generating" ? (

@@ -41,7 +41,7 @@ function readAspect(blobUrl: string): Promise<VideoAspectRatio> {
 export function RecentVideos({ onClose, returningFrom }: { onClose: () => void; returningFrom?: PlatformKey | null }) {
   const [videos, setVideos] = useState<ApiRecentVideo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [posting, setPosting] = useState<{ id: string; dataUrl: string | null; aspect: VideoAspectRatio; failed: boolean } | null>(null);
+  const [posting, setPosting] = useState<{ id: string; model: string; dataUrl: string | null; aspect: VideoAspectRatio; failed: boolean } | null>(null);
   const [autoOpened, setAutoOpened] = useState(false);
 
   useEffect(() => {
@@ -62,13 +62,13 @@ export function RecentVideos({ onClose, returningFrom }: { onClose: () => void; 
   }, []);
 
   const startPosting = async (v: ApiRecentVideo) => {
-    setPosting({ id: v.id, dataUrl: null, aspect: "9:16", failed: false });
+    setPosting({ id: v.id, model: v.model, dataUrl: null, aspect: "9:16", failed: false });
     try {
       const blob = await (await fetch(v.url)).blob();
       const [dataUrl, aspect] = await Promise.all([readAsDataUrl(blob), readAspect(URL.createObjectURL(blob))]);
-      setPosting({ id: v.id, dataUrl, aspect, failed: false });
+      setPosting({ id: v.id, model: v.model, dataUrl, aspect, failed: false });
     } catch {
-      setPosting({ id: v.id, dataUrl: null, aspect: "9:16", failed: true });
+      setPosting({ id: v.id, model: v.model, dataUrl: null, aspect: "9:16", failed: true });
     }
   };
 
@@ -147,6 +147,7 @@ export function RecentVideos({ onClose, returningFrom }: { onClose: () => void; 
             headline="My ad video"
             aspectRatio={posting.aspect}
             videoKept
+            tags={{ style: posting.model }}
             initialOpen={autoOpened && returningFrom && videos && posting.id === videos[0]?.id ? returningFrom : undefined}
           />
         </div>

@@ -115,7 +115,20 @@ function Metric({ icon: Icon, value, one, many, title }: { icon: LucideIcon; val
   );
 }
 
+// Engine ids that posts made from the home screen carry as their style; everything else is title-cased from its id.
+const LABEL_NAMES: Record<string, string> = {
+  omni: "Gemini Omni",
+  wan_3: "Wan 3.0",
+  kling_3_pro: "Kling 3.0 Pro",
+  kling_4: "Kling 4.0",
+  seedance_2_5: "Seedance 2.5",
+  seedance_2_5_hd: "Seedance 2.5 (1080p)",
+  photo_to_video: "Photo to video",
+  text_to_video: "Text to video",
+};
+
 function formatLabel(raw: string): string {
+  if (LABEL_NAMES[raw]) return LABEL_NAMES[raw];
   return raw
     .split(/[_-]/)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))

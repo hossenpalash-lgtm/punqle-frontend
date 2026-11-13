@@ -9,6 +9,7 @@ import {
   type ApiVideoOperation,
   type VideoAspectRatio,
 } from "@/lib/api";
+import { inferGoalFromDescription } from "@/lib/ad-goal";
 import { EditVideoPanel } from "./EditVideoPanel";
 import { ProductPicker } from "./ProductPicker";
 import { PublishToTikTok } from "./PublishToTikTok";
@@ -183,6 +184,10 @@ export function VideoPostForm({
     headlineRef.current = value;
   };
 
+  // Tags sent with the post (Performance groups by them). Goal follows what was typed; style says whether a photo was used.
+  const postGoal = inferGoalFromDescription(description) ?? "sales";
+  const postStyle = file ? "photo_to_video" : "text_to_video";
+
   const minutes = Math.floor(elapsedSeconds / 60);
   const seconds = elapsedSeconds % 60;
 
@@ -205,8 +210,8 @@ export function VideoPostForm({
           onSaved={(videoBase64) => setVideoUrl(`data:video/mp4;base64,${videoBase64}`)}
         />
 
-        <PublishToYouTube videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} />
-        <PublishToTikTok videoUrl={videoUrl} headline={headline} />
+        <PublishToYouTube videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} goal={postGoal} style={postStyle} />
+        <PublishToTikTok videoUrl={videoUrl} headline={headline} goal={postGoal} style={postStyle} />
         <a
           href={videoUrl}
           download="ad-video.mp4"

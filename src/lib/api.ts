@@ -1879,6 +1879,8 @@ export interface ApiPostMetrics {
   total_interactions: number | null;
   reposts: number | null;
   avg_watch_seconds: number | null; // Instagram Reels only
+  total_watch_seconds?: number | null; // Instagram Reels only: everyone's watch time added up
+  skip_rate?: number | null; // Instagram Reels only, exactly as Meta sends it (percent or ratio is not confirmed; see skipRatePercent)
   // YouTube (Analytics + Reporting APIs).
   impressions: number | null;
   ctr_pct: number | null;

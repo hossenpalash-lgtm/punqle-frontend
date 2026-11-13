@@ -28,7 +28,7 @@ import {
   getYouTubeConnectUrl,
   type ApiPerformancePost,
 } from "@/lib/api";
-import { engagementRate, formatRate, groupLeaders, isWinner, notSharedNote, scorePosts, topPosts, type TagDimension } from "@/lib/performance-insights";
+import { engagementRate, formatRate, groupLeaders, isWinner, MIN_RATE_BASE, notSharedNote, scorePosts, topPosts, type TagDimension } from "@/lib/performance-insights";
 
 function PlatformIcon({ platform, className, filled = false }: { platform: ApiPerformancePost["platform"]; className: string; filled?: boolean }) {
   if (platform === "youtube") return filled ? <YouTubeIcon className={className} /> : <Youtube className={className} />;
@@ -215,10 +215,32 @@ function estimateDuration(m: ApiPerformancePost["metrics"]): number | null {
 }
 
 // The longer YouTube numbers that don't fit as icons.
+// Everyone's watch time added up, as "42s", "12m 30s" or "3h 20m".
+function formatTotalWatch(seconds: number): string {
+  const s = Math.round(seconds);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
+  return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
+}
+
+// Instagram's reels_skip_rate: Meta calls it "the percentage of views from people who skipped during the first 3 seconds" but does
+// not say whether the API sends 0-100 or a 0-1 ratio (checked 2026-11-13 on a Reel with no viewers: value 0). A ratio can never be
+// above 1, so a value above 1 is certainly a percent and is the only case shown; anything else stays hidden rather than risk a
+// wrong number. Needs MIN_RATE_BASE people so one early skip doesn't read as 100%.
+function skipRatePercent(m: NonNullable<ApiPerformancePost["metrics"]>): number | null {
+  const raw = m.skip_rate;
+  const people = Math.max(m.views ?? 0, m.reach ?? 0);
+  if (raw === null || raw === undefined || people < MIN_RATE_BASE) return null;
+  return raw > 1 && raw <= 100 ? raw : null;
+}
+
 function youtubeDetails(m: NonNullable<ApiPerformancePost["metrics"]>): string[] {
   const parts: string[] = [];
   if (m.watch_minutes !== null) parts.push(`${formatCount(Math.round(m.watch_minutes))} min watched`);
   if (m.avg_watch_seconds !== null && m.avg_watch_seconds !== undefined) parts.push(`avg watch ${formatSeconds(m.avg_watch_seconds)}`);
+  if (m.total_watch_seconds !== null && m.total_watch_seconds !== undefined && m.total_watch_seconds > 0) parts.push(`${formatTotalWatch(m.total_watch_seconds)} total watch time`);
+  const skipped = skipRatePercent(m);
+  if (skipped !== null) parts.push(`${Math.round(skipped)}% skipped in the first 3 seconds`);
   if (m.avg_view_seconds !== null) {
     parts.push(`avg view ${formatSeconds(m.avg_view_seconds)}${m.avg_view_pct !== null ? ` (${Math.round(m.avg_view_pct)}%)` : ""}`);
   }

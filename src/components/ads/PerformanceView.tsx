@@ -7,6 +7,7 @@ import {
   Loader2,
   Lock,
   MessageCircle,
+  Percent,
   RefreshCw,
   Repeat2,
   Share2,
@@ -27,7 +28,7 @@ import {
   getYouTubeConnectUrl,
   type ApiPerformancePost,
 } from "@/lib/api";
-import { bestWinner, groupLeaders, isWinner, scorePosts, type TagDimension } from "@/lib/performance-insights";
+import { engagementRate, formatRate, groupLeaders, isWinner, notSharedNote, scorePosts, topPosts, type TagDimension } from "@/lib/performance-insights";
 
 function PlatformIcon({ platform, className, filled = false }: { platform: ApiPerformancePost["platform"]; className: string; filled?: boolean }) {
   if (platform === "youtube") return filled ? <YouTubeIcon className={className} /> : <Youtube className={className} />;
@@ -111,6 +112,19 @@ function Metric({ icon: Icon, value, one, many, title }: { icon: LucideIcon; val
       <Icon className="h-4 w-4 text-foreground" strokeWidth={2.25} aria-hidden="true" />
       <span className="text-sm font-bold tabular-nums text-foreground">{formatCount(value)}</span>
       <span className="text-[13px] text-foreground/75">{value === 1 ? one : many}</span>
+    </span>
+  );
+}
+
+// Interactions as a share of the people who saw the post (see engagementRate). Phones have no hover, so the label says what it is.
+function RateChip({ post }: { post: ApiPerformancePost }) {
+  const rate = engagementRate(post);
+  if (!rate) return null;
+  return (
+    <span className="flex items-center gap-1.5" title={`Likes, comments, shares and saves, as a share of ${rate.per === "reach" ? "people reached" : "views"}`}>
+      <Percent className="h-4 w-4 text-foreground" strokeWidth={2.25} aria-hidden="true" />
+      <span className="text-sm font-bold tabular-nums text-foreground">{formatRate(rate)}</span>
+      <span className="text-[13px] text-foreground/75">engagement</span>
     </span>
   );
 }
@@ -324,10 +338,10 @@ export function PerformanceView() {
   };
 
   const scores = useMemo(() => scorePosts(posts), [posts]);
-  const winner = useMemo(() => bestWinner(posts, scores), [posts, scores]);
+  const top = useMemo(() => topPosts(posts, scores), [posts, scores]);
   const leaders = useMemo(() => groupLeaders(posts, scores), [posts, scores]);
   // One scale for every bar in the card, never below 2x, so a 1.3x group and a 2.4x post can be compared by eye.
-  const barMax = Math.max(2, winner?.score.multiple ?? 0, ...leaders.map((l) => l.averageMultiple));
+  const barMax = Math.max(2, ...top.map((t) => t.score.multiple), ...leaders.map((l) => l.averageMultiple));
 
   const groupRows = useMemo(
     () => (groupBy === "none" ? [] : groupPosts(posts, groupBy)),
@@ -390,38 +404,49 @@ export function PerformanceView() {
         </div>
       ))}
 
-      {!loading && posts.length > 0 && (winner || leaders.length > 0) && (
+      {!loading && posts.length > 0 && (top.length > 0 || leaders.length > 0) && (
         <div className="mb-4 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
             <Trophy className="h-3.5 w-3.5" />
             What's working
           </p>
-          {winner && (
-            <div className="flex gap-3">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
-                {winner.post.image_base64 ? (
-                  <img src={`data:image/jpeg;base64,${winner.post.image_base64}`} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <PlatformBadge platform={winner.post.platform} size="md" />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="flex items-baseline gap-2">
-                  <span className="font-display text-3xl font-extrabold leading-none text-foreground">{formatMultiple(winner.score.multiple)}</span>
-                  <span className="text-xs text-muted-foreground">your best post vs your {PLATFORM_LABEL[winner.post.platform]} average</span>
-                </p>
-                <div className="my-2">
-                  <MultipleBar multiple={winner.score.multiple} max={barMax} />
-                </div>
-                <p className="line-clamp-1 text-xs text-muted-foreground">{winner.post.caption || "(no caption)"}</p>
-                <p className="text-xs text-muted-foreground">
-                  {winner.score.engagement} interactions (likes, comments, shares, saves)
-                </p>
-              </div>
-            </div>
+          {top.length > 0 && (
+            <>
+              <p className="mb-2 text-[13px] font-semibold text-foreground">{top.length === 1 ? "Your best post" : `Your best ${top.length} posts`}</p>
+              <ul className="space-y-3">
+                {top.map(({ post, score, strict }) => {
+                  const rate = engagementRate(post);
+                  return (
+                    <li key={post.id} className="flex gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
+                        {post.image_base64 ? (
+                          <img src={`data:image/jpeg;base64,${post.image_base64}`} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <PlatformBadge platform={post.platform} size="md" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="flex items-center gap-2">
+                          <span className="font-display text-2xl font-extrabold leading-none text-foreground">{formatMultiple(score.multiple)}</span>
+                          <span className="text-xs text-muted-foreground">vs your {PLATFORM_LABEL[post.platform]} average</span>
+                          {strict && <Trophy className="h-3.5 w-3.5 text-accent" aria-label="Winner" />}
+                        </p>
+                        <div className="my-1.5">
+                          <MultipleBar multiple={score.multiple} max={barMax} />
+                        </div>
+                        <p className="line-clamp-1 text-xs text-muted-foreground">{post.caption || "(no caption)"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {score.engagement} interactions{rate ? ` · ${formatRate(rate)} of ${rate.per}` : ""}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
           {leaders.length > 0 && (
-            <ul className={`space-y-3 ${winner ? "mt-3 border-t border-border pt-3" : ""}`}>
+            <ul className={`space-y-3 ${top.length > 0 ? "mt-3 border-t border-border pt-3" : ""}`}>
               {leaders.map((l) => (
                 <li key={l.dimension}>
                   <div className="mb-1.5 flex items-baseline justify-between gap-2">
@@ -516,10 +541,15 @@ export function PerformanceView() {
                     {post.metrics.shares !== null && <Metric icon={Share2} value={post.metrics.shares} one="share" many="shares" title="Shares" />}
                     {post.metrics.reposts !== null && post.metrics.reposts !== undefined && <Metric icon={Repeat2} value={post.metrics.reposts} one="repost" many="reposts" title="Reposts" />}
                     {post.metrics.saves !== null && <Metric icon={Bookmark} value={post.metrics.saves} one="save" many="saves" title="Saves" />}
+                    <RateChip post={post} />
                   </div>
                 ) : post.metrics_unavailable_reason ? (
                   <p className="text-[13px] text-foreground/75">{post.metrics_unavailable_reason}</p>
                 ) : null}
+                {/* Said once per platform (on its newest post), not under every post. */}
+                {notSharedNote(post) && posts.find((p) => p.platform === post.platform && notSharedNote(p)) === post && (
+                  <p className="mt-1.5 text-[13px] text-foreground/70">{notSharedNote(post)}</p>
+                )}
                 {post.metrics && youtubeDetails(post.metrics).length > 0 && (
                   <p className="mt-1.5 text-[13px] text-foreground/75">{youtubeDetails(post.metrics).join(" · ")}</p>
                 )}

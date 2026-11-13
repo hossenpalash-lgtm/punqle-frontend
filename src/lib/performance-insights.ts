@@ -61,18 +61,63 @@ export function isWinner(score: PostScore | undefined): boolean {
   return !!score && score.multiple >= WINNER_MULTIPLE && score.engagement >= MIN_WINNER_ENGAGEMENT;
 }
 
-// The single strongest winner, if any post qualifies.
-export function bestWinner(
-  posts: ApiPerformancePost[],
-  scores: Map<string, PostScore>,
-): { post: ApiPerformancePost; score: PostScore } | null {
-  let best: { post: ApiPerformancePost; score: PostScore } | null = null;
+// The best posts, strongest first (up to `max`), instead of one crowned winner. Same guards as a winner (3 measured posts on
+// the platform, a real floor of interactions) but a lower bar for the multiple, so a clear step above your average still
+// shows. `strict` marks the ones that also clear the full 2x winner bar; only those get the trophy.
+export const TOP_MIN_MULTIPLE = 1.2;
+export interface TopPost {
+  post: ApiPerformancePost;
+  score: PostScore;
+  strict: boolean;
+}
+export function topPosts(posts: ApiPerformancePost[], scores: Map<string, PostScore>, max = 3): TopPost[] {
+  const out: TopPost[] = [];
   for (const post of posts) {
     const score = scores.get(post.id);
-    if (!isWinner(score)) continue;
-    if (!best || score!.multiple > best.score.multiple) best = { post, score: score! };
+    if (!score || score.engagement < MIN_WINNER_ENGAGEMENT || score.multiple < TOP_MIN_MULTIPLE) continue;
+    out.push({ post, score, strict: isWinner(score) });
   }
-  return best;
+  out.sort((a, b) => b.score.multiple - a.score.multiple);
+  return out.slice(0, max);
+}
+
+// Engagement rate = interactions (likes, comments, shares, saves) as a share of the people who saw the post: reach when the
+// platform gives it, otherwise views. Below MIN_RATE_BASE people the percentage swings wildly (1 like on 3 views = 33%), so
+// no rate is shown at all rather than a misleading one.
+export const MIN_RATE_BASE = 20;
+export interface EngagementRate {
+  pct: number;
+  per: "reach" | "views";
+}
+export function engagementRate(post: ApiPerformancePost): EngagementRate | null {
+  if (!post.metrics) return null;
+  const interactions = engagementOf(post) ?? 0;
+  const { reach, views } = post.metrics;
+  if (reach !== null && reach !== undefined && reach >= MIN_RATE_BASE) return { pct: (interactions / reach) * 100, per: "reach" };
+  if (views !== null && views !== undefined && views >= MIN_RATE_BASE) return { pct: (interactions / views) * 100, per: "views" };
+  return null;
+}
+export function formatRate(rate: EngagementRate): string {
+  return `${rate.pct >= 10 ? rate.pct.toFixed(0) : rate.pct.toFixed(1)}%`;
+}
+
+// Numbers a platform does not hand to apps, said out loud so a missing number is not mistaken for zero or for a bug. Only what
+// is documented: TikTok's API returns four counts (views, likes, comments, shares) and nothing else; Facebook's video posts
+// have no shares field. A number that is just waiting on a permission is NOT listed here (those have their own unlock banner).
+export function notSharedNote(post: ApiPerformancePost): string | null {
+  const m = post.metrics;
+  if (!m) return null;
+  if (post.platform === "tiktok") {
+    const missing: string[] = [];
+    if (m.reach == null) missing.push("reach");
+    if (m.saves == null) missing.push("saves");
+    if (m.watch_minutes == null && m.avg_view_seconds == null) missing.push("watch time");
+    if (missing.length === 0) return null;
+    const list = missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`;
+    return `TikTok doesn't share ${list} with apps.`;
+  }
+  if (post.platform === "facebook" && m.shares == null) return "Facebook doesn't report shares for video posts.";
+  return null;
 }
 
 export type TagDimension = "angle" | "style" | "goal";

@@ -4,6 +4,7 @@ import {
   Facebook,
   Heart,
   Instagram,
+  Lightbulb,
   Loader2,
   Lock,
   MessageCircle,
@@ -28,7 +29,7 @@ import {
   getYouTubeConnectUrl,
   type ApiPerformancePost,
 } from "@/lib/api";
-import { engagementRate, formatRate, groupLeaders, isWinner, MIN_RATE_BASE, notSharedNote, scorePosts, tagValue, topPosts, type TagDimension } from "@/lib/performance-insights";
+import { engagementRate, formatRate, groupLeaders, isWinner, MIN_RATE_BASE, notSharedNote, scorePosts, tagValue, topPosts, type GroupLeader, type TagDimension, type TopPost } from "@/lib/performance-insights";
 
 function PlatformIcon({ platform, className, filled = false }: { platform: ApiPerformancePost["platform"]; className: string; filled?: boolean }) {
   if (platform === "youtube") return filled ? <YouTubeIcon className={className} /> : <Youtube className={className} />;
@@ -75,6 +76,43 @@ const PLATFORM_LABEL: Record<ApiPerformancePost["platform"], string> = {
 };
 
 const DIMENSION_LABEL: Record<TagDimension, string> = { angle: "angle", style: "style", goal: "goal", length: "", enhancer: "" };
+
+// "Your next step": ONE plain line taken from the strongest real pattern in the owner's own posts, never from a guess and never from
+// an AI. It only exists when a group already cleared the "What's working" bars (at least 2 posts, at least 1.3x, a platform with 3
+// measured posts), or, failing that, when one post is a clear 2x top performer. Otherwise nothing is shown, so a handful of posts
+// can never produce advice. The evidence always sits right under it.
+function nextStepFor(leaders: GroupLeader[], top: TopPost[]): { text: string; evidence: string } | null {
+  const lead = [...leaders].sort((a, b) => b.averageMultiple - a.averageMultiple)[0];
+  if (lead) {
+    const { name } = describeTag(lead.dimension, lead.value);
+    const evidence = `${formatMultiple(lead.averageMultiple)} the reactions of your usual post, across ${lead.postCount} posts`;
+    switch (lead.dimension) {
+      case "length":
+        return { text: `Make more ${name}.`, evidence };
+      case "enhancer":
+        return lead.value === "on"
+          ? { text: "Keep using the Enhancer.", evidence }
+          : { text: "Your videos made without the Enhancer are doing better so far.", evidence };
+      case "style":
+        return { text: `Make more ${name} videos.`, evidence };
+      case "goal":
+        return { text: `Your ${name} posts do best. Make more of them.`, evidence };
+      case "angle":
+        return { text: `Your "${name}" messages do best. Try more of them.`, evidence };
+      default:
+        return null;
+    }
+  }
+  const best = top.find((t) => t.strict && (t.post.caption || "").trim().length > 3);
+  if (best) {
+    const caption = (best.post.caption || "").trim();
+    return {
+      text: `Make more like "${caption.length > 60 ? `${caption.slice(0, 57)}...` : caption}".`,
+      evidence: `${formatMultiple(best.score.multiple)} the reactions of your usual ${PLATFORM_LABEL[best.post.platform]} post`,
+    };
+  }
+  return null;
+}
 
 // How a tag value reads on screen: a name, plus a small word after it when that helps ("Kling 4.0" + "style").
 function describeTag(dimension: TagDimension, value: string): { name: string; kind: string } {
@@ -385,6 +423,7 @@ export function PerformanceView() {
   const scores = useMemo(() => scorePosts(posts), [posts]);
   const top = useMemo(() => topPosts(posts, scores), [posts, scores]);
   const leaders = useMemo(() => groupLeaders(posts, scores), [posts, scores]);
+  const next = useMemo(() => nextStepFor(leaders, top), [leaders, top]);
   // One scale for every bar in the card, never below 2x, so a 1.3x group and a 2.4x post can be compared by eye.
   const barMax = Math.max(2, ...top.map((t) => t.score.multiple), ...leaders.map((l) => l.averageMultiple));
 
@@ -457,6 +496,16 @@ export function PerformanceView() {
             <Trophy className="h-3.5 w-3.5" />
             What's working
           </p>
+          {next && (
+            <div className="mb-3 flex items-start gap-2.5 rounded-xl bg-secondary px-3 py-2.5">
+              <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your next step</p>
+                <p className="text-sm font-semibold text-foreground">{next.text}</p>
+                <p className="text-xs text-muted-foreground">{next.evidence}</p>
+              </div>
+            </div>
+          )}
           {top.length > 0 && (
             <>
               <p className="mb-2 text-[13px] font-semibold text-foreground">{top.length === 1 ? "Your best post" : `Your best ${top.length} posts`}</p>

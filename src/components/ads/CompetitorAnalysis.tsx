@@ -6,7 +6,6 @@ import {
   ExternalLink,
   Eye,
   FileDown,
-  Lightbulb,
   Link2,
   Loader2,
   MessageSquare,
@@ -77,15 +76,22 @@ function OpportunityCard({
   item,
   kind,
   onCreateAd,
+  featured = false,
 }: {
   item: ApiCompetitorAnalysisResponse["opportunities"][number];
   kind?: string;
   onCreateAd: (idea: string) => void;
+  featured?: boolean; // the first, strongest opportunity: shown once, here, instead of also in At a glance
 }) {
   const [open, setOpen] = useState(false);
   const basedOn = kind ? BASED_ON[kind] : undefined;
   return (
-    <div className="rounded-xl bg-secondary px-3 py-2.5">
+    <div className={`rounded-xl bg-secondary px-3 py-2.5 ${featured ? "ring-1 ring-primary/40" : ""}`}>
+      {featured && (
+        <span className="mb-1 inline-block rounded-full bg-primary px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-primary-foreground">
+          Start here
+        </span>
+      )}
       <p className="text-sm font-bold text-foreground">{item.title}</p>
       <p className="mt-0.5 text-sm text-secondary-foreground">{item.opportunity}</p>
       {basedOn && <p className="mt-1 text-xs text-muted-foreground">{basedOn}</p>}
@@ -349,7 +355,6 @@ export function CompetitorAnalysis({
   const igHandle = result ? instagramHandle(result) : "";
   const firstDoing = result?.what_theyre_doing[0];
   const firstSignal = result?.customer_signals[0];
-  const firstOpp = result?.opportunities[0];
   // The two things an owner wants first: what customers like and what they complain about. Only from comments that carry a tag.
   const likedSignal = result?.customer_signals.find((s) => s.sentiment === "positive");
   const complaintSignal = result?.customer_signals.find((s) => s.sentiment === "negative");
@@ -555,26 +560,6 @@ export function CompetitorAnalysis({
                     <SentimentDonut signals={result.customer_signals} />
                   </div>
                 </div>
-                <div className="flex items-start gap-3 rounded-xl bg-secondary px-3 py-2.5">
-                  <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your opportunity</p>
-                    {firstOpp ? (
-                      <>
-                        <p className="text-sm font-medium text-secondary-foreground">{firstOpp.title}</p>
-                        <button
-                          onClick={() => onCreateAd(firstOpp.action || firstOpp.opportunity)}
-                          className="no-print mt-1 flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                        >
-                          Create an ad from this
-                          <ArrowRight className="h-3 w-3" />
-                        </button>
-                      </>
-                    ) : (
-                      <p className="text-sm text-secondary-foreground">Not enough real evidence yet for a strong opportunity.</p>
-                    )}
-                  </div>
-                </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {[
@@ -618,6 +603,7 @@ export function CompetitorAnalysis({
                     item={item}
                     kind={item.source_url ? kindByUrl[item.source_url] : undefined}
                     onCreateAd={onCreateAd}
+                    featured={i === 0}
                   />
                 ))}
               </div>

@@ -2,11 +2,11 @@ import { AlertCircle, ExternalLink, Instagram, Loader2, Lock } from "lucide-reac
 import { useEffect, useRef, useState } from "react";
 import { fetchInstagramStats, getMetaConnectUrl, type ApiInstagramStats } from "@/lib/api";
 
-const COLORS = ["oklch(0.56 0.14 300)", "oklch(0.66 0.13 210)", "oklch(0.74 0.14 75)", "oklch(0.62 0.12 150)"];
+export const COLORS = ["oklch(0.56 0.14 300)", "oklch(0.66 0.13 210)", "oklch(0.74 0.14 75)", "oklch(0.62 0.12 150)"];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const TIME_SLOTS = ["00-04", "04-08", "08-12", "12-16", "16-20", "20-24"];
 
-function fmt(n: number | null | undefined): string {
+export function fmt(n: number | null | undefined): string {
   if (n === null || n === undefined) return "—";
   const abs = Math.abs(n);
   if (abs >= 1e9) return `${(n / 1e9).toFixed(1).replace(/\.0$/, "")}B`;
@@ -15,7 +15,7 @@ function fmt(n: number | null | undefined): string {
   return `${Math.round(n)}`;
 }
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+export function SectionHeading({ children }: { children: React.ReactNode }) {
   return <h3 className="mt-2 font-display text-sm font-extrabold text-foreground">{children}</h3>;
 }
 
@@ -37,7 +37,7 @@ function versusTakeaway(data: ApiInstagramStats): string | null {
 
 // "They post most on Tue and Fri, mostly 08-12 UTC." from the 7 x 6 grid already on screen (rows Mon..Sun, six 4-hour UTC slots).
 // Needs at least 8 posts (or some engagement) behind it, so a handful of posts never reads as a pattern.
-function bestTimesSentence(grid: number[][], mode: "posts" | "engagement"): string | null {
+function bestTimesSentence(grid: number[][], mode: "posts" | "engagement", item = "post"): string | null {
   const total = grid.flat().reduce((a, b) => a + b, 0);
   if (mode === "posts" && total < 8) return null;
   if (mode === "engagement" && total <= 0) return null;
@@ -46,8 +46,8 @@ function bestTimesSentence(grid: number[][], mode: "posts" | "engagement"): stri
   if (days.length === 0 || slots[0].v <= 0) return null;
   const dayText = days.map((d) => WEEKDAYS[d.i]).join(" and ");
   return mode === "posts"
-    ? `They post most on ${dayText}, mostly ${slots[0].t} UTC.`
-    : `Their posts earn the most on ${dayText}, especially ${slots[0].t} UTC.`;
+    ? `They ${item === "post" ? "post" : "upload"} most on ${dayText}, mostly ${slots[0].t} UTC.`
+    : `Their ${item}s earn the most on ${dayText}, especially ${slots[0].t} UTC.`;
 }
 
 function localOffsetLabel(): string {
@@ -55,7 +55,7 @@ function localOffsetLabel(): string {
   return off === 0 ? "UTC" : `UTC${off > 0 ? "+" : ""}${off}`;
 }
 
-function Card({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
+export function Card({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
@@ -66,7 +66,7 @@ function Card({ title, note, children }: { title: string; note?: string; childre
   );
 }
 
-function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
+export function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-xl bg-secondary px-3 py-2.5">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
@@ -78,7 +78,7 @@ function Kpi({ label, value, hint }: { label: string; value: string; hint?: stri
 
 // One metric, two bars (you / them) scaled to the larger of the two, so the
 // longer bar is always the bigger number. Missing values show "—", no bar.
-function VersusRow({ label, mine, theirs, suffix = "" }: { label: string; mine: number | null; theirs: number | null; suffix?: string }) {
+export function VersusRow({ label, mine, theirs, suffix = "" }: { label: string; mine: number | null; theirs: number | null; suffix?: string }) {
   const max = Math.max(mine ?? 0, theirs ?? 0, 0.0001);
   const bar = (value: number | null, color: string, who: string) => (
     <div className="flex items-center gap-2">
@@ -100,7 +100,7 @@ function VersusRow({ label, mine, theirs, suffix = "" }: { label: string; mine: 
   );
 }
 
-function Donut({ slices }: { slices: { value: number; color: string }[] }) {
+export function Donut({ slices }: { slices: { value: number; color: string }[] }) {
   const total = slices.reduce((a, s) => a + s.value, 0) || 1;
   let offset = 0;
   return (
@@ -128,14 +128,14 @@ function Donut({ slices }: { slices: { value: number; color: string }[] }) {
   );
 }
 
-function TimelineChart({ points }: { points: ApiInstagramStats["timeline"] }) {
+export function TimelineChart({ points, item = "post", metric = "engagement" }: { points: ApiInstagramStats["timeline"]; item?: string; metric?: string }) {
   const W = 600;
   const H = 130;
   const max = Math.max(...points.map((p) => p.engagement), 1);
   const bw = W / points.length;
   const labelIdx = new Set([0, Math.floor(points.length / 2), points.length - 1]);
   return (
-    <svg viewBox={`0 0 ${W} ${H + 22}`} className="w-full" role="img" aria-label="Engagement over time">
+    <svg viewBox={`0 0 ${W} ${H + 22}`} className="w-full" role="img" aria-label={`${metric} over time`}>
       {[0.25, 0.5, 0.75, 1].map((f) => (
         <line key={f} x1="0" x2={W} y1={H - H * f} y2={H - H * f} stroke="var(--border)" strokeWidth="1" />
       ))}
@@ -147,7 +147,7 @@ function TimelineChart({ points }: { points: ApiInstagramStats["timeline"] }) {
         return (
           <g key={i}>
             <rect x={i * bw + bw * 0.15} y={H - h} width={bw * 0.7} height={Math.max(h, p.posts ? 2 : 0)} rx="2" fill={COLORS[0]}>
-              <title>{`${p.label}: ${p.posts} post${p.posts === 1 ? "" : "s"}, ${fmt(p.engagement)} engagement`}</title>
+              <title>{`${p.label}: ${p.posts} ${item}${p.posts === 1 ? "" : "s"}, ${fmt(p.engagement)} ${metric}`}</title>
             </rect>
             {labelIdx.has(i) && (
               <text x={i * bw + bw / 2} y={H + 16} fontSize="11" textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"} fill="var(--muted-foreground)">
@@ -161,7 +161,7 @@ function TimelineChart({ points }: { points: ApiInstagramStats["timeline"] }) {
   );
 }
 
-function Heatmap({ posts, engagement }: { posts: number[][]; engagement: number[][] }) {
+export function Heatmap({ posts, engagement, item = "post", metric = "engagement" }: { posts: number[][]; engagement: number[][]; item?: string; metric?: string }) {
   const [mode, setMode] = useState<"posts" | "engagement">("posts");
   const grid = mode === "posts" ? posts : engagement;
   const max = Math.max(...grid.flat(), 1);
@@ -176,12 +176,12 @@ function Heatmap({ posts, engagement }: { posts: number[][]; engagement: number[
               mode === m ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
             }`}
           >
-            {m === "posts" ? "When they post" : "When it works"}
+            {m === "posts" ? (item === "post" ? "When they post" : "When they upload") : "When it works"}
           </button>
         ))}
       </div>
-      {bestTimesSentence(grid, mode) && (
-        <p className="mb-2 rounded-lg bg-secondary px-3 py-2 text-sm font-semibold text-foreground">{bestTimesSentence(grid, mode)}</p>
+      {bestTimesSentence(grid, mode, item) && (
+        <p className="mb-2 rounded-lg bg-secondary px-3 py-2 text-sm font-semibold text-foreground">{bestTimesSentence(grid, mode, item)}</p>
       )}
       <div className="grid gap-1" style={{ gridTemplateColumns: "2.2rem repeat(6, 1fr)" }}>
         <div />
@@ -194,7 +194,7 @@ function Heatmap({ posts, engagement }: { posts: number[][]; engagement: number[
           <div key={r} className="contents">
             <p className="self-center text-[11px] text-muted-foreground">{WEEKDAYS[r]}</p>
             {row.map((v, c) => (
-              <div key={c} className="relative h-6 overflow-hidden rounded bg-secondary" title={`${WEEKDAYS[r]} ${TIME_SLOTS[c]} UTC: ${mode === "posts" ? `${v} posts` : `${fmt(v)} engagement`}`}>
+              <div key={c} className="relative h-6 overflow-hidden rounded bg-secondary" title={`${WEEKDAYS[r]} ${TIME_SLOTS[c]} UTC: ${mode === "posts" ? `${v} ${item}s` : `${fmt(v)} ${metric}`}`}>
                 <div className="absolute inset-0" style={{ background: COLORS[0], opacity: v / max }} />
               </div>
             ))}

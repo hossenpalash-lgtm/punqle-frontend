@@ -22,6 +22,7 @@ import {
   type ApiSavedCompetitor,
 } from "@/lib/api";
 import { InstagramStats } from "./InstagramStats";
+import { YouTubeStats } from "./YouTubeStats";
 import { TopUpButton } from "./TopUpButton";
 
 function timeAgo(iso?: string | null): string {
@@ -31,6 +32,15 @@ function timeAgo(iso?: string | null): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)} hr ago`;
   return `${Math.floor(seconds / 86400)} day${Math.floor(seconds / 86400) === 1 ? "" : "s"} ago`;
+}
+
+// A YouTube channel or video link the analysed URL or its cited sources point to, if any.
+function youtubeChannel(r: ApiCompetitorAnalysisResponse): string {
+  const candidates = [r.source_url, ...(r.sources ?? []).map((s) => s.url)];
+  for (const c of candidates) {
+    if (/(youtube\.com\/(@|channel\/|c\/|user\/|watch|shorts\/)|youtu\.be\/)/i.test(c || "")) return c;
+  }
+  return "";
 }
 
 function instagramHandle(r: ApiCompetitorAnalysisResponse): string {
@@ -253,8 +263,9 @@ export function CompetitorAnalysis({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ApiCompetitorAnalysisResponse | null>(null);
   const [saved, setSaved] = useState<ApiSavedCompetitor[]>([]);
-  const [tab, setTab] = useState<"overview" | "instagram">("overview");
+  const [tab, setTab] = useState<"overview" | "instagram" | "youtube">("overview");
   const [igOpened, setIgOpened] = useState(false);
+  const [ytOpened, setYtOpened] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
   const loadSaved = async () => {
@@ -274,6 +285,7 @@ export function CompetitorAnalysis({
     setResult(r);
     setTab("overview");
     setIgOpened(false);
+    setYtOpened(false);
   };
 
   const handleAnalyze = async (refresh = false, urlOverride?: string) => {
@@ -353,6 +365,7 @@ export function CompetitorAnalysis({
     kindByUrl[s.url] = s.source_type;
   });
   const igHandle = result ? instagramHandle(result) : "";
+  const ytChannel = result ? youtubeChannel(result) : "";
   const firstDoing = result?.what_theyre_doing[0];
   const firstSignal = result?.customer_signals[0];
   // The two things an owner wants first: what customers like and what they complain about. Only from comments that carry a tag.
@@ -487,6 +500,7 @@ export function CompetitorAnalysis({
               [
                 ["overview", "Overview"],
                 ["instagram", "Instagram stats"],
+                ["youtube", "YouTube stats"],
               ] as const
             ).map(([key, label]) => (
               <button
@@ -494,6 +508,7 @@ export function CompetitorAnalysis({
                 onClick={() => {
                   setTab(key);
                   if (key === "instagram") setIgOpened(true);
+                  if (key === "youtube") setYtOpened(true);
                 }}
                 className={`flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                   tab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -697,6 +712,12 @@ export function CompetitorAnalysis({
           {igOpened && (
             <div className={tab === "instagram" ? "" : "hidden"}>
               <InstagramStats key={result.id ?? result.source_url} initialUsername={igHandle} competitorName={result.competitor_name} />
+            </div>
+          )}
+
+          {ytOpened && (
+            <div className={tab === "youtube" ? "" : "hidden"}>
+              <YouTubeStats key={result.id ?? result.source_url} initialChannel={ytChannel} competitorName={result.competitor_name} />
             </div>
           )}
         </div>

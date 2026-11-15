@@ -2155,6 +2155,92 @@ export interface ApiInstagramStats {
   compare: string[];
 }
 
+// Competitor YouTube stats — public channel + video data from YouTube's Data API (no credits).
+export interface ApiYtTypeStat {
+  type: string;
+  label: string;
+  videos: number;
+  share_pct: number;
+  avg_views: number;
+  view_share_pct: number;
+}
+
+export interface ApiYtThemeStat {
+  theme: string;
+  videos: number;
+  share_pct: number;
+  view_share_pct: number;
+  avg_views: number;
+}
+
+export interface ApiYtTopVideo {
+  url: string;
+  title: string;
+  date: string;
+  views: number;
+  likes: number | null;
+  comments: number | null;
+  duration: string;
+  type: string;
+  thumbnail: string;
+}
+
+export interface ApiYtOwnSummary {
+  title: string;
+  subscribers: number | null;
+  analyzed_videos: number;
+  uploads_per_week: number | null;
+  avg_views: number | null;
+  median_views: number | null;
+  engagement_rate_pct: number | null;
+  best_type: string | null;
+}
+
+export interface ApiYouTubeStats {
+  status: "ok" | "no_youtube" | "unavailable_account" | "error";
+  message: string;
+  channel_id: string;
+  handle: string;
+  title: string;
+  thumbnail: string;
+  country: string;
+  created: string | null;
+  subscribers: number | null;
+  subscribers_hidden: boolean;
+  total_views: number | null;
+  total_videos: number | null;
+  analyzed_videos: number;
+  date_from: string | null;
+  date_to: string | null;
+  avg_views: number | null;
+  median_views: number | null;
+  avg_likes: number | null;
+  avg_comments: number | null;
+  engagement_rate_pct: number | null;
+  views_per_sub_pct: number | null;
+  avg_duration_min: number | null;
+  uploads_per_week: number | null;
+  types: ApiYtTypeStat[];
+  themes: ApiYtThemeStat[];
+  tags: { tag: string; videos: number; avg_views: number }[];
+  top_videos: ApiYtTopVideo[];
+  heatmap_videos: number[][];
+  heatmap_views: number[][];
+  timeline: { label: string; videos: number; views: number }[];
+  timeline_unit: "week" | "month";
+  takeaways: string[];
+  own: ApiYtOwnSummary | null;
+  compare: string[];
+}
+
+export function fetchYouTubeStats(channel: string): Promise<ApiYouTubeStats> {
+  return apiFetch<ApiYouTubeStats>("/ads/competitor-youtube-stats", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ channel }),
+  });
+}
+
 export function fetchInstagramStats(username: string): Promise<ApiInstagramStats> {
   return apiFetch<ApiInstagramStats>("/ads/competitor-instagram-stats", {
     method: "POST",

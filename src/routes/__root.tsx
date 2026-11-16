@@ -228,7 +228,10 @@ function RootComponent() {
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => setMinSplashDone(true), 700);
+    // Brand reveal length: 0.3 s (was 0.7 s). The logo animation in styles.css (.animate-splash-in) is 0.3 s too, so it finishes
+    // before the page appears. Shorter because a first-time visitor was staring at a black screen before seeing anything
+    // (founder's choice, 2026-11-16: a short reveal for everyone rather than none for new visitors).
+    const t = setTimeout(() => setMinSplashDone(true), 300);
     return () => clearTimeout(t);
   }, []);
 

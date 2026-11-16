@@ -238,7 +238,7 @@
   }
 }
 .animate-splash-in {
-  animation: splash-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: splash-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Login screen floating cards (LoginScreen.tsx) — each card starts near

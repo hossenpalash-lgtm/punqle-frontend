@@ -3,6 +3,7 @@ import { LegalLayout } from "@/components/legal/LegalLayout";
 
 export const Route = createFileRoute("/data-deletion")({
   head: () => ({
+    links: [{ rel: "canonical", href: "https://www.punqle.com/data-deletion" }],
     meta: [{ title: "Data Deletion — Punqle" }],
   }),
   component: DataDeletionPage,

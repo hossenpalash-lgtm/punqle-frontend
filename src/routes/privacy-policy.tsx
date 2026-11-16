@@ -3,6 +3,7 @@ import { LegalLayout } from "@/components/legal/LegalLayout";
 
 export const Route = createFileRoute("/privacy-policy")({
   head: () => ({
+    links: [{ rel: "canonical", href: "https://www.punqle.com/privacy-policy" }],
     meta: [{ title: "Privacy Policy — Punqle" }],
   }),
   component: PrivacyPolicyPage,

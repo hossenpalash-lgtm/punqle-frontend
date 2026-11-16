@@ -3,6 +3,7 @@ import { LegalLayout } from "@/components/legal/LegalLayout";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({
+    links: [{ rel: "canonical", href: "https://www.punqle.com/terms" }],
     meta: [{ title: "Terms of Service — Punqle" }],
   }),
   component: TermsPage,

@@ -626,3 +626,15 @@ h6 {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+
+/* Phones (iOS Safari) zoom the whole page when a text box smaller than 16px gets focus. The page used to forbid zooming to stop that,
+   which also took pinch-zoom away from people who need it (accessibility audit, 2026-11-16). On touch screens text boxes are now
+   16px, so focusing one does not zoom and pinch-zoom works. Not inside @layer, so it beats the text-sm utilities on the boxes. */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}

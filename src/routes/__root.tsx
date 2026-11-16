@@ -83,19 +83,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" },
+      // No maximum-scale / user-scalable: pinch-zoom must work for people who need bigger text (accessibility audit 2026-11-16). The old
+      // maximum-scale=1 was there to stop phones zooming into text boxes; styles.css now makes text boxes 16px on touch screens instead.
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#ffffff" },
       { title: "Punqle — AI Ad Creation Platform for Businesses" },
-      {
-        name: "description",
-        content: "Punqle is an AI ad creation platform for businesses and agencies — generate ad copy, images, videos, and content plans with AI, and publish them to Facebook, Instagram, TikTok, and YouTube.",
-      },
+      { name: "description", content: "Punqle turns one photo into AI video ads and posts them to Facebook, Instagram, TikTok and YouTube. Your first video is free." },
       { property: "og:title", content: "Punqle — AI Ad Creation Platform for Businesses" },
-      {
-        property: "og:description",
-        content: "Generate ad copy, images, videos, and content plans with AI, and publish them to your social accounts.",
-      },
+      { property: "og:description", content: "Punqle turns one photo into AI video ads and posts them to Facebook, Instagram, TikTok and YouTube. Your first video is free." },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Punqle" },
+      // The card that shows when a punqle.com link is pasted into Instagram/Facebook DMs, WhatsApp, Slack, X... (1200 x 630).
+      // The file name carries a version: those apps cache the picture by address, so a new picture needs a new name.
+      { property: "og:image", content: "https://www.punqle.com/og-punqle-v1.jpg" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Punqle: turn one photo into a video and post it in one click" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Punqle — AI Ad Creation Platform for Businesses" },
+      { name: "twitter:description", content: "Punqle turns one photo into AI video ads and posts them to Facebook, Instagram, TikTok and YouTube. Your first video is free." },
+      { name: "twitter:image", content: "https://www.punqle.com/og-punqle-v1.jpg" },
       { name: "facebook-domain-verification", content: "qmge0ogh6sbh0c79cu1zpwc1von0vq" },
     ],
     links: [
@@ -137,12 +144,35 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        {/* For visitors and crawlers that do not run JavaScript (the app draws itself in the browser): what Punqle is, and real links.
+            Only the text of the live landing page, nothing extra. */}
+        <noscript>
+          {/* Without JavaScript the splash would stay on screen forever and cover everything below it. */}
+          <style>{"[data-splash]{display:none !important}"}</style>
+          <main style={{ maxWidth: 640, margin: "0 auto", padding: "48px 24px", fontFamily: "system-ui, sans-serif", lineHeight: 1.5 }}>
+            <h1>Punqle</h1>
+            <p>
+              Punqle turns one photo into AI video ads and posts them to Facebook, Instagram, TikTok and YouTube. Add a photo and one
+              line, two AI video tools make it side by side, you pick your favourite, and it goes out in one click. Your first video is
+              free.
+            </p>
+            <p>Punqle is an app and needs JavaScript. Please turn JavaScript on to use it.</p>
+            <ul>
+              <li><a href="/tools">Free tools</a></li>
+              <li><a href="/terms">Terms of Service</a></li>
+              <li><a href="/privacy-policy">Privacy Policy</a></li>
+              <li><a href="/data-deletion">Data Deletion</a></li>
+            </ul>
+          </main>
+        </noscript>
         {children}
         {/* Visually hidden but present in the raw server-rendered HTML —
             the app's own UI is client-rendered, so this is what lets
             non-JS crawlers (e.g. Meta's business verification) see the
             legal business name. */}
-        <p className="sr-only">Punqle is operated by HOSSEN, MD MOSHARRAF &middot; ABN 47 183 516 336</p>
+        <footer>
+          <p className="sr-only">Punqle is operated by HOSSEN, MD MOSHARRAF &middot; ABN 47 183 516 336</p>
+        </footer>
         <Scripts />
       </body>
     </html>
@@ -280,6 +310,7 @@ function RootComponent() {
           // text. Held for a fixed minimum (see the timer above) since
           // the real auth check usually resolves too fast to be seen.
           <main
+            data-splash
             className="flex min-h-screen w-full items-center justify-center overflow-hidden"
             style={{
               background:

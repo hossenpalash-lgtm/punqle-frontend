@@ -109,6 +109,10 @@ type Tab = "home" | "single" | "plan" | "calendar" | "performance" | "history" |
 
 export const Route = createFileRoute("/")({
   component: HomeScreen,
+  head: () => ({
+    meta: [{ property: "og:url", content: "https://www.punqle.com/" }],
+    links: [{ rel: "canonical", href: "https://www.punqle.com/" }],
+  }),
   // "home" is the default tab, so leave it out of the URL. Before (2026-11-10) the router added
   // `?tab=home` to every plain `/` visit, which cost a whole extra round trip (a 307 from
   // Virginia, ~0.35 s from Melbourne) before the page started loading.

@@ -1694,7 +1694,7 @@ function HomeScreen() {
         >
           <Sparkles className="h-3.5 w-3.5 text-accent" />
           <span className="font-display text-sm text-foreground">{credits === null ? "..." : credits}</span>
-          <span className="text-xs text-muted-foreground">credits</span>
+          <span className="text-xs text-muted-foreground">{credits === 1 ? "credit" : "credits"}</span>
         </div>
       </div>
       {creditsError && <p className="mb-4 text-sm text-destructive">{creditsError}</p>}

@@ -142,7 +142,9 @@ export function YouTubeStats({ initialChannel, competitorName }: { initialChanne
                 <VersusRow label="Subscribers" mine={data.own.subscribers} theirs={data.subscribers} />
                 <VersusRow label="Uploads per week" mine={data.own.uploads_per_week} theirs={data.uploads_per_week} />
                 <VersusRow label="Views on a typical video" mine={data.own.median_views} theirs={data.median_views} />
-                <VersusRow label="Like + comment rate" mine={data.own.engagement_rate_pct} theirs={data.engagement_rate_pct} suffix="%" />
+                {data.own.engagement_rate_pct !== null && (
+                  <VersusRow label="Like + comment rate" mine={data.own.engagement_rate_pct} theirs={data.engagement_rate_pct} suffix="%" />
+                )}
               </div>
               {data.compare.length > 0 && (
                 <ul className="mt-3 space-y-1.5 border-t border-border pt-3">

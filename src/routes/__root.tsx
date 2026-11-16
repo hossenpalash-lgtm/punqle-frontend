@@ -200,7 +200,7 @@ function RootComponent() {
   // effect) rather than a useEffect checking window.location.search —
   // the router normalizes the URL and strips unrecognised params like
   // `billing` early enough to beat a plain effect, which silently
-  // dropped the auto-open on Stripe's redirect back in earlier testing.
+  // dropped the auto-open on the payment provider's redirect back in earlier testing.
   const [billingOpen, setBillingOpen] = useState(
     () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("billing"),
   );
@@ -282,7 +282,7 @@ function RootComponent() {
     }
   }, []);
 
-  // Stripe Checkout redirects the whole browser back to "/" with
+  // Checkout (the /pay page) sends the whole browser back to "/" with
   // ?billing=success or ?billing=cancelled — same round-trip pattern as
   // the Shopify OAuth callback above (see billingOpen's lazy initializer
   // for why this can't be a useEffect). BillingPanel itself reads and

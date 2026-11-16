@@ -1981,8 +1981,8 @@ export function createPortalSession(): Promise<{ portal_url: string }> {
 }
 
 // One-time credit top-up, independent of subscription status — see
-// CREDIT_PACKS in main.py. Same Stripe Checkout redirect pattern as
-// createCheckoutSession, just mode="payment" on the backend.
+// CREDIT_PACKS in main.py. Same checkout redirect pattern as
+// createCheckoutSession, just a one-time payment on the backend.
 export type CreditPack = "pack_100" | "pack_500" | "pack_1000";
 
 export function createCreditPackCheckoutSession(pack: CreditPack): Promise<{ checkout_url: string }> {

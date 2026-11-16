@@ -31,10 +31,11 @@ const CREDIT_PACKS: { pack: CreditPack; label: string; price: string; credits: n
   { pack: "pack_1000", label: "1,000 credits", price: "A$174.99", credits: 1000 },
 ];
 
-// Checkout and the customer portal are both hosted by Stripe — this panel
-// only ever redirects the whole browser there and back (?billing=success
-// or ?billing=cancelled on return), same pattern as the Shopify OAuth
-// round-trip in ProductCatalogPanel. No card data ever touches Punqle.
+// Checkout (our /pay page, which opens Paddle's payment window) and the customer
+// portal are hosted by Paddle — this panel only ever redirects the whole browser
+// there and back (?billing=success or ?billing=cancelled on return), same
+// pattern as the Shopify OAuth round-trip in ProductCatalogPanel. No card data
+// ever touches Punqle.
 export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

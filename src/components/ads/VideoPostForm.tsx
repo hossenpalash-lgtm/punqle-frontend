@@ -16,7 +16,7 @@ import { PublishToTikTok } from "./PublishToTikTok";
 import { PublishToYouTube } from "./PublishToYouTube";
 import { FormatPills, PhotoPill } from "./SettingPills";
 
-const VIDEO_CREDIT_COST = 30; // Gemini Omni, 8 s, 1080p, sound included — mirrors main.py (was 10 on Veo)
+const VIDEO_CREDIT_COST = 10; // Gemini Omni, 8 s, 1080p, sound included — mirrors main.py (pricing v2)
 const POLL_INTERVAL_MS = 8000;
 
 function fileToBase64(file: File): Promise<string> {

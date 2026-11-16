@@ -10,10 +10,10 @@ import {
   type SubscriptionTier,
 } from "@/lib/api";
 
-const TIERS: { tier: SubscriptionTier; label: string; price: string; credits: number; blurb: string }[] = [
-  { tier: "starter", label: "Starter", price: "A$5.99", credits: 30, blurb: "Try it out with a steady monthly supply." },
-  { tier: "growth", label: "Growth", price: "A$19", credits: 110, blurb: "For posting regularly across your channels." },
-  { tier: "pro", label: "Pro", price: "A$44.99", credits: 300, blurb: "For agencies or a high volume of ads." },
+const TIERS: { tier: SubscriptionTier; label: string; price: string; credits: number; ads: number; blurb: string }[] = [
+  { tier: "starter", label: "Starter", price: "$19", credits: 50, ads: 2, blurb: "Try it out with a steady monthly supply." },
+  { tier: "growth", label: "Growth", price: "$45", credits: 125, ads: 5, blurb: "For posting regularly across your channels." },
+  { tier: "pro", label: "Pro", price: "$169", credits: 500, ads: 20, blurb: "For agencies or a high volume of ads." },
 ];
 
 // One-off top-ups, independent of plan — for a month where the included
@@ -26,9 +26,9 @@ const TIERS: { tier: SubscriptionTier; label: string; price: string; credits: nu
 // is deliberately never the cheapest way to get credits, subscribing
 // always is.
 const CREDIT_PACKS: { pack: CreditPack; label: string; price: string; credits: number }[] = [
-  { pack: "pack_100", label: "100 credits", price: "A$19.99", credits: 100 },
-  { pack: "pack_500", label: "500 credits", price: "A$89.99", credits: 500 },
-  { pack: "pack_1000", label: "1,000 credits", price: "A$174.99", credits: 1000 },
+  { pack: "pack_25", label: "25 credits", price: "$12", credits: 25 },
+  { pack: "pack_100", label: "100 credits", price: "$45", credits: 100 },
+  { pack: "pack_250", label: "250 credits", price: "$105", credits: 250 },
 ];
 
 // Checkout (our /pay page, which opens Paddle's payment window) and the customer
@@ -168,7 +168,7 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {TIERS.map(({ tier, label, price, credits, blurb }) => (
+            {TIERS.map(({ tier, label, price, credits, ads, blurb }) => (
               <div
                 key={tier}
                 className="flex flex-col rounded-2xl border border-input bg-background p-5"
@@ -180,7 +180,7 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
                 </p>
                 <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Check className="h-3.5 w-3.5 text-primary" />
-                  {credits} credits / month
+                  {credits} credits / month (about {ads} ads of 15 seconds)
                 </p>
                 <p className="mt-2 flex-1 text-xs text-muted-foreground">{blurb}</p>
                 <button

@@ -50,7 +50,7 @@ export function VideoCompare({
   onUse,
   onUnlock,
   onUpgrade,
-  unlockCost = 10,
+  unlockCost = 3,
   upgradeCost,
   onBack,
 }: {

@@ -14,8 +14,8 @@ import {
 } from "@/lib/api";
 import { GOALS } from "./AdBriefStep";
 
-const TRYON_CREDIT_COST = 2;
-const VIDEO_CREDIT_COST = 30; // Gemini Omni, 8 s, 1080p, sound included — mirrors main.py TRYON_ANIMATE_CREDIT_COST (was 10 on Veo)
+const TRYON_CREDIT_COST = 1;
+const VIDEO_CREDIT_COST = 10; // Gemini Omni, 8 s, 1080p, sound included — mirrors main.py TRYON_ANIMATE_CREDIT_COST (pricing v2)
 const POLL_INTERVAL_MS = 4000;
 const VIDEO_POLL_INTERVAL_MS = 8000;
 

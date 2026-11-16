@@ -64,8 +64,8 @@ export interface VideoStyleOption {
   group: "ai_ugc" | "product" | "presenter";
   icon: LucideIcon;
   // A real credit figure, not a placeholder — mirrors the backend's own
-  // constants (main.py: VIDEO_CREDIT_COST=10, AVATAR_STANDARD/PREMIUM=4/10,
-  // CINEMATIC_UGC_OMNI_CREDIT_COST=30). There's no shared
+  // constants (main.py: VIDEO_CREDIT_COST=10, AVATAR_STANDARD/PREMIUM=2/4,
+  // CINEMATIC_UGC_OMNI_CREDIT_COST=10). There's no shared
   // source of truth across the Python/TS boundary, so this has to be kept
   // in sync by hand if those constants ever change — same as every other
   // credit figure already hardcoded in the frontend (e.g. Setup step's own
@@ -84,7 +84,7 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     promptModifier: "clean product showcase, the item as the clear hero, simple uncluttered background",
     group: "product",
     icon: Package,
-    creditHint: "30 credits",
+    creditHint: "10 credits",
   },
   {
     id: "lifestyle",
@@ -93,7 +93,7 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     promptModifier: "warm lifestyle setting, the product in genuine everyday use",
     group: "product",
     icon: Heart,
-    creditHint: "30 credits",
+    creditHint: "10 credits",
   },
   {
     id: "cinematic",
@@ -102,7 +102,7 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     promptModifier: "cinematic lighting, dramatic composition, film-like color grading",
     group: "product",
     icon: Clapperboard,
-    creditHint: "30 credits",
+    creditHint: "10 credits",
   },
   {
     id: "cinematic_ugc",
@@ -124,7 +124,7 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     promptModifier: "",
     group: "ai_ugc",
     icon: Hand,
-    creditHint: "30 credits",
+    creditHint: "10 credits",
   },
   {
     id: "ai_actor",
@@ -140,7 +140,7 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     promptModifier: "",
     group: "ai_ugc",
     icon: Sparkles,
-    creditHint: "30 credits",
+    creditHint: "10 credits",
   },
   {
     id: "avatar",
@@ -153,7 +153,7 @@ export const VIDEO_STYLES: VideoStyleOption[] = [
     promptModifier: "",
     group: "presenter",
     icon: UserRound,
-    creditHint: "from 4 credits",
+    creditHint: "from 2 credits",
   },
 ];
 

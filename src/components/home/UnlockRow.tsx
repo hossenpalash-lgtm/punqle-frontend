@@ -56,13 +56,13 @@ interface Item {
 
 // Credit chips only where the app itself already states a "from N credits" price.
 const ITEMS: Item[] = [
-  { target: "video", chapter: 0, problem: "Only 4 seconds, with a watermark?", name: "Full video", blurb: "Up to 30 s, 1080p, no watermark. 3 engines and the Enhancer.", image: "/demo/engine-compare-poster.jpg", clip: "/demo/engine-compare.mp4", chip: "from 15 credits" },
-  { target: "product", chapter: 1, problem: "Want a person showing your product?", name: "Product", blurb: "Someone holds it and talks about it.", image: "/video-style-previews/cinematic_ugc.jpg", clip: "/video-style-previews/cinematic_ugc.mp4", chip: "from 3 credits" },
-  { target: "actors", chapter: 1, problem: "Don't want to be on camera yourself?", name: "Ready Actors", blurb: "A real filmed actor says your words.", image: "/video-style-previews/ai_actor.jpg", clip: "/video-style-previews/ai_actor.mp4", chip: "from 30 credits" },
+  { target: "video", chapter: 0, problem: "Only 4 seconds, with a watermark?", name: "Full video", blurb: "Up to 30 s, 1080p, no watermark. 3 engines and the Enhancer.", image: "/demo/engine-compare-poster.jpg", clip: "/demo/engine-compare.mp4", chip: "from 14 credits" },
+  { target: "product", chapter: 1, problem: "Want a person showing your product?", name: "Product", blurb: "Someone holds it and talks about it.", image: "/video-style-previews/cinematic_ugc.jpg", clip: "/video-style-previews/cinematic_ugc.mp4", chip: "from 2 credits" },
+  { target: "actors", chapter: 1, problem: "Don't want to be on camera yourself?", name: "Ready Actors", blurb: "A real filmed actor says your words.", image: "/video-style-previews/ai_actor.jpg", clip: "/video-style-previews/ai_actor.mp4", chip: "from 10 credits" },
   { target: "unboxing", chapter: 1, problem: "Product photo looks plain?", name: "Unboxing", blurb: "A fresh surface around your own photo, like it was just unboxed.", image: "/scene-previews/marble.jpg", frames: ["/scene-previews/marble.jpg", "/scene-previews/wood.jpg", "/scene-previews/linen.jpg", "/scene-previews/outdoor.jpg", "/scene-previews/tile.jpg"] },
   { target: "show_app", chapter: 1, problem: "Have an app or a website?", name: "Show Your App", blurb: "Puts your app on an actor's phone screen.", image: "/unlock-previews/show_app_sample.jpg", clip: "/unlock-previews/show_app_sample.mp4", focus: "object-[50%_80%]" },
-  { target: "tryon", chapter: 1, problem: "Selling clothes?", name: "Try-On", blurb: "Your clothes on a model, then bring it to life.", image: "/showcase-ads/tryon-result.jpg", clip: "/unlock-previews/tryon.mp4", chip: "from 2 credits" },
-  { target: "image", chapter: 2, problem: "Nothing to start from?", name: "Image", blurb: "Studio ad images from one line.", image: "/home/image.jpg", frames: ["/home/image.jpg", "/style-previews/clean_premium.jpg", "/style-previews/bold_energetic.jpg"], chip: "from 2 credits" },
+  { target: "tryon", chapter: 1, problem: "Selling clothes?", name: "Try-On", blurb: "Your clothes on a model, then bring it to life.", image: "/showcase-ads/tryon-result.jpg", clip: "/unlock-previews/tryon.mp4", chip: "from 1 credit" },
+  { target: "image", chapter: 2, problem: "Nothing to start from?", name: "Image", blurb: "Studio ad images from one line.", image: "/home/image.jpg", frames: ["/home/image.jpg", "/style-previews/clean_premium.jpg", "/style-previews/bold_energetic.jpg"], chip: "from 1 credit" },
   { target: "upscale", chapter: 2, problem: "Photo or clip a bit blurry?", name: "Upscale", blurb: "Sharpen it to 1080p or 4K.", image: "/examples/jewellery.jpg", picture: "sharpen" },
   { target: "plan", chapter: 3, problem: "Can't keep posting every week?", name: "Weekly Plan", blurb: "A week of posts planned for you, then posted.", picture: "week" },
   { target: "performance", chapter: 3, problem: "What works, and what do others do?", name: "Performance and Competitive Edge", blurb: "Your real numbers, and what your competitors post.", image: "/demo/competitive-edge.jpg", pan: true },
@@ -78,9 +78,9 @@ const WEEK_TILES = [
 ];
 
 const PLANS = [
-  { name: "Starter", price: "A$5.99", credits: 30 },
-  { name: "Growth", price: "A$19", credits: 110 },
-  { name: "Pro", price: "A$44.99", credits: 300 },
+  { name: "Starter", price: "$19", credits: 50 },
+  { name: "Growth", price: "$45", credits: 125 },
+  { name: "Pro", price: "$169", credits: 500 },
 ];
 
 const CARD_WIDTH = "w-[172px] min-[400px]:w-[184px] sm:w-[200px]";

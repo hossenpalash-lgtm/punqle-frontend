@@ -807,11 +807,11 @@ export type ImageGenModel = "nano_banana_pro" | "nano_banana_2" | "gpt_image";
 // Background, Enhance, Unboxing, Show Your App, Product combine, Refine
 // Actor), is a Nano Banana Pro call and costs PHOTO_EDIT_CREDIT_COST.
 export const IMAGE_GEN_CREDIT_COST: Record<ImageGenModel, number> = {
-  nano_banana_pro: 3,
-  nano_banana_2: 2,
-  gpt_image: 5,
+  nano_banana_pro: 1,
+  nano_banana_2: 1,
+  gpt_image: 2,
 };
-export const PHOTO_EDIT_CREDIT_COST = 3;
+export const PHOTO_EDIT_CREDIT_COST = 1;
 
 export function imageGenerateCreditCost(hasPhoto: boolean, model: ImageGenModel): number {
   return hasPhoto ? PHOTO_EDIT_CREDIT_COST : IMAGE_GEN_CREDIT_COST[model];
@@ -1983,7 +1983,7 @@ export function createPortalSession(): Promise<{ portal_url: string }> {
 // One-time credit top-up, independent of subscription status — see
 // CREDIT_PACKS in main.py. Same checkout redirect pattern as
 // createCheckoutSession, just a one-time payment on the backend.
-export type CreditPack = "pack_100" | "pack_500" | "pack_1000";
+export type CreditPack = "pack_25" | "pack_100" | "pack_250";
 
 export function createCreditPackCheckoutSession(pack: CreditPack): Promise<{ checkout_url: string }> {
   return apiFetch<{ checkout_url: string }>("/billing/checkout-credit-pack", {

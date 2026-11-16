@@ -10,8 +10,8 @@ import type {
 } from "@/lib/api";
 
 const TIERS: { value: AvatarTier; label: string; description: string; credits: number }[] = [
-  { value: "standard", label: "Standard", description: "Great quality, lower cost", credits: 4 },
-  { value: "premium", label: "Premium", description: "Higher fidelity, more realistic movement", credits: 10 },
+  { value: "standard", label: "Standard", description: "Great quality, lower cost", credits: 2 },
+  { value: "premium", label: "Premium", description: "Higher fidelity, more realistic movement", credits: 4 },
 ];
 
 // HeyGen's catalog is 1264 avatars — even gender-filtered, that's several

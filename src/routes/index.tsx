@@ -229,7 +229,6 @@ const IMAGE_VIDEO_MODEL_OPTIONS: { id: ImageVideoModel; label: string; blurb: st
   { id: "kling_3_pro", label: "Kling 3.0 Pro", blurb: "Crisp motion, up to 15 s." },
   { id: "kling_4", label: "Kling 4.0", blurb: "Clean cuts in one steady setting." },
   { id: "seedance_2_5", label: "Seedance 2.5", blurb: "The most cinematic, lifelike look." },
-  { id: "seedance_2_5_hd", label: "Seedance 2.5 · 1080p", blurb: "Seedance in full 1080p. Takes longer, costs more." },
 ];
 // The tool a new video starts on. Wan 3.0 beat Gemini Omni in the 2026-11-08 blind test (2 of 3 pairs, and Omni
 // repeated a spoken line); Omni stays in the code for Video Ad, Try-On, Cinematic UGC, actors and the studio voice.
@@ -245,23 +244,23 @@ const IMAGE_VIDEO_MODEL_LABELS: Record<ImageVideoModel, string> = {
 // Display-only estimate, mirrors the backend's own per-second credit rates — the backend always
 // computes the real charge itself, this is just so the cards and the Generate button can show a cost upfront.
 const IMAGE_VIDEO_CREDIT_PER_SECOND: Record<ImageVideoModel, number> = {
-  omni: 3.75,
-  wan_3: 5, // Wan 3.0 and Kling 4.0 run at 1080p
-  kling_3_pro: 5, // Kling now makes its own sound here; with a studio voice it animates silently at 4/s (see videoCreditsPerSecond)
-  kling_4: 6,
-  seedance_2_5: 4, // was 6 until 2026-11-09 (rivals sell it for about half; 5 first, then 4); mirrors main.py
-  seedance_2_5_hd: 10, // native 1080p through a second provider (measured 2026-11-09); mirrors main.py
+  omni: 1.25, // hidden from the tool list (still used by Video Ad, Try-On, actors, studio voice)
+  wan_3: 1.66, // pricing v2 (2026-11-17): Wan 3.0, Kling 4.0 and Seedance 2.5 cost the same -> 8 s = 14, 15 s = 25, 30 s = 50 credits; Wan and Kling run at 1080p
+  kling_3_pro: 1.66, // hidden; with a studio voice it animates silently at 1.33/s (see videoCreditsPerSecond)
+  kling_4: 1.66,
+  seedance_2_5: 1.66, // 720p
+  seedance_2_5_hd: 5, // hidden: native 1080p through a second provider, no longer offered; mirrors main.py
 };
 const videoCreditsPerSecond = (model: ImageVideoModel, withStudioVoice: boolean) =>
-  model === "kling_3_pro" && withStudioVoice ? 4 : IMAGE_VIDEO_CREDIT_PER_SECOND[model];
+  model === "kling_3_pro" && withStudioVoice ? 1.33 : IMAGE_VIDEO_CREDIT_PER_SECOND[model];
 // Three length choices per tool (the lengths the tool does best), so nobody has to pick a number of seconds.
 // Omni goes to 30 s as chained 10 s extensions; Kling 4.0 and Seedance 2.5 reach 30 s in one request.
 const VIDEO_LENGTH_CHIPS: Record<ImageVideoModel, { label: string; seconds: number }[]> = {
-  omni: [{ label: "Short", seconds: 8 }, { label: "Medium", seconds: 20 }, { label: "Long", seconds: 30 }],
+  omni: [{ label: "Short", seconds: 8 }, { label: "Medium", seconds: 15 }, { label: "Long", seconds: 30 }],
   wan_3: [{ label: "Short", seconds: 8 }, { label: "Medium", seconds: 15 }, { label: "Long", seconds: 30 }],
   kling_3_pro: [{ label: "Short", seconds: 5 }, { label: "Medium", seconds: 10 }, { label: "Long", seconds: 15 }],
   kling_4: [{ label: "Short", seconds: 8 }, { label: "Medium", seconds: 15 }, { label: "Long", seconds: 30 }],
-  seedance_2_5: [{ label: "Short", seconds: 5 }, { label: "Medium", seconds: 15 }, { label: "Long", seconds: 30 }],
+  seedance_2_5: [{ label: "Short", seconds: 8 }, { label: "Medium", seconds: 15 }, { label: "Long", seconds: 30 }],
   seedance_2_5_hd: [{ label: "Short", seconds: 5 }, { label: "Medium", seconds: 10 }, { label: "Long", seconds: 15 }], // 10 credits a second, so kept short
 };
 // "Studio voice" (a separate ElevenLabs voice, lip-synced afterwards) is the old Talking Video path:
@@ -271,43 +270,43 @@ const STUDIO_VOICE_MAX: Partial<Record<ImageVideoModel, number>> = { omni: 10, k
 const lengthChipsFor = (model: ImageVideoModel, studioVoice: boolean) =>
   studioVoice ? VIDEO_LENGTH_CHIPS[model].filter((c) => c.seconds <= (STUDIO_VOICE_MAX[model] ?? 0)) : VIDEO_LENGTH_CHIPS[model];
 // The full-quality version offered after the free comparison is the same 4 seconds as the comparison, so it is
-// the cheapest real video (Wan/Kling 4.0 20-24 credits, Seedance 24) and a new account's ~15 free credits fall just short.
+// the cheapest real video (7 credits) and a new account's 5 free credits fall just short.
 const TASTER_UPGRADE_SECONDS = 4;
 // Under every free result: (1) the SAME video (720p) without the watermark for TASTER_UNLOCK_CREDITS (mirrors main.py), or
-// (2) a NEW 1080p video. Wan 3.0 and Kling 4.0 already make 1080p; Seedance 2.5's 1080p is its own engine.
-const TASTER_UNLOCK_CREDITS = 10;
-const TASTER_1080_MODEL: Partial<Record<ImageVideoModel, ImageVideoModel>> = { seedance_2_5: "seedance_2_5_hd" };
+// (2) a NEW 1080p video. The free comparison is Wan 3.0 and Kling 4.0, which already make 1080p (the separate 1080p Seedance is no longer offered).
+const TASTER_UNLOCK_CREDITS = 3;
+const TASTER_1080_MODEL: Partial<Record<ImageVideoModel, ImageVideoModel>> = {};
 const tasterUpgradeModel = (model: ImageVideoModel): ImageVideoModel => TASTER_1080_MODEL[model] ?? model;
 // TALKING_VIDEO_REDUB_SURCHARGE is declared right below this block.
 const videoCostFor = (model: ImageVideoModel, seconds: number, studioVoice: boolean) =>
-  Math.ceil(seconds * videoCreditsPerSecond(model, studioVoice)) + (studioVoice ? 18 : 0);
+  Math.ceil(seconds * videoCreditsPerSecond(model, studioVoice)) + (studioVoice ? 6 : 0);
 // Mirrors the backend's own TALKING_VIDEO_REDUB_SURCHARGE — display only.
-const TALKING_VIDEO_REDUB_SURCHARGE = 18;
+const TALKING_VIDEO_REDUB_SURCHARGE = 6;
 // Mirrors the backend's own ACTOR_VIDEO_V2_CREDIT_COST (main.py) — same
 // flat price AdVideoForm.tsx's "Punqle Actors" style already charges,
 // since this reuses that exact same endpoint. Display only.
-const ACTOR_VIDEO_V2_CREDIT_COST = 30;
+const ACTOR_VIDEO_V2_CREDIT_COST = 10;
 // Custom actors (the user's own photo): a narration up to ~9 s is filmed by
 // Gemini Omni and lip-synced (Talking Video's chain), a longer one stays on
 // OmniHuman at the flat price above. Mirrors the backend's
 // _omni_actor_clip_seconds / _omni_actor_cost — display only.
 const ACTOR_CHARS_PER_SECOND = 13;
 const OMNI_ACTOR_MAX_NARRATION_SECONDS = 9;
-// Longer narrations (OmniHuman 1.5): up to 900 characters (~60 s), 3.5 credits
-// per second after the flat 30. Over ~35 s it is made in 720p (one continuous
+// Longer narrations (OmniHuman 1.5): up to 900 characters (~60 s), 1.17 credits
+// per second after the flat 10. Over ~35 s it is made in 720p (one continuous
 // take). No quality choice is offered: the user only sees seconds and credits. Ready Actors: up to 420 characters (~28 s),
-// 30 credits to 15 s then 2 per second. Mirrors main.py's
+// 10 credits to 15 s then 0.66 per second. Mirrors main.py's
 // CUSTOM_ACTOR_MAX_NARRATION_CHARS / ACTOR_V2_MAX_NARRATION_CHARS and their
 // cost functions — display only, the server charges the real amount.
 const ACTOR_SPEECH_CHARS_PER_SECOND = 15;
 const CUSTOM_ACTOR_MAX_CHARS = 900;
 const READY_ACTOR_MAX_CHARS = 420;
-const OMNIHUMAN_CREDITS_PER_SECOND = 3.5;
+const OMNIHUMAN_CREDITS_PER_SECOND = 1.17;
 // [emotion] tags are voice direction, never spoken, so they don't count.
 const spokenLength = (text: string) => text.replace(/\[[^\]]*\]/g, "").trim().length;
 const actorSpeechSeconds = (text: string) => Math.max(3, spokenLength(text) / ACTOR_SPEECH_CHARS_PER_SECOND);
 function readyActorVideoCost(narration: string): number {
-  return Math.max(ACTOR_VIDEO_V2_CREDIT_COST, Math.ceil(actorSpeechSeconds(narration) * 2));
+  return Math.max(ACTOR_VIDEO_V2_CREDIT_COST, Math.ceil(actorSpeechSeconds(narration) * 0.66));
 }
 function customActorVideoCost(narration: string): number {
   const text = narration.trim();
@@ -322,7 +321,7 @@ function customActorVideoCost(narration: string): number {
 
 // Mirrors the backend's own VIDEO_UPSCALE_CREDIT_COST (main.py) — display
 // only, the backend computes and charges the real amount server-side.
-const UPSCALE_VIDEO_CREDIT_COST: Record<AvatarTier, number> = { standard: 4, premium: 10 };
+const UPSCALE_VIDEO_CREDIT_COST: Record<AvatarTier, number> = { standard: 2, premium: 4 };
 
 function HomeScreen() {
   const { tab } = Route.useSearch();
@@ -1728,10 +1727,10 @@ function HomeScreen() {
             {homeIdle && (
               <HomeShowcase
                 cards={[
-                  { key: "actors", title: "Ready Actors", blurb: "A real filmed actor says your words", meta: "from 30 credits", image: "/home/actors.jpg", icon: UserRound, onClick: () => handleSwitchMode("talking_actors") },
-                  { key: "video", title: "Video", blurb: "Turn any photo into a short clip", meta: "from 15 credits", image: "/home/video.jpg", icon: Video, onClick: () => handleSwitchMode("video") },
-                  { key: "image", title: "Image", blurb: "Studio ad images from a prompt", meta: "from 2 credits", image: "/home/image.jpg", icon: Sparkles, onClick: () => handleSwitchMode("image") },
-                  { key: "product", title: "Product", blurb: "A person showing off your product", meta: "from 3 credits", image: "/home/product.jpg", icon: Package, onClick: () => handleSwitchMode("product") },
+                  { key: "actors", title: "Ready Actors", blurb: "A real filmed actor says your words", meta: "from 10 credits", image: "/home/actors.jpg", icon: UserRound, onClick: () => handleSwitchMode("talking_actors") },
+                  { key: "video", title: "Video", blurb: "Turn any photo into a short clip", meta: "from 14 credits", image: "/home/video.jpg", icon: Video, onClick: () => handleSwitchMode("video") },
+                  { key: "image", title: "Image", blurb: "Studio ad images from a prompt", meta: "from 1 credit", image: "/home/image.jpg", icon: Sparkles, onClick: () => handleSwitchMode("image") },
+                  { key: "product", title: "Product", blurb: "A person showing off your product", meta: "from 2 credits", image: "/home/product.jpg", icon: Package, onClick: () => handleSwitchMode("product") },
                 ]}
               />
             )}
@@ -1976,7 +1975,7 @@ function HomeScreen() {
                           className="w-full rounded-full px-5 py-2 text-xs font-bold text-white disabled:opacity-40"
                           style={{ background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN }}
                         >
-                          {createActorGenerating ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Generate (9 credits)"}
+                          {createActorGenerating ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Generate (3 credits)"}
                         </button>
                       </div>
                     )}
@@ -2846,7 +2845,7 @@ function HomeScreen() {
                             }}
                             className="h-4 w-4"
                           />
-                          Use a studio voice instead (Omni and Kling 3.0 Pro, up to {STUDIO_VOICE_MAX.omni}–{STUDIO_VOICE_MAX.kling_3_pro} s, +18 credits)
+                          Use a studio voice instead (Omni and Kling 3.0 Pro, up to {STUDIO_VOICE_MAX.omni}–{STUDIO_VOICE_MAX.kling_3_pro} s, +6 credits)
                         </label>
                         {videoNarrationEnabled && (
                           <div className="space-y-2 rounded-xl bg-secondary/50 p-3">

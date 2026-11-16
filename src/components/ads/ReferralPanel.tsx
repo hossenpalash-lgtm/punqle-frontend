@@ -66,7 +66,7 @@ export function ReferralPanel({ open, onClose }: { open: boolean; onClose: () =>
           <>
             <p className="mb-4 text-sm text-muted-foreground">
               Share your link — when a friend signs up with it, you both get{" "}
-              <span className="font-semibold text-foreground">5 free credits</span>.
+              <span className="font-semibold text-foreground">2 free credits</span>.
             </p>
 
             <div className="mb-4 flex items-center gap-2 rounded-2xl border border-input bg-background px-4 py-3">

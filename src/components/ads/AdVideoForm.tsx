@@ -65,32 +65,32 @@ import { TopUpButton } from "./TopUpButton";
 // Mirrors main.py's VIDEO_CREDIT_COST: one fixed 8 s Gemini Omni clip at
 // 1080p, sound included. Was 10 on Veo 3.1 Lite until Veo's 22 Oct 2026
 // retirement (2026-10-05).
-const VIDEO_CREDIT_COST = 30;
+const VIDEO_CREDIT_COST = 10; // pricing v2 (2026-11-17): credits are about a third of the old size
 const POLL_INTERVAL_MS = 8000;
 // Avatar videos are now billed by their real length (main.py's
 // _avatar_credit_cost): these are the MINIMUM charges (short clips cost
-// exactly these); longer scripts cost more — Standard 0.5 credits/s,
-// Premium 1.6 credits/s. Shown as "from N credits".
-const AVATAR_STANDARD_CREDIT_COST = 4;
-const AVATAR_PREMIUM_CREDIT_COST = 10;
+// exactly these); longer scripts cost more — Standard 0.17 credits/s,
+// Premium 0.53 credits/s. Shown as "from N credits".
+const AVATAR_STANDARD_CREDIT_COST = 2;
+const AVATAR_PREMIUM_CREDIT_COST = 4;
 // Cinematic UGC runs on Gemini Omni only (8 s, 1080p, sound, one price —
 // main.py's CINEMATIC_UGC_OMNI_CREDIT_COST). The Seedance option was removed
 // 2026-10-06 (480p/720p and silent, worse and dearer than Omni); Kling in Video Ad
 // was dropped from the screen too. Both stay on the server only as an automatic
 // backup when Omni can't deliver.
-const CINEMATIC_UGC_OMNI_CREDIT_COST = 30;
+const CINEMATIC_UGC_OMNI_CREDIT_COST = 10;
 // AI Actor talking video (OmniHuman) — 8s x $0.14/s = $1.12 real cost,
 // matches main.py's AI_ACTOR_VIDEO_CREDIT_COST exactly. One fixed price,
 // no tier (OmniHuman has no cheap/expensive engine split like HeyGen).
-const AI_ACTOR_VIDEO_CREDIT_COST = 30;
-// Ready Actors: up to 420 characters (~28 s). 30 credits up to 15 s, then 2 per
+const AI_ACTOR_VIDEO_CREDIT_COST = 10;
+// Ready Actors: up to 420 characters (~28 s). 10 credits up to 15 s, then 0.66 per
 // extra second (Sync Labs bills by output length) — mirrors main.py's
 // ACTOR_V2_MAX_NARRATION_CHARS / _actor_v2_cost. Display only.
 const READY_ACTOR_MAX_CHARS = 420;
 // [emotion] tags are voice direction, never spoken, so they don't count.
 const spokenLength = (text: string) => text.replace(/\[[^\]]*\]/g, "").trim().length;
 const readyActorSeconds = (text: string) => Math.max(3, spokenLength(text) / 15);
-const readyActorCost = (text: string) => Math.max(AI_ACTOR_VIDEO_CREDIT_COST, Math.ceil(readyActorSeconds(text) * 2));
+const readyActorCost = (text: string) => Math.max(AI_ACTOR_VIDEO_CREDIT_COST, Math.ceil(readyActorSeconds(text) * 0.66));
 
 type WizardStep = "create" | "review-script" | "generating" | "result" | "receiving";
 

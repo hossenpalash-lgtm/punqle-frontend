@@ -32,7 +32,7 @@ import { ALL_NAV_TABS, Sidebar, type NavTab } from "../components/Sidebar";
 // stay reachable regardless of auth state — signed out, mid-splash, or
 // signed in — since Meta's own reviewers/crawlers and logged-out visitors
 // both need to load them directly.
-const PUBLIC_ROUTES = new Set(["/privacy-policy", "/terms", "/refund-policy", "/data-deletion"]);
+const PUBLIC_ROUTES = new Set(["/privacy-policy", "/terms", "/refund-policy", "/data-deletion", "/pay"]);
 
 const PENDING_REFERRAL_KEY = "punqle_pending_ref";
 

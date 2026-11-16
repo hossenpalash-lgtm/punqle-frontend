@@ -654,6 +654,13 @@ function HomeScreen() {
     fetchAdCredits()
       .then((c) => setCredits(c.credits))
       .catch((err) => setCreditsError(err instanceof Error ? err.message : "Couldn't load your credits."));
+    // The Plans & billing panel re-reads the balance after a purchase and announces it, so the counter here is never stale.
+    const onCredits = (e: Event) => {
+      const n = (e as CustomEvent<number>).detail;
+      if (typeof n === "number") setCredits(n);
+    };
+    window.addEventListener("punqle:credits", onCredits);
+    return () => window.removeEventListener("punqle:credits", onCredits);
   }, []);
 
   // This account's guaranteed-once-free tries (main.py's

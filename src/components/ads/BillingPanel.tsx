@@ -4,6 +4,7 @@ import {
   createCheckoutSession,
   createCreditPackCheckoutSession,
   createPortalSession,
+  fetchAdCredits,
   fetchSubscriptionStatus,
   type ApiSubscriptionStatus,
   type CreditPack,
@@ -44,6 +45,9 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
   const [pendingTier, setPendingTier] = useState<SubscriptionTier | null>(null);
   const [pendingPack, setPendingPack] = useState<CreditPack | null>(null);
   const [openingPortal, setOpeningPortal] = useState(false);
+  // The balance shown at the top of the panel. After a purchase the credits arrive a few seconds later (Paddle tells our
+  // server first), so we look again every 3 s for up to ~30 s and also tell the home screen, whose counter is behind the panel.
+  const [balance, setBalance] = useState<number | null>(null);
   // Captured once at the panel's true first mount (a lazy initializer runs
   // during render, before any effect) — reading window.location.search
   // from inside the `open`-triggered effect below was racing the router's
@@ -59,7 +63,7 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
     setNotice(null);
 
     if (initialBillingResult === "success") {
-      setNotice("You're subscribed! It may take a few seconds for your credits to appear.");
+      setNotice("Thank you, your payment went through. Your credits show up within a few seconds.");
     } else if (initialBillingResult === "cancelled") {
       setNotice("Checkout was cancelled — no charge was made.");
     }
@@ -76,6 +80,26 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
       .then(setStatus)
       .catch((err) => setError(err instanceof Error ? err.message : "Couldn't load your subscription."))
       .finally(() => setLoading(false));
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const readBalance = (attemptsLeft: number) => {
+      fetchAdCredits()
+        .then((c) => {
+          if (cancelled) return;
+          setBalance(c.credits);
+          window.dispatchEvent(new CustomEvent("punqle:credits", { detail: c.credits }));
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (!cancelled && attemptsLeft > 0) timer = setTimeout(() => readBalance(attemptsLeft - 1), 3000);
+        });
+    };
+    readBalance(initialBillingResult === "success" ? 9 : 0);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [open]);
 
   if (!open) return null;
@@ -140,6 +164,12 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
           <div className="mb-4 rounded-2xl bg-secondary/60 p-4 text-sm font-medium text-secondary-foreground">
             {notice}
           </div>
+        )}
+        {balance !== null && (
+          <p className="mb-4 text-sm text-muted-foreground">
+            You have <span className="font-display text-base font-extrabold text-foreground">{balance}</span>{" "}
+            {balance === 1 ? "credit" : "credits"}.
+          </p>
         )}
         {error && <p className="mb-4 text-sm font-medium text-destructive">{error}</p>}
 

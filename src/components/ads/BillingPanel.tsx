@@ -182,10 +182,16 @@ export function BillingPanel({ open, onClose }: { open: boolean; onClose: () => 
           <div className="rounded-2xl border border-input bg-background p-5">
             <p className="text-sm text-muted-foreground">Current plan</p>
             <p className="mt-1 font-display text-xl font-extrabold capitalize text-foreground">{status.tier}</p>
-            {status.current_period_end && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Renews {new Date(status.current_period_end).toLocaleDateString()}
+            {status.cancel_at ? (
+              <p className="mt-1 text-xs font-medium text-destructive">
+                Cancelled. Your plan stays active until {new Date(status.cancel_at).toLocaleDateString()}, then it ends and nothing more is charged.
               </p>
+            ) : (
+              status.current_period_end && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Renews {new Date(status.current_period_end).toLocaleDateString()}
+                </p>
+              )
             )}
             <button
               onClick={handleManage}

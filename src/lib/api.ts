@@ -1962,6 +1962,8 @@ export interface ApiSubscriptionStatus {
   tier: SubscriptionTier | null;
   status: string | null;
   current_period_end: string | null;
+  // Set when the customer cancelled: the plan keeps working until this date, then ends.
+  cancel_at?: string | null;
 }
 
 export function fetchSubscriptionStatus(): Promise<ApiSubscriptionStatus> {

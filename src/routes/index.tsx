@@ -1734,7 +1734,7 @@ function HomeScreen() {
             {homeIdle && (
               <HomeShowcase
                 cards={[
-                  { key: "actors", title: "Ready Actors", blurb: "A real filmed actor says your words", meta: "from 10 credits", image: "/home/actors.jpg", icon: UserRound, onClick: () => handleSwitchMode("talking_actors") },
+                  { key: "actors", title: "Ready Actors", blurb: "A lifelike AI actor says your words", meta: "from 10 credits", image: "/home/actors.jpg", icon: UserRound, onClick: () => handleSwitchMode("talking_actors") },
                   { key: "video", title: "Video", blurb: "Turn any photo into a short clip", meta: "from 14 credits", image: "/home/video.jpg", icon: Video, onClick: () => handleSwitchMode("video") },
                   { key: "image", title: "Image", blurb: "Studio ad images from a prompt", meta: "from 1 credit", image: "/home/image.jpg", icon: Sparkles, onClick: () => handleSwitchMode("image") },
                   { key: "product", title: "Product", blurb: "A person showing off your product", meta: "from 2 credits", image: "/home/product.jpg", icon: Package, onClick: () => handleSwitchMode("product") },
@@ -3490,7 +3490,7 @@ function HomeScreen() {
                     <div>
                       <p className="text-sm font-bold text-foreground font-display">Show Your App</p>
                       <p className="text-xs text-muted-foreground">
-                        Puts your app on an actor's phone screen — a real person showing it off.
+                        Puts your app on an AI actor's phone screen — a lifelike presenter showing it off.
                       </p>
                     </div>
                     {showAppError && <p className="text-xs font-medium text-destructive">{showAppError}</p>}

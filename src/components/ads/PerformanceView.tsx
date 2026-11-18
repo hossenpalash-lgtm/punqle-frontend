@@ -204,7 +204,7 @@ type UnlockAction = NonNullable<ApiPerformancePost["metrics_action"]>;
 //   Instagram  instagram_manage_insights — approved 2026-10-11
 //   Facebook   read_insights + pages_read_user_content — requested 2026-10-12
 //   YouTube    yt-analytics.readonly     — non-sensitive scope, no verification needed (live 2026-11-05)
-//   TikTok     video.list                — TikTok revision requested 2026-10-12
+//   TikTok     video.list                — approved by TikTok 2026-11-18 (revision submitted 2026-11-08)
 const UNLOCKS: Record<UnlockAction, { title: string; body: string; button: string; approved: boolean; start: () => Promise<{ authorize_url: string }> }> = {
   unlock_instagram_insights: {
     title: "See reach, views and saves for your Instagram posts",
@@ -231,7 +231,7 @@ const UNLOCKS: Record<UnlockAction, { title: string; body: string; button: strin
     title: "See views, likes and shares for your TikTok posts",
     body: "Reconnect TikTok once to let Punqle read how each of your posts is doing.",
     button: "Reconnect TikTok",
-    approved: false,
+    approved: true,
     start: () => getTikTokConnectUrl(true),
   },
 };

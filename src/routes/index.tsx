@@ -450,6 +450,9 @@ function HomeScreen() {
   // offers the full-quality version and states the price, since this is the first time a cost appears for them.
   const [resultFromTaster, setResultFromTaster] = useState(false);
   const [tasterResultJobId, setTasterResultJobId] = useState<string | null>(null); // the free-comparison job whose video is on screen (needed to unlock it)
+  // The clean (unlocked, no watermark) copy the customer paid for. TikTok forbids a brand watermark on posted videos, so only
+  // this exact video may go to TikTok from a free account; any other video on screen is treated as watermarked there.
+  const [cleanVideoB64, setCleanVideoB64] = useState<string | null>(null);
   const [tasterActionError, setTasterActionError] = useState<string | null>(null);
   const [exampleLoading, setExampleLoading] = useState<string | null>(null); // which "Try an example" card is loading its photo
   // True once the server has answered about the free test (so the "Unlock" row below never flashes for a new account
@@ -1600,6 +1603,7 @@ function HomeScreen() {
       setTasterActionError(null);
       setResultFromTaster(false);
       setTasterResultJobId(null);
+      setCleanVideoB64(r.video_base64);
       setHomeGeneratedVideo(r.video_base64);
       setVideoModel(model);
       setVideoVariants([]);
@@ -2524,6 +2528,7 @@ function HomeScreen() {
                       aspectRatio={videoAspectRatio}
                       videoKept={recentSaved}
                       tags={homeVideoTags}
+                      watermarkFree={!!homeGeneratedVideo && homeGeneratedVideo === cleanVideoB64}
                     />
                   </>
                 ) : !videoRefImage && showRecent ? (
@@ -3197,6 +3202,7 @@ function HomeScreen() {
                       aspectRatio={videoAspectRatio}
                       videoKept={recentSaved}
                       tags={homeVideoTags}
+                      watermarkFree={!!homeGeneratedVideo && homeGeneratedVideo === cleanVideoB64}
                     />
                   </>
                 ) : productPanel === "generating" ? (

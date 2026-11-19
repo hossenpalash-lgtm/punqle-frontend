@@ -57,6 +57,7 @@ export function PostThisVideo({
   videoKept,
   initialOpen,
   tags,
+  watermarkFree,
 }: {
   videoUrl: string | null; // a "data:video/mp4;base64,..." URL, the shape the publish panels expect
   headline: string;
@@ -66,6 +67,9 @@ export function PostThisVideo({
   // What this video was made with. Sent along with the post so Performance can group results ("which engine / goal works").
   // Pass only what is really known; anything left out is stored as empty, never guessed.
   tags?: PostTags;
+  // True only when this exact video is known to be a clean copy (an unlocked one). TikTok forbids a brand watermark on posted
+  // videos, and every video a free account makes carries Punqle's, so TikTok's own form blocks those unless this is set.
+  watermarkFree?: boolean;
 }) {
   const [open, setOpen] = useState<PlatformKey | null>(initialOpen ?? null);
   const seconds = useVideoSeconds(videoUrl);
@@ -104,7 +108,7 @@ export function PostThisVideo({
       {open === "youtube" && (
         <PublishToYouTube key="youtube" videoUrl={videoUrl} headline={headline} aspectRatio={aspectRatio} videoKept={videoKept} startOpen goal={tags?.goal} angle={tags?.angle} style={tags?.style} videoTags={videoTags} />
       )}
-      {open === "tiktok" && <PublishToTikTok key="tiktok" videoUrl={videoUrl} headline={headline} videoKept={videoKept} startOpen goal={tags?.goal} angle={tags?.angle} style={tags?.style} videoTags={videoTags} />}
+      {open === "tiktok" && <PublishToTikTok key="tiktok" videoUrl={videoUrl} headline={headline} videoKept={videoKept} startOpen goal={tags?.goal} angle={tags?.angle} style={tags?.style} videoTags={videoTags} watermarkFree={watermarkFree} />}
       {(open === "facebook" || open === "instagram") && (
         <PublishVideoToMeta key={open} videoUrl={videoUrl} headline={headline} videoKept={videoKept} startOpen initial={open} goal={tags?.goal} angle={tags?.angle} style={tags?.style} videoTags={videoTags} />
       )}

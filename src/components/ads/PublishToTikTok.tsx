@@ -45,6 +45,7 @@ export function PublishToTikTok({
   videoTags,
   videoKept,
   startOpen,
+  watermarkFree,
 }: {
   videoUrl: string | null;
   headline: string;
@@ -54,6 +55,7 @@ export function PublishToTikTok({
   videoTags?: VideoPostTags; // length + Enhancer of this video (see PostThisVideo)
   videoKept?: boolean; // the server keeps this video 14 days (Recent videos), so connecting does not lose it
   startOpen?: boolean; // open the form straight away (the caller already showed a button for it)
+  watermarkFree?: boolean; // this exact video is a clean copy (an unlocked one); TikTok forbids a brand watermark on posted videos
 }) {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [connected, setConnected] = useState(false);
@@ -70,7 +72,10 @@ export function PublishToTikTok({
   const [allowComment, setAllowComment] = useState(false);
   const [allowDuet, setAllowDuet] = useState(false);
   const [allowStitch, setAllowStitch] = useState(false);
-  const [promotesOwnBrand, setPromotesOwnBrand] = useState(true);
+  // TikTok's Content Sharing Guidelines: the commercial-content disclosure is a toggle that is OFF by default; only when it
+  // is on do "Your brand" / "Branded content" appear, and then at least one must be chosen.
+  const [discloseOn, setDiscloseOn] = useState(false);
+  const [promotesOwnBrand, setPromotesOwnBrand] = useState(false);
   const [hasPaidPartnership, setHasPaidPartnership] = useState(false);
 
   const [canSchedule, setCanSchedule] = useState(false); // true only while the server's own alarm clock is on
@@ -117,15 +122,10 @@ export function PublishToTikTok({
     fetchTikTokCreatorInfo()
       .then((info) => {
         setCreatorInfo(info);
-        // While unaudited, TikTok's real API rejects (403) any
-        // privacy_level other than SELF_ONLY — confirmed live by
-        // replaying the exact publish request with only this field
-        // changed. privacy_level_options reflects the creator's own
-        // account settings, not the app's audit status, so it can
-        // legitimately list options that would still fail right now —
-        // default to the one that's actually usable instead of
-        // whichever option happens to sort first.
-        setPrivacyLevel(info.is_audited ? info.privacy_level_options[0] ?? "" : "SELF_ONLY");
+        // TikTok's guidelines: the creator picks who can see the post from a dropdown of THEIR real options, and there is
+        // no default value. While the app is unaudited the server still publishes every post as "Only me" (TikTok's own
+        // API rejects anything else), which the notice below says openly.
+        setPrivacyLevel("");
       })
       .catch((err) => setCreatorInfoError(err instanceof Error ? err.message : "Couldn't load your TikTok posting options."))
       .finally(() => setLoadingCreatorInfo(false));
@@ -152,11 +152,14 @@ export function PublishToTikTok({
     }
   };
 
+  // TikTok forbids a brand watermark on posted videos; every video a free account makes carries the Punqle one.
+  const watermarkBlocked = !!creatorInfo?.watermark_blocked && !watermarkFree;
   const canPublish =
     !!videoUrl &&
     !!creatorInfo &&
     !!privacyLevel &&
-    (promotesOwnBrand || hasPaidPartnership) &&
+    !watermarkBlocked &&
+    (!discloseOn || promotesOwnBrand || hasPaidPartnership) &&
     (!scheduling || !!scheduledAt);
 
   const handlePublish = async () => {
@@ -172,8 +175,8 @@ export function PublishToTikTok({
         allowComment,
         allowDuet,
         allowStitch,
-        promotesOwnBrand,
-        hasPaidPartnership,
+        discloseOn && promotesOwnBrand,
+        discloseOn && hasPaidPartnership,
         undefined,
         undefined,
         goal,
@@ -182,6 +185,7 @@ export function PublishToTikTok({
         // datetime-local gives the viewer's local time; toISOString() converts it to the UTC the backend expects.
         scheduling && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
         videoTags,
+        watermarkFree,
       );
       setResult(r);
     } catch (err) {
@@ -241,7 +245,16 @@ export function PublishToTikTok({
       </div>
       {creatorInfo && !creatorInfo.is_audited && (
         <p className="mb-3 rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground">
-          Posts land as private while the app is in TikTok's review — that's expected, not a bug.
+          While Punqle's TikTok access is in review, TikTok publishes every post as "Only me" (private), whatever you pick below — that's expected, not a bug.
+        </p>
+      )}
+      {watermarkBlocked && (
+        <p className="mb-3 flex items-start gap-1.5 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>
+            TikTok doesn't allow a brand watermark on posted videos, and this video carries the Punqle watermark. Get it without the
+            watermark (or make a new one with a paid plan or a credit pack), then post it.
+          </span>
         </p>
       )}
 
@@ -273,32 +286,20 @@ export function PublishToTikTok({
           <select
             value={privacyLevel}
             onChange={(e) => setPrivacyLevel(e.target.value)}
-            disabled={!creatorInfo.is_audited}
-            className="mb-1.5 w-full rounded-full border border-input bg-background px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+            className="mb-1.5 w-full rounded-full border border-input bg-background px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            {creatorInfo.is_audited ? (
-              <>
-                <option value="" disabled>
-                  Choose who can see this
-                </option>
-                {creatorInfo.privacy_level_options.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {PRIVACY_LABELS[opt] ?? opt}
-                  </option>
-                ))}
-              </>
-            ) : (
-              <option value="SELF_ONLY">Only me</option>
-            )}
+            {/* TikTok's guidelines: the creator's own options from creator_info, no default value, chosen by hand. */}
+            <option value="" disabled>
+              Choose who can see this
+            </option>
+            {creatorInfo.privacy_level_options.map((opt) => (
+              <option key={opt} value={opt} disabled={discloseOn && hasPaidPartnership && opt === "SELF_ONLY"}>
+                {PRIVACY_LABELS[opt] ?? opt}
+                {discloseOn && hasPaidPartnership && opt === "SELF_ONLY" ? " — branded content can't be private" : ""}
+              </option>
+            ))}
           </select>
-          {creatorInfo.is_audited ? (
-            <div className="mb-3" />
-          ) : (
-            <p className="mb-3 text-xs text-muted-foreground">
-              Locked to "Only me" until Punqle's TikTok app passes review — TikTok itself rejects any other
-              option from an app that hasn't been audited yet.
-            </p>
-          )}
+          <div className="mb-3" />
 
           <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">Allow on this post</label>
           <div className="mb-3 flex flex-wrap gap-3">
@@ -331,55 +332,84 @@ export function PublishToTikTok({
             </label>
           </div>
 
-          <label className="mb-1.5 flex items-start gap-2 text-xs text-foreground">
+          {/* Commercial-content disclosure, TikTok's way: a toggle that is OFF by default; only when it is on do the two
+              choices appear, and then at least one must be picked. */}
+          <label className="mb-1 flex items-start gap-2 text-xs font-semibold text-foreground">
             <input
               type="checkbox"
-              checked={promotesOwnBrand}
-              onChange={(e) => setPromotesOwnBrand(e.target.checked)}
+              checked={discloseOn}
+              onChange={(e) => {
+                setDiscloseOn(e.target.checked);
+                if (!e.target.checked) {
+                  setPromotesOwnBrand(false);
+                  setHasPaidPartnership(false);
+                }
+              }}
               className="mt-0.5 h-4 w-4 shrink-0 rounded border-input"
             />
-            <span>This video promotes my own business.</span>
+            <span>Disclose post content</span>
           </label>
-          <label className="mb-2 flex items-start gap-2 text-xs text-foreground">
-            <input
-              type="checkbox"
-              checked={hasPaidPartnership}
-              onChange={(e) => setHasPaidPartnership(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-input"
-            />
-            <span>This is a paid partnership with a different brand.</span>
-          </label>
-          {!promotesOwnBrand && !hasPaidPartnership && (
-            <p className="mb-2 text-xs font-medium text-destructive">Choose at least one of the two above.</p>
-          )}
-          {(promotesOwnBrand || hasPaidPartnership) && (
-            <p className="mb-3 text-xs text-muted-foreground">
-              By posting, you agree to TikTok's{" "}
-              <a
-                href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en"
-                target="_blank"
-                rel="noreferrer"
-                className="underline"
-              >
-                Music Usage Confirmation
-              </a>
-              {hasPaidPartnership && (
-                <>
-                  {" "}
-                  and{" "}
-                  <a
-                    href="https://www.tiktok.com/legal/page/global/bc-policy/en"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline"
-                  >
-                    Branded Content Policy
-                  </a>
-                </>
+          <p className="mb-2 pl-6 text-xs text-muted-foreground">
+            Turn this on to say that this video promotes yourself, a brand, product or service.
+          </p>
+          {discloseOn && (
+            <div className="mb-2 pl-6">
+              <label className="mb-1.5 flex items-start gap-2 text-xs text-foreground">
+                <input
+                  type="checkbox"
+                  checked={promotesOwnBrand}
+                  onChange={(e) => setPromotesOwnBrand(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-input"
+                />
+                <span>
+                  <span className="font-semibold">Your brand</span>
+                  <span className="block text-muted-foreground">You are promoting yourself or your own business. This video will be classified as Brand Organic.</span>
+                </span>
+              </label>
+              <label className={`mb-1.5 flex items-start gap-2 text-xs text-foreground ${!creatorInfo.is_audited ? "opacity-60" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={hasPaidPartnership}
+                  disabled={!creatorInfo.is_audited}
+                  onChange={(e) => {
+                    setHasPaidPartnership(e.target.checked);
+                    if (e.target.checked && privacyLevel === "SELF_ONLY") setPrivacyLevel(""); // branded content can't be private: pick again
+                  }}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-input"
+                />
+                <span>
+                  <span className="font-semibold">Branded content</span>
+                  <span className="block text-muted-foreground">
+                    You are promoting another brand or a third party. This video will be classified as Branded Content.
+                    {!creatorInfo.is_audited && " Not available yet: branded content can't be private, and TikTok publishes every Punqle post as private for now."}
+                  </span>
+                </span>
+              </label>
+              {!promotesOwnBrand && !hasPaidPartnership && (
+                <p className="text-xs font-medium text-destructive">You need to indicate if your content promotes yourself, a third party, or both.</p>
               )}
-              .
-            </p>
+            </div>
           )}
+          <p className="mb-3 text-xs text-muted-foreground">
+            By posting, you agree to TikTok's{" "}
+            {discloseOn && hasPaidPartnership && (
+              <>
+                <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noreferrer" className="underline">
+                  Branded Content Policy
+                </a>{" "}
+                and{" "}
+              </>
+            )}
+            <a
+              href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              Music Usage Confirmation
+            </a>
+            .
+          </p>
         </>
       )}
 

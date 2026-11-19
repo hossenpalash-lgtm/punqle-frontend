@@ -1771,6 +1771,8 @@ export interface ApiTikTokCreatorInfo {
   stitch_disabled: boolean;
   max_video_post_duration_sec: number;
   is_audited: boolean;
+  // True for a free account: its videos carry the Punqle watermark, which TikTok does not allow on posted content.
+  watermark_blocked?: boolean;
 }
 
 export function fetchTikTokCreatorInfo(): Promise<ApiTikTokCreatorInfo> {
@@ -1799,6 +1801,7 @@ export function publishToTikTok(
   style?: string | null,
   scheduledTime?: string, // ISO8601; only when the server says TikTok can take a time (see fetchSchedulingCapabilities)
   videoTags?: VideoPostTags, // length + Enhancer of the video being posted; only known values are sent
+  watermarkFree?: boolean, // true only for a video known to be a clean copy (an unlocked one); free accounts' other videos are watermarked
 ): Promise<ApiTikTokPublishResponse> {
   const match = videoDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
@@ -1814,6 +1817,7 @@ export function publishToTikTok(
   formData.append("allow_stitch", String(allowStitch));
   formData.append("promotes_own_brand", String(promotesOwnBrand));
   formData.append("has_paid_partnership", String(hasPaidPartnership));
+  if (watermarkFree) formData.append("watermark_free", "true");
   if (scheduledTime) formData.append("scheduled_time", scheduledTime);
   if (contentPlanId && contentPlanDay) {
     formData.append("source", "weekly_plan");

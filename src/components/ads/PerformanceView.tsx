@@ -1,5 +1,6 @@
 import {
   Bookmark,
+  ChevronDown,
   Eye,
   Facebook,
   Heart,
@@ -11,6 +12,7 @@ import {
   Percent,
   RefreshCw,
   Repeat2,
+  Send,
   Share2,
   Trophy,
   TrendingUp,
@@ -29,7 +31,7 @@ import {
   getYouTubeConnectUrl,
   type ApiPerformancePost,
 } from "@/lib/api";
-import { engagementRate, formatRate, groupLeaders, isWinner, MIN_RATE_BASE, notSharedNote, scorePosts, tagValue, topPosts, type GroupLeader, type TagDimension, type TopPost } from "@/lib/performance-insights";
+import { engagementRate, formatRate, groupLeaders, isWinner, MIN_RATE_BASE, notSharedNote, scorePosts, summarizePosts, tagValue, topPosts, type GroupLeader, type PostsSummary, type TagDimension, type TopPost } from "@/lib/performance-insights";
 
 function PlatformIcon({ platform, className, filled = false }: { platform: ApiPerformancePost["platform"]; className: string; filled?: boolean }) {
   if (platform === "youtube") return filled ? <YouTubeIcon className={className} /> : <Youtube className={className} />;
@@ -377,6 +379,77 @@ function groupPosts(posts: ApiPerformancePost[], by: Exclude<GroupBy, "none">): 
 // (Image Ad + Video Ad) tags each publish with goal/angle/style at
 // publish time; Social Content has no such concept and always lands in
 // "Untagged" here, same as any post published before this existed.
+// "At a glance": four numbers and one bar chart that can be taken in within five seconds (founder, 2026-11-23: very simple,
+// important facts at a glance). Everything below it is detail. A dash means "no numbers have come in yet", never an invented 0.
+function GlanceTile({ icon: Icon, value, label }: { icon: LucideIcon; value: number | null; label: string }) {
+  return (
+    <div className="rounded-xl bg-secondary px-3.5 py-3">
+      <Icon className="mb-1.5 h-4 w-4 text-foreground" strokeWidth={2.25} aria-hidden="true" />
+      <p className="font-display text-3xl font-extrabold leading-none tabular-nums text-foreground">{formatCount(value)}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+// What each platform lets Punqle read, per the permissions that are approved today. Said once, collapsed, so the screen stays simple.
+const TRACKED: { platform: ApiPerformancePost["platform"]; shows: string; missing?: string }[] = [
+  { platform: "instagram", shows: "reach, views, saves, shares, likes and comments" },
+  { platform: "facebook", shows: "reach and views", missing: "Facebook doesn't let apps read likes and comments on Page posts yet." },
+  { platform: "youtube", shows: "views, likes, comments, watch time, impressions, and where viewers leave and come from" },
+  { platform: "tiktok", shows: "views, likes, comments and shares, once the post is public" },
+];
+
+function AtAGlance({ summary }: { summary: PostsSummary }) {
+  const maxReactions = Math.max(0, ...summary.platforms.map((p) => p.reactions ?? 0));
+  return (
+    <div className="mb-4 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-accent">At a glance</p>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <GlanceTile icon={Send} value={summary.posts} label={summary.posts === 1 ? "post published" : "posts published"} />
+        <GlanceTile icon={Eye} value={summary.views} label="views" />
+        <GlanceTile icon={Users} value={summary.reach} label="people reached" />
+        <GlanceTile icon={Heart} value={summary.reactions} label="reactions" />
+      </div>
+      <ul className="mt-4 space-y-2.5">
+        {summary.platforms.map((p) => (
+          <li key={p.platform} className="flex items-center gap-3">
+            <PlatformBadge platform={p.platform} size="sm" />
+            <span className="w-[4.5rem] shrink-0 text-[13px] font-semibold text-foreground">{PLATFORM_NAME[p.platform]}</span>
+            <div
+              className="h-2.5 min-w-0 flex-1 rounded-full bg-secondary"
+              role="img"
+              aria-label={p.reactions === null ? `${PLATFORM_NAME[p.platform]}: no numbers yet` : `${PLATFORM_NAME[p.platform]}: ${p.reactions} reactions`}
+            >
+              {p.reactions ? <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(4, (p.reactions / maxReactions) * 100)}%` }} /> : null}
+            </div>
+            <span className="w-28 shrink-0 text-right text-[13px] tabular-nums text-foreground/80">
+              {p.reactions === null ? "no numbers yet" : `${formatCount(p.reactions)} ${p.reactions === 1 ? "reaction" : "reactions"}`}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-[11px] text-muted-foreground">Reactions = likes, comments, shares and saves. A dash means no numbers have come in yet.</p>
+      <details className="group mt-3 border-t border-border pt-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between text-[13px] font-semibold text-foreground">
+          What numbers can I see?
+          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <ul className="mt-2.5 space-y-2.5">
+          {TRACKED.map((t) => (
+            <li key={t.platform} className="flex items-start gap-2.5">
+              <PlatformBadge platform={t.platform} size="sm" />
+              <p className="text-[13px] leading-snug text-foreground/80">
+                <span className="font-semibold text-foreground">{PLATFORM_NAME[t.platform]}:</span> {t.shows}.
+                {t.missing && <span className="text-muted-foreground"> {t.missing}</span>}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </div>
+  );
+}
+
 export function PerformanceView() {
   const [posts, setPosts] = useState<ApiPerformancePost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -385,6 +458,7 @@ export function PerformanceView() {
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
   const [unlocking, setUnlocking] = useState<UnlockAction | null>(null);
   const [preview] = useState(insightsPreviewOn);
+  const [showNoNumbers, setShowNoNumbers] = useState(false);
 
   const load = (isRefresh: boolean) => {
     if (isRefresh) setRefreshing(true);
@@ -422,6 +496,7 @@ export function PerformanceView() {
   };
 
   const scores = useMemo(() => scorePosts(posts), [posts]);
+  const summary = useMemo(() => summarizePosts(posts), [posts]);
   const top = useMemo(() => topPosts(posts, scores), [posts, scores]);
   const leaders = useMemo(() => groupLeaders(posts, scores), [posts, scores]);
   const next = useMemo(() => nextStepFor(leaders, top), [leaders, top]);
@@ -431,6 +506,64 @@ export function PerformanceView() {
   const groupRows = useMemo(
     () => (groupBy === "none" ? [] : groupPosts(posts, groupBy)),
     [posts, groupBy],
+  );
+
+  const listed = posts.filter((p) => p.metrics);
+  const hidden = posts.filter((p) => !p.metrics);
+
+  const renderRow = (post: ApiPerformancePost) => (
+    <div key={post.id} className="flex gap-3 rounded-2xl bg-card p-3" style={{ boxShadow: "var(--shadow-card)" }}>
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
+        {post.image_base64 ? (
+          <img src={`data:image/jpeg;base64,${post.image_base64}`} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <PlatformBadge platform={post.platform} size="lg" />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold text-foreground/80">
+          <PlatformBadge platform={post.platform} size="sm" />
+          {formatDate(post.scheduled_time)}
+          {isWinner(scores.get(post.id)) && (
+            <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
+              <Trophy className="h-2.5 w-2.5" />
+              Top performer · {formatMultiple(scores.get(post.id)!.multiple)}
+            </span>
+          )}
+          {post.angle && (
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
+              {formatLabel(post.angle)}
+            </span>
+          )}
+        </div>
+        <p className="mb-2 line-clamp-2 text-[15px] leading-snug text-foreground">{post.caption || "(no caption)"}</p>
+        {post.metrics ? (
+          <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+            {post.metrics.views !== null && <Metric icon={Eye} value={post.metrics.views} one="view" many="views" title="Views" />}
+            {post.metrics.reach !== null && <Metric icon={Users} value={post.metrics.reach} one="reached" many="reached" title="Reach — people who saw it" />}
+            {post.metrics.likes !== null && <Metric icon={Heart} value={post.metrics.likes} one="like" many="likes" title="Likes" />}
+            {post.metrics.comments !== null && <Metric icon={MessageCircle} value={post.metrics.comments} one="comment" many="comments" title="Comments" />}
+            {post.metrics.shares !== null && <Metric icon={Share2} value={post.metrics.shares} one="share" many="shares" title="Shares" />}
+            {post.metrics.reposts !== null && post.metrics.reposts !== undefined && <Metric icon={Repeat2} value={post.metrics.reposts} one="repost" many="reposts" title="Reposts" />}
+            {post.metrics.saves !== null && <Metric icon={Bookmark} value={post.metrics.saves} one="save" many="saves" title="Saves" />}
+            <RateChip post={post} />
+          </div>
+        ) : post.metrics_unavailable_reason ? (
+          <p className="text-[13px] text-foreground/75">{post.metrics_unavailable_reason}</p>
+        ) : null}
+        {/* Said once per platform (on its newest post), not under every post. */}
+        {notSharedNote(post) && posts.find((p) => p.platform === post.platform && notSharedNote(p)) === post && (
+          <p className="mt-1.5 text-[13px] text-foreground/70">{notSharedNote(post)}</p>
+        )}
+        {post.metrics && youtubeDetails(post.metrics).length > 0 && (
+          <p className="mt-1.5 text-[13px] text-foreground/75">{youtubeDetails(post.metrics).join(" · ")}</p>
+        )}
+        {post.platform === "youtube" && post.external_post_id && (
+          <YouTubeDeepDive videoId={post.external_post_id} durationSeconds={estimateDuration(post.metrics)} />
+        )}
+        {post.metrics_note && <p className="mt-1 text-[13px] text-foreground/75">{post.metrics_note}</p>}
+      </div>
+    </div>
   );
 
   return (
@@ -490,6 +623,8 @@ export function PerformanceView() {
           </button>
         </div>
       ))}
+
+      {!loading && posts.length > 0 && <AtAGlance summary={summary} />}
 
       {!loading && posts.length > 0 && (top.length > 0 || leaders.length > 0) && (
         <div className="mb-4 rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
@@ -603,60 +738,22 @@ export function PerformanceView() {
         </div>
       ) : (
         <div className="space-y-3">
-          {posts.map((post) => (
-            <div key={post.id} className="flex gap-3 rounded-2xl bg-card p-3" style={{ boxShadow: "var(--shadow-card)" }}>
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
-                {post.image_base64 ? (
-                  <img src={`data:image/jpeg;base64,${post.image_base64}`} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <PlatformBadge platform={post.platform} size="lg" />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold text-foreground/80">
-                  <PlatformBadge platform={post.platform} size="sm" />
-                  {formatDate(post.scheduled_time)}
-                  {isWinner(scores.get(post.id)) && (
-                    <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
-                      <Trophy className="h-2.5 w-2.5" />
-                      Top performer · {formatMultiple(scores.get(post.id)!.multiple)}
-                    </span>
-                  )}
-                  {post.angle && (
-                    <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
-                      {formatLabel(post.angle)}
-                    </span>
-                  )}
-                </div>
-                <p className="mb-2 line-clamp-2 text-[15px] leading-snug text-foreground">{post.caption || "(no caption)"}</p>
-                {post.metrics ? (
-                  <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-                    {post.metrics.views !== null && <Metric icon={Eye} value={post.metrics.views} one="view" many="views" title="Views" />}
-                    {post.metrics.reach !== null && <Metric icon={Users} value={post.metrics.reach} one="reached" many="reached" title="Reach — people who saw it" />}
-                    {post.metrics.likes !== null && <Metric icon={Heart} value={post.metrics.likes} one="like" many="likes" title="Likes" />}
-                    {post.metrics.comments !== null && <Metric icon={MessageCircle} value={post.metrics.comments} one="comment" many="comments" title="Comments" />}
-                    {post.metrics.shares !== null && <Metric icon={Share2} value={post.metrics.shares} one="share" many="shares" title="Shares" />}
-                    {post.metrics.reposts !== null && post.metrics.reposts !== undefined && <Metric icon={Repeat2} value={post.metrics.reposts} one="repost" many="reposts" title="Reposts" />}
-                    {post.metrics.saves !== null && <Metric icon={Bookmark} value={post.metrics.saves} one="save" many="saves" title="Saves" />}
-                    <RateChip post={post} />
-                  </div>
-                ) : post.metrics_unavailable_reason ? (
-                  <p className="text-[13px] text-foreground/75">{post.metrics_unavailable_reason}</p>
-                ) : null}
-                {/* Said once per platform (on its newest post), not under every post. */}
-                {notSharedNote(post) && posts.find((p) => p.platform === post.platform && notSharedNote(p)) === post && (
-                  <p className="mt-1.5 text-[13px] text-foreground/70">{notSharedNote(post)}</p>
-                )}
-                {post.metrics && youtubeDetails(post.metrics).length > 0 && (
-                  <p className="mt-1.5 text-[13px] text-foreground/75">{youtubeDetails(post.metrics).join(" · ")}</p>
-                )}
-                {post.platform === "youtube" && post.external_post_id && (
-                  <YouTubeDeepDive videoId={post.external_post_id} durationSeconds={estimateDuration(post.metrics)} />
-                )}
-                {post.metrics_note && <p className="mt-1 text-[13px] text-foreground/75">{post.metrics_note}</p>}
-              </div>
-            </div>
-          ))}
+          {listed.map(renderRow)}
+          {hidden.length > 0 && (
+            <>
+              <button
+                onClick={() => setShowNoNumbers((v) => !v)}
+                className="flex w-full items-center justify-between gap-2 rounded-2xl bg-secondary px-4 py-3 text-left text-[13px] font-semibold text-secondary-foreground"
+              >
+                <span>
+                  {hidden.length} {hidden.length === 1 ? "post has" : "posts have"} no numbers yet
+                  <span className="font-normal text-secondary-foreground/75"> · {showNoNumbers ? "hide" : "see why"}</span>
+                </span>
+                <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${showNoNumbers ? "rotate-180" : ""}`} aria-hidden="true" />
+              </button>
+              {showNoNumbers && hidden.map(renderRow)}
+            </>
+          )}
         </div>
       )}
     </>

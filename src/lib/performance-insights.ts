@@ -166,3 +166,58 @@ export function groupLeaders(posts: ApiPerformancePost[], scores: Map<string, Po
   }
   return leaders;
 }
+
+// "At a glance" numbers for the top of Performance: only what the posts really report. A number is null ("no data", shown as a dash)
+// when not one post reported it, never silently 0, so an empty account reads as empty and fills in by itself once numbers arrive.
+export interface PlatformSummary {
+  platform: ApiPerformancePost["platform"];
+  posts: number;
+  measured: number;
+  reactions: number | null;
+}
+export interface PostsSummary {
+  posts: number;
+  measured: number;
+  views: number | null;
+  reach: number | null;
+  reactions: number | null;
+  platforms: PlatformSummary[];
+}
+
+function sumKnown(values: (number | null | undefined)[]): number | null {
+  let any = false;
+  let total = 0;
+  for (const v of values) {
+    if (typeof v === "number") {
+      any = true;
+      total += v;
+    }
+  }
+  return any ? total : null;
+}
+
+const PLATFORM_ORDER: ApiPerformancePost["platform"][] = ["facebook", "instagram", "youtube", "tiktok"];
+
+export function summarizePosts(posts: ApiPerformancePost[]): PostsSummary {
+  const measured = posts.filter((p) => p.metrics);
+  const platforms: PlatformSummary[] = [];
+  for (const platform of PLATFORM_ORDER) {
+    const mine = posts.filter((p) => p.platform === platform);
+    if (mine.length === 0) continue;
+    const mineMeasured = mine.filter((p) => p.metrics);
+    platforms.push({
+      platform,
+      posts: mine.length,
+      measured: mineMeasured.length,
+      reactions: mineMeasured.length ? sumKnown(mineMeasured.map((p) => engagementOf(p))) : null,
+    });
+  }
+  return {
+    posts: posts.length,
+    measured: measured.length,
+    views: sumKnown(measured.map((p) => p.metrics!.views)),
+    reach: sumKnown(measured.map((p) => p.metrics!.reach)),
+    reactions: measured.length ? sumKnown(measured.map((p) => engagementOf(p))) : null,
+    platforms,
+  };
+}

@@ -15,12 +15,16 @@ import {
 import { useEffect, useRef, useState } from "react";
 import {
   deleteSavedCompetitor,
+  fetchBusinessProfile,
   fetchCompetitorAnalysis,
   fetchSavedCompetitor,
   fetchSavedCompetitors,
+  setBusinessProfile,
   type ApiCompetitorAnalysisResponse,
   type ApiSavedCompetitor,
+  type BusinessCategory,
 } from "@/lib/api";
+import { CATEGORY_LABELS, CATEGORY_OPTIONS } from "@/lib/categories";
 import { InstagramStats } from "./InstagramStats";
 import { YouTubeStats } from "./YouTubeStats";
 import { TopUpButton } from "./TopUpButton";
@@ -288,10 +292,31 @@ export function CompetitorAnalysis({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ApiCompetitorAnalysisResponse | null>(null);
   const [saved, setSaved] = useState<ApiSavedCompetitor[]>([]);
+  // The business type the ideas are written for. It was used silently before (a "Professional Services" account got customer-service
+  // ideas for a shoe brand), so it is shown here and can be changed in place.
+  const [myType, setMyType] = useState<BusinessCategory | null>(null);
   const [tab, setTab] = useState<"overview" | "instagram" | "youtube">("overview");
   const [igOpened, setIgOpened] = useState(false);
   const [ytOpened, setYtOpened] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchBusinessProfile()
+      .then((p) => setMyType(p.category))
+      .catch(() => {
+        // a convenience only: the tool works without it
+      });
+  }, []);
+
+  const handleTypeChange = async (next: BusinessCategory) => {
+    const previous = myType;
+    setMyType(next);
+    try {
+      await setBusinessProfile({ category: next });
+    } catch {
+      setMyType(previous);
+    }
+  };
 
   const loadSaved = async () => {
     try {
@@ -433,6 +458,28 @@ export function CompetitorAnalysis({
           </span>
         )}
       </p>
+
+      {myType && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <label htmlFor="my-business-type" className="font-medium text-foreground">
+            Ideas are written for your business type:
+          </label>
+          <select
+            id="my-business-type"
+            value={myType}
+            disabled={loading}
+            onChange={(e) => void handleTypeChange(e.target.value as BusinessCategory)}
+            className="rounded-full border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+          >
+            {CATEGORY_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {CATEGORY_LABELS[c]}
+              </option>
+            ))}
+          </select>
+          {myType === "other" && <span>Pick yours for sharper ideas.</span>}
+        </div>
+      )}
 
       {saved.length > 0 && (
         <div className="mb-4">

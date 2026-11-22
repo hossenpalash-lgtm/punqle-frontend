@@ -1,6 +1,7 @@
 import { Download, Loader2, Send, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchRecentVideos } from "@/lib/api";
+import { downloadVideoBlob } from "@/lib/video-download";
 import type { ApiRecentVideo, VideoAspectRatio } from "@/lib/api";
 import { PostThisVideo } from "./PostThisVideo";
 import type { PlatformKey } from "@/components/PlatformTile";
@@ -64,7 +65,8 @@ export function RecentVideos({ onClose, returningFrom }: { onClose: () => void; 
   const startPosting = async (v: ApiRecentVideo) => {
     setPosting({ id: v.id, model: v.model, dataUrl: null, aspect: "9:16", failed: false });
     try {
-      const blob = await (await fetch(v.url)).blob();
+      // In pieces first (a single big download fails on some laptops); one plain request is the fallback.
+      const blob = await downloadVideoBlob(v.url).catch(async () => (await fetch(v.url)).blob());
       const [dataUrl, aspect] = await Promise.all([readAsDataUrl(blob), readAspect(URL.createObjectURL(blob))]);
       setPosting({ id: v.id, model: v.model, dataUrl, aspect, failed: false });
     } catch {

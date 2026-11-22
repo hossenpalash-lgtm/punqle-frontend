@@ -202,7 +202,8 @@ type UnlockAction = NonNullable<ApiPerformancePost["metrics_action"]>;
 // app (the founder, and the reviewers), so the banner is hidden from everyone
 // else unless the page was opened with #insights-preview.
 //   Instagram  instagram_manage_insights — approved 2026-10-11
-//   Facebook   read_insights + pages_read_user_content — requested 2026-10-12
+//   Facebook   read_insights — approved 2026-11-22 (reach + views). pages_read_user_content (like/comment counts) was NOT approved,
+//              so a reconnect cannot bring those back: the backend shows a note for them, never this button.
 //   YouTube    yt-analytics.readonly     — non-sensitive scope, no verification needed (live 2026-11-05)
 //   TikTok     video.list                — approved by TikTok 2026-11-18 (revision submitted 2026-11-08)
 const UNLOCKS: Record<UnlockAction, { title: string; body: string; button: string; approved: boolean; start: () => Promise<{ authorize_url: string }> }> = {
@@ -214,11 +215,11 @@ const UNLOCKS: Record<UnlockAction, { title: string; body: string; button: strin
     start: () => getMetaConnectUrl(true),
   },
   unlock_facebook_insights: {
-    title: "See reach, views, likes and comments for your Facebook posts",
-    body: "Reconnect Facebook once to let Punqle read how many people each post reached and how many likes and comments it got.",
+    title: "See reach and views for your Facebook posts",
+    body: "Reconnect Facebook once to let Punqle read how many people each post reached and how many times it was viewed.",
     button: "Reconnect Facebook",
-    approved: false,
-    start: () => getMetaConnectUrl(false, true),
+    approved: true,
+    start: () => getMetaConnectUrl(false),
   },
   unlock_youtube_analytics: {
     title: "See watch time, retention and impressions for your YouTube videos",
@@ -366,7 +367,7 @@ function groupPosts(posts: ApiPerformancePost[], by: Exclude<GroupBy, "none">): 
 // Organic-only, deliberately — see fetchOrganicPerformance's backend
 // docstring (GET /performance/posts). Instagram also shows reach, views and
 // saves (instagram_manage_insights, approved 2026-10-11); Facebook reach and
-// YouTube impressions still need permissions Punqle hasn't requested. No
+// views (read_insights, approved 2026-11-22) and YouTube analytics (live 2026-11-05) too. No
 // spend/CTR/conversions/ROAS exist here, and no placeholder for them either — the one prior "Coming soon" stub found
 // in this codebase's own audit (PostKit.tsx's disabled Launch Campaign
 // button) is the precedent this page deliberately does not repeat.

@@ -1516,8 +1516,8 @@ export function syncShopifyProducts(): Promise<{ products: ApiImportedProduct[] 
   return apiFetch<{ products: ApiImportedProduct[] }>("/shopify/sync", { method: "POST" });
 }
 
-// reach=true also asks for read_insights (Facebook post reach/views) — opt-in
-// until Meta approves it (requested 2026-10-12).
+// read_insights (Facebook post reach/views) is part of every Connect since Meta approved it on 2026-11-22. reach=true only adds
+// pages_read_user_content (Facebook like/comment counts), which Meta did NOT approve: ordinary users must never send it.
 export function getMetaConnectUrl(insights = false, reach = false): Promise<{ authorize_url: string }> {
   const query = [insights ? "insights=true" : "", reach ? "reach=true" : ""].filter(Boolean).join("&");
   return apiFetch<{ authorize_url: string }>(`/meta/connect-url${query ? `?${query}` : ""}`);

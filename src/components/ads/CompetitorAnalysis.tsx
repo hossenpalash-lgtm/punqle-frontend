@@ -29,29 +29,19 @@ import { InstagramStats } from "./InstagramStats";
 import { YouTubeStats } from "./YouTubeStats";
 import { TopUpButton } from "./TopUpButton";
 
-// The saved list showed the same brand several times ("NIVEA" x3) with nothing to tell them apart. An exact repeat (same name AND the
-// same website) is shown once, the newest; the same name on a different website keeps both and adds the website to the label.
-function savedHost(url: string): string {
-  try {
-    return new URL(/^https?:/i.test(url) ? url : `https://${url}`).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
+// The saved list showed the same brand several times ("NIVEA" x3). On 2026-11-23 the real list showed they were the SAME brand saved
+// from three differently typed links (instragram.com/nivea, instgram.com/nivea, instagram.com/nivea), so telling them apart by
+// website only showed the typos. The competitor's name is what Punqle worked out from the analysis, so one chip per name: the newest.
 function tidySaved(items: ApiSavedCompetitor[]): { item: ApiSavedCompetitor; label: string }[] {
   const newest = new Map<string, ApiSavedCompetitor>();
   for (const c of items) {
-    const key = `${c.competitor_name.trim().toLowerCase()}|${savedHost(c.source_url)}`;
+    const key = c.competitor_name.trim().toLowerCase();
     const seen = newest.get(key);
     if (!seen || new Date(c.analyzed_at).getTime() > new Date(seen.analyzed_at).getTime()) newest.set(key, c);
   }
-  const unique = items.filter((c) => newest.get(`${c.competitor_name.trim().toLowerCase()}|${savedHost(c.source_url)}`) === c);
-  const perName = new Map<string, number>();
-  for (const c of unique) perName.set(c.competitor_name.trim().toLowerCase(), (perName.get(c.competitor_name.trim().toLowerCase()) ?? 0) + 1);
-  return unique.map((c) => ({
-    item: c,
-    label: (perName.get(c.competitor_name.trim().toLowerCase()) ?? 0) > 1 ? `${c.competitor_name} · ${savedHost(c.source_url)}` : c.competitor_name,
-  }));
+  return items
+    .filter((c) => newest.get(c.competitor_name.trim().toLowerCase()) === c)
+    .map((c) => ({ item: c, label: c.competitor_name }));
 }
 
 function timeAgo(iso?: string | null): string {

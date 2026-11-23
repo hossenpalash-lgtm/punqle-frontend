@@ -30,7 +30,7 @@ export function HomeShowcase({ cards }: { cards: ShowcaseCard[] }) {
             key={c.key}
             type="button"
             onClick={c.onClick}
-            className="group relative h-[clamp(132px,21vh,190px)] overflow-hidden rounded-3xl text-left transition-transform duration-300 hover:-translate-y-1"
+            className="group relative h-[clamp(108px,16vh,146px)] overflow-hidden rounded-3xl text-left transition-transform duration-300 hover:-translate-y-1"
             style={{
               boxShadow:
                 "inset 0 1px 0 rgb(255 255 255 / 70%), 0 0 0 1px rgb(255 255 255 / 55%), 0 22px 44px -26px rgb(20 20 30 / 50%)",
@@ -38,10 +38,10 @@ export function HomeShowcase({ cards }: { cards: ShowcaseCard[] }) {
           >
             {c.plain ? (
               <div className="absolute inset-0 bg-gradient-to-br from-white/80 to-secondary">
-                <div className="absolute inset-x-0 top-12 flex flex-wrap justify-center gap-2 px-4">
-                  {(c.extras ?? []).slice(0, 6).map((E, i) => (
-                    <span key={i} className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/80 text-foreground shadow-sm">
-                      <E className="h-4 w-4" />
+                <div className="absolute right-3 top-3 flex gap-1.5">
+                  {(c.extras ?? []).slice(0, 3).map((E, i) => (
+                    <span key={i} className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/80 text-foreground shadow-sm">
+                      <E className="h-3.5 w-3.5" />
                     </span>
                   ))}
                 </div>
@@ -59,7 +59,7 @@ export function HomeShowcase({ cards }: { cards: ShowcaseCard[] }) {
               <Icon className="h-4 w-4" />
             </span>
             {c.meta && <span className="glass-chip absolute right-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-semibold">{c.meta}</span>}
-            <div className="glass-caption absolute inset-x-0 bottom-0 min-h-[68px] px-4 py-3">
+            <div className="glass-caption absolute inset-x-0 bottom-0 min-h-[60px] px-4 py-2.5">
               <p className="font-display text-[16px] leading-tight text-white">{c.title}</p>
               <p className="mt-0.5 text-[12.5px] leading-snug text-white/80">{c.blurb}</p>
             </div>

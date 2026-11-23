@@ -12,7 +12,7 @@ export type HomeStep = "create" | "post" | "results" | "rivals";
 
 const STEPS: { key: HomeStep; n: number; name: string; line: string; icon: LucideIcon; color: string; from: string; tint: string }[] = [
   { key: "create", n: 1, name: "Create", line: "One photo, 3 AI engines, you pick", icon: Clapperboard, color: "oklch(0.5 0.15 300", from: "oklch(0.66 0.18 310", tint: "oklch(0.95 0.035 300" },
-  { key: "post", n: 2, name: "Post", line: "Facebook, Instagram, TikTok, YouTube in one tap", icon: Send, color: "oklch(0.45 0.14 150", from: "oklch(0.64 0.16 160", tint: "oklch(0.95 0.045 150" },
+  { key: "post", n: 2, name: "Post", line: "Facebook, Instagram, TikTok, YouTube", icon: Send, color: "oklch(0.45 0.14 150", from: "oklch(0.64 0.16 160", tint: "oklch(0.95 0.045 150" },
   { key: "results", n: 3, name: "See performance", line: "See what worked, make more of it", icon: Gauge, color: "oklch(0.5 0.14 60", from: "oklch(0.74 0.16 70", tint: "oklch(0.96 0.045 75" },
   { key: "rivals", n: 4, name: "Beat rivals", line: "See what they do, make something better", icon: Target, color: "oklch(0.5 0.13 235", from: "oklch(0.66 0.14 225", tint: "oklch(0.95 0.035 235" },
 ];
@@ -64,7 +64,7 @@ export function StepStrip({ onStep }: { onStep: (step: HomeStep) => void }) {
                     aria-hidden="true"
                   />
                 </span>
-                <span className="text-[12px] leading-snug text-foreground/70">{s.line}</span>
+                <span className="text-[12.5px] leading-snug text-foreground/85">{s.line}</span>
               </button>
             </li>
           );

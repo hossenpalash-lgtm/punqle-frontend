@@ -7,6 +7,7 @@ import {
   Download,
   Facebook,
   Images,
+  Layers,
   Instagram,
   Loader2,
   Megaphone,
@@ -27,6 +28,7 @@ import {
   ZoomIn,
 } from "lucide-react";
 import { HomeShowcase } from "@/components/home/HomeShowcase";
+import { StepStrip, type HomeStep } from "@/components/home/StepStrip";
 import { UnlockRow, type UnlockTarget } from "@/components/home/UnlockRow";
 import { showToast } from "@/components/GlassToast";
 import { useEffect, useRef, useState } from "react";
@@ -353,7 +355,7 @@ function HomeScreen() {
   // "See more" (Image Ad/Try-On/Carousel) stays outside this — those are
   // genuinely separate, heavier wizards that navigate away, unchanged.
   type HomeMode = "talking_actors" | "video" | "image" | "product" | "unboxing" | "show_app" | "upscale";
-  const [homeMode, setHomeMode] = useState<HomeMode>("talking_actors");
+  const [homeMode, setHomeMode] = useState<HomeMode>("video");
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const [homeIdea, setHomeIdea] = useState("");
@@ -996,6 +998,24 @@ function HomeScreen() {
   // The very first thing a brand-new account sees: its free video test is still unused and the Video start screen is up.
   const freeFirst = tasterAvailable && homeMode === "video" && (videoPanel === "closed" || videoPanel === "composer") && !showRecent;
   const freeComposer = tasterAvailable && !videoNarrationEnabled && !showPaidOptions;
+
+  // "More tools" lights up (and says which tool is open) while one of its tools is the active mode.
+  const MORE_MODE_LABELS: Partial<Record<HomeMode, string>> = {
+    talking_actors: "Ready Actors",
+    unboxing: "Unboxing",
+    show_app: "Show Your App",
+    upscale: "Upscale",
+  };
+  const moreLabel = MORE_MODE_LABELS[homeMode];
+
+  const handleStep = (step: HomeStep) => {
+    if (step === "create") handleSwitchMode("video");
+    else if (step === "post") {
+      handleSwitchMode("video");
+      setShowRecent(true);
+    } else if (step === "results") goTo("performance");
+    else goTo("competitor");
+  };
 
   const handleSwitchMode = (mode: HomeMode) => {
     setShowMoreMenu(false);
@@ -1727,21 +1747,22 @@ function HomeScreen() {
             <h1 className="font-display mb-3 text-3xl leading-[1.05] tracking-[-0.02em] text-foreground sm:mb-4 sm:text-4xl xl:text-5xl">
               {freeFirst ? "Make your first video free" : "What are we creating today?"}
             </h1>
-            <p className="max-w-md px-4 text-sm text-muted-foreground">
+            <p className="max-w-lg px-4 text-sm text-muted-foreground">
               {freeFirst
                 ? "Add a photo and one line. Punqle makes it with 2 AI video tools. Pick your favourite and post it in one tap."
-                : "Pick a tool below, describe what you need, and Punqle makes it."}
+                : "One photo or video to every platform, then see what worked."}
             </p>
           </div>
+          {!freeFirst && <StepStrip onStep={handleStep} />}
 
           <div className={freeFirst ? "hidden" : "hidden flex-1 items-center justify-center py-6 lg:flex"}>
             {homeIdle && (
               <HomeShowcase
                 cards={[
-                  { key: "actors", title: "Ready Actors", blurb: "A lifelike AI actor says your words", meta: "from 10 credits", image: "/home/actors.jpg", icon: UserRound, onClick: () => handleSwitchMode("talking_actors") },
-                  { key: "video", title: "Video", blurb: "Turn any photo into a short clip", meta: "from 14 credits", image: "/home/video.jpg", icon: Video, onClick: () => handleSwitchMode("video") },
+                  { key: "video", title: "Video", blurb: "Compare 3 AI engines on your photo", meta: "from 14 credits", image: "/home/video.jpg", icon: Video, onClick: () => handleSwitchMode("video") },
                   { key: "image", title: "Image", blurb: "Studio ad images from a prompt", meta: "from 1 credit", image: "/home/image.jpg", icon: Sparkles, onClick: () => handleSwitchMode("image") },
                   { key: "product", title: "Product", blurb: "A person showing off your product", meta: "from 2 credits", image: "/home/product.jpg", icon: Package, onClick: () => handleSwitchMode("product") },
+                  { key: "more", title: "More tools", blurb: "Actors, Upscale, Try-On and more", meta: "", image: "", icon: MoreHorizontal, plain: true, extras: [UserRound, PackageOpen, Smartphone, ZoomIn, Shirt, Images], onClick: () => setShowMoreMenu(true) },
                 ]}
               />
             )}
@@ -1766,17 +1787,6 @@ function HomeScreen() {
             className="mx-auto mb-5 flex w-fit flex-wrap items-center justify-center gap-1 rounded-full border border-white/70 p-1.5"
             style={{ background: "oklch(1 0 0 / 72%)", boxShadow: "var(--shadow-card)" }}
           >
-            <button
-              onClick={() => handleSwitchMode("talking_actors")}
-              className={[
-                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors sm:gap-2 sm:px-4 sm:py-2 sm:text-sm",
-                homeMode === "talking_actors" ? "text-white" : "text-foreground hover:bg-white/60",
-              ].join(" ")}
-              style={homeMode === "talking_actors" ? { background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN } : undefined}
-            >
-              <UserRound className="h-4 w-4" />
-              Ready Actors
-            </button>
             <button
               onClick={() => handleSwitchMode("video")}
               className={[
@@ -1813,10 +1823,14 @@ function HomeScreen() {
             <div className="relative">
               <button
                 onClick={() => setShowMoreMenu((v) => !v)}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold text-foreground transition-colors hover:bg-white/60 sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
+                className={[
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors sm:gap-2 sm:px-4 sm:py-2 sm:text-sm",
+                  moreLabel ? "text-white" : "text-foreground hover:bg-white/60",
+                ].join(" ")}
+                style={moreLabel ? { background: HOME_GRADIENT, boxShadow: HOME_GRADIENT_SHEEN } : undefined}
               >
                 <MoreHorizontal className="h-4 w-4" />
-                See more
+                {moreLabel ?? "More tools"}
                 <ChevronDown className={["h-3.5 w-3.5 transition-transform", showMoreMenu ? "rotate-180" : ""].join(" ")} />
               </button>
               {/* Opens upward (2026-10-01, founder's call) — this row sits
@@ -1840,6 +1854,7 @@ function HomeScreen() {
                     style={{ background: "rgb(255 255 255 / 94%)", boxShadow: "0 16px 40px -12px rgba(0,0,0,0.22), var(--shadow-card)" }}
                   >
                   {[
+                    { icon: UserRound, label: "Ready Actors", onClick: () => handleSwitchMode("talking_actors") },
                     { icon: PackageOpen, label: "Unboxing", onClick: () => handleSwitchMode("unboxing") },
                     { icon: Smartphone, label: "Show Your App", onClick: () => handleSwitchMode("show_app") },
                     { icon: ZoomIn, label: "Upscale", onClick: () => handleSwitchMode("upscale") },
@@ -1852,6 +1867,7 @@ function HomeScreen() {
                         goTo("single");
                       },
                     },
+                    { icon: Layers, label: "Bulk Creative", onClick: () => goTo("bulk-creative") },
                   ].map(({ icon: Icon, label, onClick }) => (
                     <button
                       key={label}

@@ -25,7 +25,7 @@ import {
   type BusinessCategory,
 } from "@/lib/api";
 import { CATEGORY_LABELS, CATEGORY_OPTIONS } from "@/lib/categories";
-import { InstagramStats } from "./InstagramStats";
+import { InstagramStats, MoreToggle, SECTION } from "./InstagramStats";
 import { YouTubeStats } from "./YouTubeStats";
 import { TopUpButton } from "./TopUpButton";
 
@@ -239,6 +239,29 @@ function Section({
   );
 }
 
+// One folded row inside the single "details" card at the bottom of the Overview: title (+ count) and a chevron, content when opened.
+// `data-print-open` lets the page open every row while printing / saving as PDF, so a report never loses what is folded away.
+function FoldRow({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
+  return (
+    <details data-print-open className="group border-t border-border first:border-t-0">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-3 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          {title}
+          {count !== undefined && (
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">{count}</span>
+          )}
+        </span>
+        <ChevronDown className="no-print h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="pb-3">{children}</div>
+    </details>
+  );
+}
+
+// "What's working for them" / "Where they fall short" chips: soft colour wash, bold coloured label, the one-sentence reason.
+const PRAISE = { bg: "oklch(0.95 0.05 150)", label: "oklch(0.4 0.13 150)", text: "oklch(0.3 0.08 150)" };
+const COMPLAINT = { bg: "oklch(0.95 0.04 20)", label: "oklch(0.45 0.17 20)", text: "oklch(0.32 0.1 20)" };
+
 function SourceLink({ url, kind }: { url: string | null; kind?: string }) {
   if (!url) return null;
   let host = url;
@@ -289,6 +312,25 @@ export function CompetitorAnalysis({
   const [igOpened, setIgOpened] = useState(false);
   const [ytOpened, setYtOpened] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  // Open every folded row while printing / saving as PDF, then close them again.
+  useEffect(() => {
+    const opened: HTMLDetailsElement[] = [];
+    const before = () =>
+      document.querySelectorAll<HTMLDetailsElement>("details[data-print-open]").forEach((d) => {
+        if (!d.open) {
+          d.open = true;
+          opened.push(d);
+        }
+      });
+    const after = () => opened.splice(0).forEach((d) => (d.open = false));
+    window.addEventListener("beforeprint", before);
+    window.addEventListener("afterprint", after);
+    return () => {
+      window.removeEventListener("beforeprint", before);
+      window.removeEventListener("afterprint", after);
+    };
+  }, []);
 
   useEffect(() => {
     fetchBusinessProfile()
@@ -407,6 +449,11 @@ export function CompetitorAnalysis({
   const igHandle = result ? instagramHandle(result) : "";
   const ytChannel = result ? youtubeChannel(result) : "";
   const firstDoing = result?.what_theyre_doing[0];
+  // The summary's first sentence is the one line shown; the rest (and "Recent") sit behind the "About them" button.
+  const summaryText = result?.summary?.trim() ?? "";
+  const summaryParts = summaryText.match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g) ?? [summaryText];
+  const aboutLine = (summaryParts[0] ?? "").trim();
+  const aboutRest = summaryParts.slice(1).join("").trim();
   const firstSignal = result?.customer_signals[0];
   // The two things an owner wants first: what customers like and what they complain about. Only from comments that carry a tag.
   const likedSignal = result?.customer_signals.find((s) => s.sentiment === "positive");
@@ -583,91 +630,42 @@ export function CompetitorAnalysis({
 
           <div className={`space-y-3 ${tab === "overview" ? "" : "hidden"}`}>
             <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <Link2 className="h-3.5 w-3.5" />
-                {result.competitor_name}
-              </p>
-              <p className="text-sm text-foreground">{result.summary}</p>
-              {result.snapshot.recent_developments && (
-                <p className="mt-2 rounded-lg bg-secondary px-3 py-2 text-xs text-secondary-foreground">
-                  <span className="font-semibold">Recent: </span>
-                  {result.snapshot.recent_developments}
-                </p>
-              )}
-            </div>
-
-            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-              <SectionLabel>At a glance</SectionLabel>
-              <div className="space-y-2">
-                <div className="flex items-start gap-3 rounded-xl bg-secondary px-3 py-2.5">
-                  <Eye className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">What they do</p>
-                    <p className="text-sm text-secondary-foreground">
-                      {firstDoing?.observation || result.snapshot.positioning || "Not enough public information found."}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 rounded-xl bg-secondary px-3 py-2.5">
-                  <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0 flex-1">
-                    {likedSignal || complaintSignal ? (
-                      <div className="space-y-1.5">
-                        {likedSignal && (
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">What customers like</p>
-                            <p className="text-sm text-secondary-foreground">{likedSignal.signal}</p>
-                          </div>
-                        )}
-                        {complaintSignal && (
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">What customers complain about</p>
-                            <p className="text-sm text-secondary-foreground">{complaintSignal.signal}</p>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Customers say</p>
-                        <p className="text-sm text-secondary-foreground">
-                          {firstSignal?.signal || "No reliable public customer feedback found."}
-                        </p>
-                      </>
-                    )}
-                    <SentimentDonut signals={result.customer_signals} />
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-display text-sm font-extrabold text-foreground">{result.competitor_name}</span>
                 {[
                   `${result.customer_signals.length} customer signal${result.customer_signals.length === 1 ? "" : "s"}`,
                   `${result.opportunities.length} opportunit${result.opportunities.length === 1 ? "y" : "ies"}`,
                   `${result.sources.length} source${result.sources.length === 1 ? "" : "s"}`,
                 ].map((chip) => (
-                  <span key={chip} className="rounded-full bg-secondary px-2.5 py-1 text-[12px] font-medium text-secondary-foreground">
+                  <span key={chip} className="rounded-full bg-secondary px-2.5 py-0.5 text-[12px] font-medium text-secondary-foreground">
                     {chip}
                   </span>
                 ))}
               </div>
+              {aboutLine && <p className="mt-2 text-sm text-secondary-foreground">{aboutLine}</p>}
+              {(aboutRest || result.snapshot.recent_developments) && (
+                <>
+                  {/* Kept in full: folded on screen, always there when printed or saved as PDF. */}
+                  <div className={`mt-2 space-y-2 ${aboutOpen ? "" : "hidden print:block"}`}>
+                    {aboutRest && <p className="text-sm text-secondary-foreground">{aboutRest}</p>}
+                    {result.snapshot.recent_developments && (
+                      <p className="rounded-lg bg-secondary px-3 py-2 text-xs text-secondary-foreground">
+                        <span className="font-semibold">Recent: </span>
+                        {result.snapshot.recent_developments}
+                      </p>
+                    )}
+                  </div>
+                  <MoreToggle open={aboutOpen} onClick={() => setAboutOpen((v) => !v)} more="About them" less="Hide" />
+                </>
+              )}
             </div>
 
-            {result.limitations.length > 0 && (
-              <div className="rounded-2xl bg-secondary p-4">
-                <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <AlertCircle className="h-3.5 w-3.5" />
-                  Research notes
-                </p>
-                <ul className="space-y-1">
-                  {result.limitations.map((note, i) => (
-                    <li key={i} className="text-xs text-secondary-foreground">
-                      {note}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <Section title="Opportunities for you" count={result.opportunities.length} defaultOpen>
+            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider" style={{ color: SECTION.rivals }}>
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: SECTION.rivals }} aria-hidden="true" />
+                Your best move
+              </p>
               {result.opportunities.length === 0 && (
                 <p className="rounded-xl bg-secondary px-3 py-2 text-xs italic text-muted-foreground">
                   Not enough real evidence to identify a strong opportunity for this competitor.
@@ -684,91 +682,141 @@ export function CompetitorAnalysis({
                   />
                 ))}
               </div>
-            </Section>
+            </div>
 
-            <Section title="Customer signals" count={result.customer_signals.length}>
-              {result.customer_signals.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {result.customer_signals.map((item, i) => (
-                    <div key={i} className="rounded-xl bg-secondary px-3 py-2">
-                      <p className="text-sm text-secondary-foreground">{item.signal}</p>
-                      {item.evidence && <p className="mt-1 text-xs italic text-muted-foreground">{item.evidence}</p>}
-                      <SourceLink url={item.source_url} kind={item.source_url ? kindByUrl[item.source_url] : undefined} />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="rounded-xl bg-secondary px-3 py-2 text-xs italic text-muted-foreground">
-                  Limited public customer feedback found — no reliable third-party reviews or discussions turned up
-                  for this competitor.
-                </p>
-              )}
-            </Section>
-
-            {result.what_theyre_doing.length > 0 && (
-              <Section title="What they're doing" count={result.what_theyre_doing.length}>
-                <div className="flex flex-col gap-2">
-                  {result.what_theyre_doing.map((item, i) => (
-                    <div key={i} className="rounded-xl bg-secondary px-3 py-2">
-                      <p className="text-sm text-secondary-foreground">{item.observation}</p>
-                      {item.evidence && <p className="mt-1 text-xs italic text-muted-foreground">{item.evidence}</p>}
-                      <SourceLink url={item.source_url} kind={item.source_url ? kindByUrl[item.source_url] : undefined} />
-                    </div>
-                  ))}
-                </div>
-              </Section>
-            )}
-
-            {(result.snapshot.category || result.snapshot.what_they_sell || result.snapshot.target_customer || result.snapshot.positioning) && (
-              <Section title="Snapshot">
-                <div className="grid grid-cols-2 gap-2">
-                  {SNAPSHOT_FIELDS.filter((f) => result.snapshot[f.key]).map((f) => (
-                    <div key={f.key} className="rounded-lg bg-secondary px-2.5 py-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{f.label}</p>
-                      <p className="text-xs text-secondary-foreground">{result.snapshot[f.key]}</p>
-                    </div>
-                  ))}
-                </div>
-              </Section>
-            )}
-
-            {(result.public_presence.website || result.public_presence.facebook || result.public_presence.instagram) && (
-              <Section title="Public presence">
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {result.public_presence.website && <SourceLink url={result.public_presence.website} />}
-                  {result.public_presence.facebook && <SourceLink url={result.public_presence.facebook} />}
-                  {result.public_presence.instagram && <SourceLink url={result.public_presence.instagram} />}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {metricRows.map((m) => (
-                    <div key={m.label} className="rounded-lg bg-secondary px-2.5 py-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{m.label}</p>
-                      <p className={m.value ? "text-xs font-semibold text-secondary-foreground" : "text-xs italic text-muted-foreground"}>
-                        {m.value || "Not publicly available"}
+            <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider" style={{ color: SECTION.content }}>
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: SECTION.content }} aria-hidden="true" />
+                What customers say
+              </p>
+              {likedSignal || complaintSignal ? (
+                <div className="space-y-2">
+                  {likedSignal && (
+                    <div className="rounded-xl px-3 py-2" style={{ background: PRAISE.bg }}>
+                      <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: PRAISE.label }}>
+                        Working for them
+                      </p>
+                      <p className="text-sm" style={{ color: PRAISE.text }}>
+                        {likedSignal.signal}
                       </p>
                     </div>
-                  ))}
+                  )}
+                  {complaintSignal && (
+                    <div className="rounded-xl px-3 py-2" style={{ background: COMPLAINT.bg }}>
+                      <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: COMPLAINT.label }}>
+                        Falling short
+                      </p>
+                      <p className="text-sm" style={{ color: COMPLAINT.text }}>
+                        {complaintSignal.signal}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </Section>
-            )}
+              ) : (
+                <p className="rounded-xl bg-secondary px-3 py-2 text-sm text-secondary-foreground">
+                  {firstSignal?.signal || "No reliable public customer feedback found."}
+                </p>
+              )}
+              <SentimentDonut signals={result.customer_signals} />
+            </div>
 
-            {result.sources.length > 0 && (
-              <Section title="Sources" count={result.sources.length}>
-                <div className="flex flex-wrap gap-2">
-                  {result.sources.map((s, i) => (
-                    <a
-                      key={i}
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-full bg-secondary px-2.5 py-1 text-[12px] font-medium text-secondary-foreground hover:underline"
-                    >
-                      {s.title || s.url}
-                    </a>
-                  ))}
-                </div>
-              </Section>
-            )}
+            <div className="rounded-2xl bg-card px-4" style={{ boxShadow: "var(--shadow-card)" }}>
+              {result.what_theyre_doing.length > 0 && (
+                <FoldRow title="What they're doing" count={result.what_theyre_doing.length}>
+                  <div className="flex flex-col gap-2">
+                    {result.what_theyre_doing.map((item, i) => (
+                      <div key={i} className="rounded-xl bg-secondary px-3 py-2">
+                        <p className="text-sm text-secondary-foreground">{item.observation}</p>
+                        {item.evidence && <p className="mt-1 text-xs italic text-muted-foreground">{item.evidence}</p>}
+                        <SourceLink url={item.source_url} kind={item.source_url ? kindByUrl[item.source_url] : undefined} />
+                      </div>
+                    ))}
+                  </div>
+                </FoldRow>
+              )}
+
+              <FoldRow title="Customer signals" count={result.customer_signals.length}>
+                {result.customer_signals.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {result.customer_signals.map((item, i) => (
+                      <div key={i} className="rounded-xl bg-secondary px-3 py-2">
+                        <p className="text-sm text-secondary-foreground">{item.signal}</p>
+                        {item.evidence && <p className="mt-1 text-xs italic text-muted-foreground">{item.evidence}</p>}
+                        <SourceLink url={item.source_url} kind={item.source_url ? kindByUrl[item.source_url] : undefined} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="rounded-xl bg-secondary px-3 py-2 text-xs italic text-muted-foreground">
+                    Limited public customer feedback found — no reliable third-party reviews or discussions turned up
+                    for this competitor.
+                  </p>
+                )}
+              </FoldRow>
+
+              {(result.snapshot.category || result.snapshot.what_they_sell || result.snapshot.target_customer || result.snapshot.positioning) && (
+                <FoldRow title="Snapshot">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SNAPSHOT_FIELDS.filter((f) => result.snapshot[f.key]).map((f) => (
+                      <div key={f.key} className="rounded-lg bg-secondary px-2.5 py-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{f.label}</p>
+                        <p className="text-xs text-secondary-foreground">{result.snapshot[f.key]}</p>
+                      </div>
+                    ))}
+                  </div>
+                </FoldRow>
+              )}
+
+              {(result.public_presence.website || result.public_presence.facebook || result.public_presence.instagram) && (
+                <FoldRow title="Public presence">
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {result.public_presence.website && <SourceLink url={result.public_presence.website} />}
+                    {result.public_presence.facebook && <SourceLink url={result.public_presence.facebook} />}
+                    {result.public_presence.instagram && <SourceLink url={result.public_presence.instagram} />}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {metricRows.map((m) => (
+                      <div key={m.label} className="rounded-lg bg-secondary px-2.5 py-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{m.label}</p>
+                        <p className={m.value ? "text-xs font-semibold text-secondary-foreground" : "text-xs italic text-muted-foreground"}>
+                          {m.value || "Not publicly available"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </FoldRow>
+              )}
+
+              {result.sources.length > 0 && (
+                <FoldRow title="Sources" count={result.sources.length}>
+                  <div className="flex flex-wrap gap-2">
+                    {result.sources.map((s, i) => (
+                      <a
+                        key={i}
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-full bg-secondary px-2.5 py-1 text-[12px] font-medium text-secondary-foreground hover:underline"
+                      >
+                        {s.title || s.url}
+                      </a>
+                    ))}
+                  </div>
+                </FoldRow>
+              )}
+
+              {result.limitations.length > 0 && (
+                <FoldRow title="Research notes" count={result.limitations.length}>
+                  <ul className="space-y-1">
+                    {result.limitations.map((note, i) => (
+                      <li key={i} className="text-xs text-secondary-foreground">
+                        {note}
+                      </li>
+                    ))}
+                  </ul>
+                </FoldRow>
+              )}
+            </div>
           </div>
 
           {igOpened && (

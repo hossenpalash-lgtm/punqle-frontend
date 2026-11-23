@@ -1734,7 +1734,7 @@ function HomeScreen() {
             </p>
           </div>
 
-          <div className={freeFirst ? "hidden" : "hidden flex-1 items-center justify-center py-9 lg:flex"}>
+          <div className={freeFirst ? "hidden" : "hidden flex-1 items-center justify-center py-6 lg:flex"}>
             {homeIdle && (
               <HomeShowcase
                 cards={[

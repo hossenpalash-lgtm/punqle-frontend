@@ -20,7 +20,7 @@ import {
   Youtube,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { YouTubeDeepDive } from "@/components/ads/RetentionChart";
 import { TikTokIcon } from "@/components/TikTokIcon";
 import { YouTubeIcon } from "@/components/YouTubeIcon";
@@ -153,12 +153,17 @@ function formatCount(n: number | null): string {
 
 // One number with its icon AND a word ("4 views"): icon-only rows were hard to read (founder, 2026-11-09) and the
 // hover titles do not exist on a phone. Bold dark digits, a heavier icon, a plain-language label.
-function Metric({ icon: Icon, value, one, many, title }: { icon: LucideIcon; value: number | null; one: string; many: string; title?: string }) {
+// A zero is faded (light, thin) so the numbers that actually moved stand out (founder, 2026-11-23); `accent` colours the digits of
+// the two "reach" numbers (views, people reached) when they are above zero.
+function Metric({ icon: Icon, value, one, many, title, accent = false }: { icon: LucideIcon; value: number | null; one: string; many: string; title?: string; accent?: boolean }) {
+  const zero = value === 0;
   return (
     <span className="flex items-center gap-1.5" title={title}>
-      <Icon className="h-4 w-4 text-foreground" strokeWidth={2.25} aria-hidden="true" />
-      <span className="text-sm font-bold tabular-nums text-foreground">{formatCount(value)}</span>
-      <span className="text-[13px] text-foreground/75">{value === 1 ? one : many}</span>
+      <Icon className={`h-4 w-4 ${zero ? "text-muted-foreground/60" : "text-foreground"}`} strokeWidth={zero ? 1.75 : 2.25} aria-hidden="true" />
+      <span className={`text-sm tabular-nums ${zero ? "font-normal text-muted-foreground/70" : accent ? "font-extrabold text-accent" : "font-bold text-foreground"}`}>
+        {formatCount(value)}
+      </span>
+      <span className={`text-[13px] ${zero ? "text-muted-foreground/70" : "text-foreground/75"}`}>{value === 1 ? one : many}</span>
     </span>
   );
 }
@@ -173,6 +178,19 @@ function RateChip({ post }: { post: ApiPerformancePost }) {
       <span className="text-sm font-bold tabular-nums text-foreground">{formatRate(rate)}</span>
       <span className="text-[13px] text-foreground/75">engagement</span>
     </span>
+  );
+}
+
+// One small labelled number in the aligned strip under a post's headline number: the label on top (light), the number below (bold),
+// "—" when the platform doesn't give that number, a faded 0 when it gave zero.
+function StatCell({ label, value }: { label: string; value: number | null | undefined }) {
+  const empty = value === null || value === undefined;
+  const faded = empty || value === 0;
+  return (
+    <div className="flex min-w-0 flex-col">
+      <span className="text-[11px] leading-tight text-muted-foreground">{label}</span>
+      <span className={`text-[15px] tabular-nums ${faded ? "font-normal text-muted-foreground/70" : "font-bold text-foreground"}`}>{empty ? "—" : formatCount(value)}</span>
+    </div>
   );
 }
 
@@ -459,6 +477,15 @@ export function PerformanceView() {
   const [unlocking, setUnlocking] = useState<UnlockAction | null>(null);
   const [preview] = useState(insightsPreviewOn);
   const [showNoNumbers, setShowNoNumbers] = useState(false);
+  // Rows whose extra details (the full caption, zero-value extras, watch-time lines) are open.
+  const [openRows, setOpenRows] = useState<Set<string>>(() => new Set());
+  const toggleRow = (id: string) =>
+    setOpenRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const load = (isRefresh: boolean) => {
     if (isRefresh) setRefreshing(true);
@@ -511,60 +538,118 @@ export function PerformanceView() {
   const listed = posts.filter((p) => p.metrics);
   const hidden = posts.filter((p) => !p.metrics);
 
-  const renderRow = (post: ApiPerformancePost) => (
-    <div key={post.id} className="flex gap-3 rounded-2xl bg-card p-3" style={{ boxShadow: "var(--shadow-card)" }}>
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
-        {post.image_base64 ? (
-          <img src={`data:image/jpeg;base64,${post.image_base64}`} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <PlatformBadge platform={post.platform} size="lg" />
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold text-foreground/80">
-          <PlatformBadge platform={post.platform} size="sm" />
-          {formatDate(post.scheduled_time)}
-          {isWinner(scores.get(post.id)) && (
-            <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
-              <Trophy className="h-2.5 w-2.5" />
-              Top performer · {formatMultiple(scores.get(post.id)!.multiple)}
-            </span>
-          )}
-          {post.angle && (
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
-              {formatLabel(post.angle)}
-            </span>
+  const renderRow = (post: ApiPerformancePost) => {
+    const open = openRows.has(post.id);
+    const m = post.metrics;
+    const n = (v: number | null | undefined) => v ?? 0;
+    // One big headline number per post: people reached when the platform gives it, else views, else the reactions added up
+    // (likes, comments, shares, saves: the same definition as "Reactions" above).
+    const heroIsReach = !!m && m.reach !== null && m.reach !== undefined;
+    const hero = m
+      ? heroIsReach
+        ? { value: n(m.reach), label: "people reached" }
+        : m.views !== null && m.views !== undefined
+          ? { value: m.views, label: m.views === 1 ? "view" : "views" }
+          : { value: n(m.likes) + n(m.comments) + n(m.shares) + n(m.saves), label: "reactions" }
+      : null;
+    const rate = engagementRate(post);
+    const justPosted = hero !== null && hero.value === 0 && Date.now() - new Date(post.scheduled_time).getTime() < 48 * 3600 * 1000;
+    const shareSave = m && ((m.shares !== null && m.shares !== undefined) || (m.saves !== null && m.saves !== undefined)) ? n(m.shares) + n(m.saves) : null;
+    const firstCell = m ? (heroIsReach ? { label: "Views", value: m.views } : m.views !== null && m.views !== undefined ? { label: "Reached", value: m.reach } : { label: "Views", value: m.views }) : null;
+    // What the "Shares and saves" number is made of, and the Instagram reposts: behind the Details button.
+    const breakdown = m
+      ? [
+          m.shares !== null && m.shares !== undefined ? `${formatCount(m.shares)} ${m.shares === 1 ? "share" : "shares"}` : null,
+          m.saves !== null && m.saves !== undefined ? `${formatCount(m.saves)} ${m.saves === 1 ? "save" : "saves"}` : null,
+          m.reposts !== null && m.reposts !== undefined ? `${formatCount(m.reposts)} ${m.reposts === 1 ? "repost" : "reposts"}` : null,
+        ].filter((x): x is string => x !== null)
+      : [];
+    const details = m ? youtubeDetails(m) : [];
+    const longCaption = (post.caption?.length ?? 0) > 70;
+    const hasMore = longCaption || breakdown.length > 0 || details.length > 0;
+    return (
+      <div key={post.id} className="flex gap-3 rounded-2xl bg-card p-3" style={{ boxShadow: "var(--shadow-card)" }}>
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
+          {post.image_base64 ? (
+            <img src={`data:image/jpeg;base64,${post.image_base64}`} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <PlatformBadge platform={post.platform} size="lg" />
           )}
         </div>
-        <p className="mb-2 line-clamp-2 text-[15px] leading-snug text-foreground">{post.caption || "(no caption)"}</p>
-        {post.metrics ? (
-          <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-            {post.metrics.views !== null && <Metric icon={Eye} value={post.metrics.views} one="view" many="views" title="Views" />}
-            {post.metrics.reach !== null && <Metric icon={Users} value={post.metrics.reach} one="reached" many="reached" title="Reach — people who saw it" />}
-            {post.metrics.likes !== null && <Metric icon={Heart} value={post.metrics.likes} one="like" many="likes" title="Likes" />}
-            {post.metrics.comments !== null && <Metric icon={MessageCircle} value={post.metrics.comments} one="comment" many="comments" title="Comments" />}
-            {post.metrics.shares !== null && <Metric icon={Share2} value={post.metrics.shares} one="share" many="shares" title="Shares" />}
-            {post.metrics.reposts !== null && post.metrics.reposts !== undefined && <Metric icon={Repeat2} value={post.metrics.reposts} one="repost" many="reposts" title="Reposts" />}
-            {post.metrics.saves !== null && <Metric icon={Bookmark} value={post.metrics.saves} one="save" many="saves" title="Saves" />}
-            <RateChip post={post} />
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[13px] font-semibold text-foreground/80">
+            <PlatformBadge platform={post.platform} size="sm" />
+            {formatDate(post.scheduled_time)}
+            {isWinner(scores.get(post.id)) && (
+              <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
+                <Trophy className="h-2.5 w-2.5" />
+                Top performer · {formatMultiple(scores.get(post.id)!.multiple)}
+              </span>
+            )}
+            {post.angle && (
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
+                {formatLabel(post.angle)}
+              </span>
+            )}
           </div>
-        ) : post.metrics_unavailable_reason ? (
-          <p className="text-[13px] text-foreground/75">{post.metrics_unavailable_reason}</p>
-        ) : null}
-        {/* Said once per platform (on its newest post), not under every post. */}
-        {notSharedNote(post) && posts.find((p) => p.platform === post.platform && notSharedNote(p)) === post && (
-          <p className="mt-1.5 text-[13px] text-foreground/70">{notSharedNote(post)}</p>
-        )}
-        {post.metrics && youtubeDetails(post.metrics).length > 0 && (
-          <p className="mt-1.5 text-[13px] text-foreground/75">{youtubeDetails(post.metrics).join(" · ")}</p>
-        )}
-        {post.platform === "youtube" && post.external_post_id && (
-          <YouTubeDeepDive videoId={post.external_post_id} durationSeconds={estimateDuration(post.metrics)} />
-        )}
-        {post.metrics_note && <p className="mt-1 text-[13px] text-foreground/75">{post.metrics_note}</p>}
+          <p className={`mb-2 text-[15px] leading-snug text-foreground ${open ? "" : "line-clamp-1"}`}>{post.caption || "(no caption)"}</p>
+          {m && hero ? (
+            <>
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className={`font-display text-2xl font-extrabold leading-none tabular-nums ${hero.value === 0 ? "text-muted-foreground/60" : "text-accent"}`}>
+                  {formatCount(hero.value)}
+                </span>
+                <span className="text-[13px] text-foreground/75">
+                  {hero.label}
+                  {justPosted ? " so far" : ""}
+                </span>
+                {rate ? (
+                  <span
+                    className="ml-auto rounded-full px-2.5 py-0.5 text-[12px] font-bold"
+                    style={{ background: "oklch(0.95 0.05 150)", color: "oklch(0.4 0.13 150)" }}
+                    title={`Likes, comments, shares and saves, as a share of ${rate.per === "reach" ? "people reached" : "views"}`}
+                  >
+                    {formatRate(rate)} interacted
+                  </span>
+                ) : justPosted ? (
+                  <span className="ml-auto rounded-full bg-secondary px-2.5 py-0.5 text-[12px] font-semibold text-muted-foreground">just posted</span>
+                ) : null}
+              </div>
+              <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-border pt-2.5 sm:grid-cols-4">
+                {firstCell && <StatCell label={firstCell.label} value={firstCell.value} />}
+                <StatCell label="Likes" value={m.likes} />
+                <StatCell label="Comments" value={m.comments} />
+                <StatCell label="Shares and saves" value={shareSave} />
+              </div>
+            </>
+          ) : post.metrics_unavailable_reason ? (
+            <p className="text-[13px] text-foreground/75">{post.metrics_unavailable_reason}</p>
+          ) : null}
+          {/* Said once per platform (on its newest post), not under every post. */}
+          {notSharedNote(post) && posts.find((p) => p.platform === post.platform && notSharedNote(p)) === post && (
+            <p className="mt-1.5 text-[13px] text-foreground/70">{notSharedNote(post)}</p>
+          )}
+          {open && breakdown.length > 0 && <p className="mt-1.5 text-[13px] text-foreground/75">{breakdown.join(" · ")}</p>}
+          {open && details.length > 0 && <p className="mt-1.5 text-[13px] text-foreground/75">{details.join(" · ")}</p>}
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => toggleRow(post.id)}
+              aria-expanded={open}
+              className="mt-1.5 flex items-center gap-1 text-[12px] font-semibold text-muted-foreground hover:text-foreground"
+            >
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+              {open ? "Hide details" : "Details"}
+            </button>
+          )}
+          {post.platform === "youtube" && post.external_post_id && (
+            <YouTubeDeepDive videoId={post.external_post_id} durationSeconds={estimateDuration(post.metrics)} />
+          )}
+          {post.metrics_note && <p className="mt-1 text-[13px] text-foreground/75">{post.metrics_note}</p>}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>

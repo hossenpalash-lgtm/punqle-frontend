@@ -1,4 +1,4 @@
-import { AlertCircle, ExternalLink, Instagram, Loader2, Lock } from "lucide-react";
+import { AlertCircle, ChevronDown, ExternalLink, Instagram, Loader2, Lock } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { fetchInstagramStats, getMetaConnectUrl, type ApiInstagramStats } from "@/lib/api";
 
@@ -17,6 +17,149 @@ export function fmt(n: number | null | undefined): string {
 
 export function SectionHeading({ children }: { children: React.ReactNode }) {
   return <h3 className="mt-2 font-display text-sm font-extrabold text-foreground">{children}</h3>;
+}
+
+// One bold colour per kind of section, so the eye can tell them apart at a glance (founder, 2026-11-23: the paragraphs were too
+// much to read). Dark enough to read as text on the white card.
+export const SECTION = {
+  overview: "oklch(0.5 0.15 300)",
+  rivals: "oklch(0.5 0.13 235)",
+  content: "oklch(0.48 0.14 150)",
+  top: "oklch(0.52 0.14 55)",
+  timing: "oklch(0.5 0.15 15)",
+};
+
+type FactTone = "good" | "info" | "plain";
+interface Fact {
+  big: string;
+  label: string;
+  tone: FactTone;
+  bar?: number;
+  detail?: string; // the supporting line behind the tile's small "more" button
+}
+const FULL_WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function daysBetween(from: string | null, to: string | null): number | null {
+  if (!from || !to) return null;
+  const a = new Date(`${from}T00:00:00`).getTime();
+  const b = new Date(`${to}T00:00:00`).getTime();
+  return Number.isNaN(a) || Number.isNaN(b) ? null : Math.max(1, Math.round((b - a) / 86_400_000));
+}
+const FACT_COLOR: Record<FactTone, string | undefined> = { good: SECTION.content, info: SECTION.overview, plain: undefined };
+
+// "What stands out" as a few big numbers with a short label, worked out from the numbers already on screen. The longer written
+// notes (data.takeaways) stay one tap away, so nothing is lost.
+function factsFrom(data: ApiInstagramStats): Fact[] {
+  const out: Fact[] = [];
+  if (data.posts_per_week !== null && data.posts_per_week > 0) {
+    const span = daysBetween(data.date_from, data.date_to);
+    out.push({
+      big: `${data.posts_per_week.toFixed(1).replace(/\.0$/, "")}×`,
+      label: "posts per week",
+      tone: "plain",
+      detail: `${data.analyzed_posts} posts analysed${span ? `, spanning ${span} days` : ""}.`,
+    });
+  }
+  const grid = data.heatmap_engagement;
+  if (grid.flat().reduce((a, b) => a + b, 0) > 0) {
+    const days = grid.map((row, i) => ({ i, v: row.reduce((a, b) => a + b, 0) }));
+    const bestDay = days.reduce((a, b) => (b.v > a.v ? b : a));
+    const slots = TIME_SLOTS.map((t, c) => ({ t, v: grid.reduce((a, row) => a + row[c], 0) }));
+    const bestSlot = slots.reduce((a, b) => (b.v > a.v ? b : a));
+    out.push({
+      big: WEEKDAYS[bestDay.i],
+      label: `best day · ${bestSlot.t} UTC`,
+      tone: "info",
+      detail: `Most of their engagement comes from posts on ${FULL_WEEKDAYS[bestDay.i]}, ${bestSlot.t} UTC (your time is ${localOffsetLabel()}).`,
+    });
+  }
+  const types = data.types.filter((t) => t.avg_engagement > 0).sort((a, b) => b.avg_engagement - a.avg_engagement);
+  if (types.length >= 2) {
+    const typeDetail = (t: (typeof types)[number]) => `${t.label}: ${t.posts} posts, ${t.share_pct}% of everything they post.`;
+    out.push({ big: fmt(types[0].avg_engagement), label: `avg per ${types[0].label.toLowerCase()}`, tone: "good", bar: 1, detail: typeDetail(types[0]) });
+    out.push({ big: fmt(types[1].avg_engagement), label: `avg per ${types[1].label.toLowerCase()}`, tone: "plain", bar: types[1].avg_engagement / types[0].avg_engagement, detail: typeDetail(types[1]) });
+  }
+  const best = data.top_posts[0];
+  if (best && data.avg_engagement && data.avg_engagement > 0) {
+    const ratio = best.engagement / data.avg_engagement;
+    if (ratio >= 2) {
+      out.push({
+        big: `${Math.round(ratio)}×`,
+        label: "their best post vs average",
+        tone: "good",
+        detail: `Their best post earned ${fmt(best.engagement)} (likes + comments), against an average of ${fmt(data.avg_engagement)}.`,
+      });
+    }
+  }
+  const lift = data.themes.map((t) => ({ t, gap: t.engagement_share_pct - t.share_pct })).sort((a, b) => b.gap - a.gap)[0];
+  if (lift && lift.gap >= 5) {
+    out.push({
+      big: `${Math.round(lift.t.share_pct)}% → ${Math.round(lift.t.engagement_share_pct)}%`,
+      label: `“${lift.t.theme}”: posts → engagement`,
+      tone: "info",
+      detail: `“${lift.t.theme}” is ${Math.round(lift.t.share_pct)}% of their posts but ${Math.round(lift.t.engagement_share_pct)}% of their engagement.`,
+    });
+  }
+  return out;
+}
+
+function FactTile({ f }: { f: Fact }) {
+  const color = FACT_COLOR[f.tone];
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-xl bg-secondary px-3 py-2.5">
+      <div className="flex items-start justify-between gap-1">
+        <p className={`font-display text-xl font-extrabold leading-tight ${color ? "" : "text-foreground"}`} style={color ? { color } : undefined}>
+          {f.big}
+        </p>
+        {f.detail && (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-label={open ? "Hide the detail" : "Show the detail"}
+            className="no-print -mr-1 -mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
+          >
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+          </button>
+        )}
+      </div>
+      <p className="text-[12px] text-muted-foreground">{f.label}</p>
+      {f.bar !== undefined && (
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-background">
+          <div className={`h-full rounded-full ${color ? "" : "bg-muted-foreground/50"}`} style={{ width: `${Math.max(4, Math.round(f.bar * 100))}%`, background: color }} />
+        </div>
+      )}
+      {f.detail && <p className={`mt-1.5 text-[12px] leading-snug text-foreground/80 ${open ? "" : "hidden print:block"}`}>{f.detail}</p>}
+    </div>
+  );
+}
+
+// The small "show more" button. Collapsed text still prints (Save as PDF), so a printed report never loses detail.
+export function MoreToggle({ open, onClick, more, less }: { open: boolean; onClick: () => void; more: string; less: string }) {
+  return (
+    <button type="button" onClick={onClick} aria-expanded={open} className="no-print mt-2 flex items-center gap-1 text-[12px] font-semibold text-muted-foreground hover:text-foreground">
+      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      {open ? less : more}
+    </button>
+  );
+}
+
+const POST_TYPE_COLOR: Record<string, string> = { video: SECTION.overview, carousel: SECTION.rivals, image: SECTION.content };
+
+function postTypeName(t: string): string {
+  return t === "video" ? "Reel / Video" : t === "carousel" ? "Carousel" : t === "image" ? "Image" : "Post";
+}
+
+// One line of caption for the compact list: hashtags and extra spaces dropped; the full caption is behind the toggle.
+function shortCaption(c: string): string {
+  const s = c.replace(/#[^\s#]+/g, "").replace(/\s+/g, " ").trim();
+  return s || c.trim() || "(no caption)";
+}
+
+function shortDate(d: string): string {
+  const t = new Date(`${d}T00:00:00`);
+  return Number.isNaN(t.getTime()) ? d : t.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
 }
 
 // One plain line for the "You vs them" card, from numbers already on screen. Engagement rate is per follower, so a small account can
@@ -55,10 +198,16 @@ function localOffsetLabel(): string {
   return off === 0 ? "UTC" : `UTC${off > 0 ? "+" : ""}${off}`;
 }
 
-export function Card({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
+export function Card({ title, note, children, accent }: { title: string; note?: string; children: React.ReactNode; accent?: string }) {
   return (
     <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+      <p
+        className={`flex items-center gap-1.5 text-xs uppercase tracking-wider ${accent ? "font-extrabold" : "font-semibold text-muted-foreground"}`}
+        style={accent ? { color: accent } : undefined}
+      >
+        {accent && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: accent }} aria-hidden="true" />}
+        {title}
+      </p>
       {note && <p className="mb-3 mt-0.5 text-xs text-muted-foreground">{note}</p>}
       {!note && <div className="mb-2" />}
       {children}
@@ -214,6 +363,8 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
   const [data, setData] = useState<ApiInstagramStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [showFullCaptions, setShowFullCaptions] = useState(false);
   const autoLoaded = useRef(false);
 
   const load = async (name: string) => {
@@ -254,6 +405,8 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
   const typeSlices = data?.types.map((t, i) => ({ value: t.posts, color: COLORS[i % COLORS.length] })) ?? [];
   const maxThemeShare = data ? Math.max(...data.themes.flatMap((t) => [t.share_pct, t.engagement_share_pct]), 1) : 1;
   const maxTag = data ? Math.max(...data.hashtags.map((h) => h.posts), 1) : 1;
+  const topMax = data ? Math.max(...data.top_posts.map((p) => p.engagement), 1) : 1;
+  const facts = data && data.status === "ok" ? factsFrom(data) : [];
 
   return (
     <div className="space-y-3">
@@ -349,21 +502,35 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
             </p>
           </div>
 
-          {data.takeaways.length > 0 && (
-            <Card title="What stands out">
-              <ul className="space-y-1.5">
-                {data.takeaways.map((t, i) => (
-                  <li key={i} className="rounded-lg bg-secondary px-3 py-2 text-sm text-secondary-foreground">
-                    {t}
-                  </li>
-                ))}
-              </ul>
+          {(data.takeaways.length > 0 || facts.length > 0) && (
+            <Card title="What stands out" accent={SECTION.overview}>
+              {facts.length > 0 && (
+                <div className="grid grid-cols-2 items-start gap-2 sm:grid-cols-3">
+                  {facts.map((f, i) => (
+                    <FactTile key={i} f={f} />
+                  ))}
+                </div>
+              )}
+              {data.takeaways.length > 0 && (
+                <>
+                  {/* Kept in full: hidden on screen until opened, always present when printed or saved as PDF. */}
+                  <ul className={`mt-3 space-y-1.5 ${showNotes || facts.length === 0 ? "" : "hidden print:block"}`}>
+                    {data.takeaways.map((t, i) => (
+                      <li key={i} className="rounded-lg bg-secondary px-3 py-2 text-sm text-secondary-foreground">
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                  {facts.length > 0 && <MoreToggle open={showNotes} onClick={() => setShowNotes((v) => !v)} more="Show the full notes" less="Hide the full notes" />}
+                </>
+              )}
             </Card>
           )}
 
           {data.own && data.own.analyzed_posts >= 3 && (
             <Card
               title={`You vs @${data.username}`}
+              accent={SECTION.rivals}
               note={`Your own Instagram${data.own.username ? ` (@${data.own.username})` : ""} against theirs, counted the same way`}
             >
               {versusTakeaway(data) && <p className="mb-3 rounded-lg bg-secondary px-3 py-2 text-sm font-semibold text-foreground">{versusTakeaway(data)}</p>}
@@ -401,7 +568,7 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
 
           <SectionHeading>What content works</SectionHeading>
 
-          <Card title="Post types" note="What they post, and how each type performs">
+          <Card title="Post types" note="What they post, and how each type performs" accent={SECTION.content}>
             <div className="flex items-center gap-4">
               <div className="relative">
                 <Donut slices={typeSlices} />
@@ -427,7 +594,7 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
           </Card>
 
           {data.themes.length > 0 && (
-            <Card title="Content themes" note="Share of posts vs. share of engagement — a longer bar on the engagement side means the theme over-delivers">
+            <Card title="Content themes" note="Share of posts vs. share of engagement — a longer bar on the engagement side means the theme over-delivers" accent={SECTION.content}>
               <div className="space-y-3">
                 {data.themes.map((t) => (
                   <div key={t.theme}>
@@ -454,7 +621,7 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
             </Card>
           )}
 
-          <Card title="Top posts" note="Highest engagement (likes + comments)">
+          <Card title="Top posts" note="Highest engagement (likes + comments)" accent={SECTION.top}>
             <div className="space-y-2">
               {data.top_posts.map((p) => (
                 <a
@@ -464,34 +631,48 @@ export function InstagramStats({ initialUsername, competitorName }: { initialUse
                   rel="noopener noreferrer"
                   className="block rounded-xl bg-secondary px-3 py-2 hover:bg-secondary/70"
                 >
-                  <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {p.type === "video" ? "Reel / Video" : p.type === "carousel" ? "Carousel" : p.type === "image" ? "Image" : "Post"} · {p.date}
-                  </p>
-                  <p className="text-sm text-secondary-foreground">{p.caption || "(no caption)"}</p>
-                  <p className="mt-0.5 text-xs font-medium text-foreground">
-                    {p.likes === null ? "" : `${fmt(p.likes)} likes · `}
-                    {fmt(p.comments)} comments
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
+                      style={{ background: POST_TYPE_COLOR[p.type] ?? "oklch(0.5 0 0)" }}
+                    >
+                      {postTypeName(p.type)}
+                    </span>
+                    <p className={`min-w-0 flex-1 text-sm text-secondary-foreground ${showFullCaptions ? "" : "truncate print:whitespace-normal"}`}>
+                      {showFullCaptions ? p.caption || "(no caption)" : shortCaption(p.caption)}
+                    </p>
+                    <p className="shrink-0 text-right">
+                      <span className="font-display text-base font-extrabold text-foreground">{fmt(p.likes ?? p.engagement)}</span>{" "}
+                      <span className="text-[11px] text-muted-foreground">{p.likes === null ? "engagement" : "likes"}</span>
+                    </p>
+                  </div>
+                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-background">
+                    <div className="h-full rounded-full" style={{ width: `${Math.max(4, (p.engagement / topMax) * 100)}%`, background: SECTION.top }} />
+                  </div>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {shortDate(p.date)} · <span className="font-semibold text-foreground">{fmt(p.comments)}</span> comments
                   </p>
                 </a>
               ))}
             </div>
+            <MoreToggle open={showFullCaptions} onClick={() => setShowFullCaptions((v) => !v)} more="Show full captions" less="Show short captions" />
           </Card>
 
           <SectionHeading>When to post</SectionHeading>
 
           {data.timeline.length > 1 && (
-            <Card title="Engagement over time" note={`Total likes + comments per ${data.timeline_unit}`}>
+            <Card title="Engagement over time" note={`Total likes + comments per ${data.timeline_unit}`} accent={SECTION.timing}>
               <TimelineChart points={data.timeline} />
             </Card>
           )}
 
-          <Card title="Best times" note="Days and hours of their posts">
+          <Card title="Best times" note="Days and hours of their posts" accent={SECTION.timing}>
             <Heatmap posts={data.heatmap_posts} engagement={data.heatmap_engagement} />
           </Card>
 
           {data.hashtags.length > 0 && (
             <>
-            <Card title="Hashtags they use">
+            <Card title="Hashtags they use" accent={SECTION.top}>
               <div className="space-y-1.5">
                 {data.hashtags.map((h) => (
                   <div key={h.tag} className="flex items-center gap-2">

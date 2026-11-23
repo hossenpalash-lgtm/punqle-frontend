@@ -1750,7 +1750,11 @@ function HomeScreen() {
             <p className="max-w-lg px-4 text-sm text-muted-foreground">
               {freeFirst
                 ? "Add a photo and one line. Punqle makes it with 2 AI video tools. Pick your favourite and post it in one tap."
-                : "One photo or video to every platform, then see what worked."}
+                : (
+                    <>
+                      Make it, post it, measure it, beat your rivals. <span className="font-semibold text-foreground">All in one place.</span>
+                    </>
+                  )}
             </p>
           </div>
           {!freeFirst && <StepStrip onStep={handleStep} />}

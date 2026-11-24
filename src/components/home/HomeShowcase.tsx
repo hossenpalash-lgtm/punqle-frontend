@@ -1,3 +1,4 @@
+import { ArrowUpRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 // The home screen's middle used to be a large empty void between the heading and
@@ -6,7 +7,8 @@ import type { LucideIcon } from "lucide-react";
 // it now shows one row of real example outputs as tool launchers — a photo, a
 // frosted-glass caption with the tool's name and what it does, a credit chip and
 // a hover lift. Each card only switches the creation bar below to that tool; it
-// starts nothing and costs nothing.
+// starts nothing and costs nothing. 2026-11-24: the hover is now clearly visible
+// (rise + deeper shadow + photo zoom + arrow chip + hand cursor, see .tool-card in styles.css).
 export interface ShowcaseCard {
   key: string;
   title: string;
@@ -30,17 +32,17 @@ export function HomeShowcase({ cards }: { cards: ShowcaseCard[] }) {
             key={c.key}
             type="button"
             onClick={c.onClick}
-            className="group relative h-[clamp(108px,16vh,146px)] overflow-hidden rounded-3xl text-left transition-transform duration-300 hover:-translate-y-1"
-            style={{
-              boxShadow:
-                "inset 0 1px 0 rgb(255 255 255 / 70%), 0 0 0 1px rgb(255 255 255 / 55%), 0 22px 44px -26px rgb(20 20 30 / 50%)",
-            }}
+            className="tool-card group relative h-[clamp(108px,16vh,146px)] overflow-hidden rounded-3xl text-left"
           >
             {c.plain ? (
               <div className="absolute inset-0 bg-gradient-to-br from-white/80 to-secondary">
                 <div className="absolute right-3 top-3 flex gap-1.5">
                   {(c.extras ?? []).slice(0, 3).map((E, i) => (
-                    <span key={i} className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/80 text-foreground shadow-sm">
+                    <span
+                      key={i}
+                      className="tool-card-extra flex h-7 w-7 items-center justify-center rounded-xl bg-white/80 text-foreground shadow-sm"
+                      style={{ transitionDelay: `${i * 45}ms` }}
+                    >
                       <E className="h-3.5 w-3.5" />
                     </span>
                   ))}
@@ -51,7 +53,7 @@ export function HomeShowcase({ cards }: { cards: ShowcaseCard[] }) {
                 src={c.image}
                 alt=""
                 loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.09] group-focus-visible:scale-[1.09] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
               />
             )}
             {!c.plain && <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-black/25 to-transparent" />}
@@ -59,7 +61,10 @@ export function HomeShowcase({ cards }: { cards: ShowcaseCard[] }) {
               <Icon className="h-4 w-4" />
             </span>
             {c.meta && <span className="glass-chip absolute right-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-semibold">{c.meta}</span>}
-            <div className="glass-caption absolute inset-x-0 bottom-0 min-h-[60px] px-4 py-2.5">
+            <div className="tool-card-caption glass-caption absolute inset-x-0 bottom-0 min-h-[60px] px-4 py-2.5">
+              <span className="tool-card-arrow glass-chip-light absolute right-3 top-2.5 flex h-6 w-6 items-center justify-center rounded-full text-foreground">
+                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </span>
               <p className="font-display text-[16px] leading-tight text-white">{c.title}</p>
               <p className="mt-0.5 text-[12.5px] leading-snug text-white/80">{c.blurb}</p>
             </div>

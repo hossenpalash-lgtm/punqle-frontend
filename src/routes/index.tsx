@@ -1763,9 +1763,9 @@ function HomeScreen() {
             {homeIdle && (
               <HomeShowcase
                 cards={[
-                  { key: "video", title: "Video", blurb: "Compare 3 AI engines on your photo", meta: "from 14 credits", image: "/home/video.jpg", icon: Video, onClick: () => handleSwitchMode("video") },
-                  { key: "image", title: "Image", blurb: "Studio ad images from a prompt", meta: "from 1 credit", image: "/home/image.jpg", icon: Sparkles, onClick: () => handleSwitchMode("image") },
-                  { key: "product", title: "Product", blurb: "A person showing off your product", meta: "from 2 credits", image: "/home/product.jpg", icon: Package, onClick: () => handleSwitchMode("product") },
+                  { key: "video", title: "Video", blurb: "Compare 3 AI engines on your photo", meta: "from 14 credits", image: "/home/video-candle.jpg", clip: "/home/video-hover.mp4", icon: Video, onClick: () => handleSwitchMode("video") },
+                  { key: "image", title: "Image", blurb: "Studio ad images from a prompt", meta: "from 1 credit", image: "/home/image.jpg", frames: ["/home/image.jpg", "/style-previews/clean_premium.jpg", "/style-previews/bold_energetic.jpg"], icon: Sparkles, onClick: () => handleSwitchMode("image") },
+                  { key: "product", title: "Product", blurb: "A person showing off your product", meta: "from 2 credits", image: "/video-style-previews/cinematic_ugc.jpg", clip: "/video-style-previews/cinematic_ugc.mp4", position: "50% 100%", icon: Package, onClick: () => handleSwitchMode("product") },
                   { key: "more", title: "More tools", blurb: "Actors, Upscale, Try-On and more", meta: "", image: "", icon: MoreHorizontal, plain: true, extras: [UserRound, PackageOpen, Smartphone, ZoomIn, Shirt, Images], onClick: () => setShowMoreMenu(true) },
                 ]}
               />

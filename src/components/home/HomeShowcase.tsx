@@ -19,7 +19,7 @@ import { previewAsset } from "@/lib/preview-assets";
 export interface ShowcaseCard {
   key: string;
   title: string;
-  blurb: string;
+  blurb: string; // not drawn (the step strip above the cards already says it, founder 2026-11-24); read out by screen readers
   meta: string;
   image: string;
   icon: LucideIcon;
@@ -116,6 +116,7 @@ function ShowcaseButton({ card, warm }: { card: ShowcaseCard; warm: boolean }) {
     <button
       type="button"
       onClick={card.onClick}
+      aria-label={`${card.title}: ${card.blurb}`}
       onMouseEnter={() => setActive(true)}
       onMouseLeave={() => setActive(false)}
       onFocus={() => setActive(true)}
@@ -170,12 +171,11 @@ function ShowcaseButton({ card, warm }: { card: ShowcaseCard; warm: boolean }) {
         <Icon className="h-4 w-4" />
       </span>
       {card.meta && <span className="glass-chip absolute right-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-semibold">{card.meta}</span>}
-      <div className="tool-card-caption glass-caption absolute inset-x-0 bottom-0 min-h-[60px] px-4 py-2.5">
+      <div className="tool-card-caption glass-caption absolute inset-x-0 bottom-0 px-4 py-3">
         <span className="tool-card-arrow glass-chip-light absolute right-3 top-2.5 flex h-6 w-6 items-center justify-center rounded-full text-foreground">
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
         <p className="font-display text-[16px] leading-tight text-white">{card.title}</p>
-        <p className="mt-0.5 text-[12.5px] leading-snug text-white/80">{card.blurb}</p>
       </div>
     </button>
   );
